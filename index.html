@@ -1392,11 +1392,34 @@ function openUpgradeModal(){
         <input type="text" id="redeemCodeInput" placeholder="e.g. GBP-XXXXXX" style="text-transform:uppercase;">
         <button class="btn-primary" id="redeemCodeBtn" style="margin-top:12px;">Redeem பண்ணு</button>
         <div id="redeemError" style="color:#FF4D4D; font-size:12.5px; margin-top:8px; min-height:16px;"></div>
+        <button id="debugDbTestBtn" style="margin-top:16px; width:100%; padding:10px; background:#222; color:#0f0; border:1px dashed #0f0; border-radius:8px; font-size:12.5px;">🔧 Debug: Test DB Connection</button>
+        <div id="debugDbResult" style="color:#0f0; font-size:11.5px; margin-top:8px; word-break:break-all;"></div>
       </div>
     </div>
   `);
   document.getElementById('closeModalX').addEventListener('click', closeModal);
   document.getElementById('redeemCodeBtn').addEventListener('click', redeemPremiumCode);
+  document.getElementById('debugDbTestBtn').addEventListener('click', debugTestDbConnection);
+}
+
+async function debugTestDbConnection(){
+  const resEl = document.getElementById('debugDbResult');
+  resEl.textContent = 'Writing...';
+  try{
+    const ts = Date.now();
+    const testPath = 'debugTest/ping';
+    await db.ref(testPath).set({ time: ts, from: (currentUser ? currentUser.uid : 'NONE') });
+    const readBack = await db.ref(testPath).once('value');
+    resEl.innerHTML =
+      '✅ Write OK<br>' +
+      'databaseURL: ' + firebase.app().options.databaseURL + '<br>' +
+      'projectId: ' + firebase.app().options.projectId + '<br>' +
+      'Wrote to: ' + testPath + '<br>' +
+      'Read back: ' + JSON.stringify(readBack.val()) + '<br><br>' +
+      '👉 Console-la Realtime Database → debugTest → ping கீழ இந்த timestamp (' + ts + ') தேடுங்க. அது தெரிஞ்சா, app வேற database URL-ku point ஆகுது.';
+  }catch(e){
+    resEl.innerHTML = '❌ Write FAILED: ' + (e.code||'') + ' ' + (e.message||e);
+  }
 }
 
 async function redeemPremiumCode(){
