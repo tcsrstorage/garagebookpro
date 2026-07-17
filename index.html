@@ -1402,7 +1402,9 @@ function openUpgradeModal(){
 async function redeemPremiumCode(){
   const input = document.getElementById('redeemCodeInput');
   const errEl = document.getElementById('redeemError');
-  const code = input.value.trim().toUpperCase();
+  const code = input.value.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
+  console.log('[Redeem] Raw input:', JSON.stringify(input.value), 'char codes:', Array.from(input.value).map(c=>c.charCodeAt(0)));
+  console.log('[Redeem] Cleaned code:', JSON.stringify(code));
   if(!code){ errEl.textContent = 'Code போடுங்க'; return; }
   const btn = document.getElementById('redeemCodeBtn');
   btn.disabled = true;
