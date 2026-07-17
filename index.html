@@ -1387,13 +1387,53 @@ function openUpgradeModal(){
       <div style="font-size:48px; margin-bottom:10px;">🚗🏍️🚙</div>
       <div style="font-weight:800; font-size:17px; margin-bottom:8px;">Free tier-ல 1 vehicle மட்டும்</div>
       <div style="color:#999; font-size:14px; margin-bottom:20px;">Unlimited vehicles + Full Reports + Compare + Cloud Backup வேணும்னா Premium-க்கு upgrade பண்ணுங்க — ₹240/year (₹20/month)</div>
-      <button class="btn-primary" id="upgradeContactBtn">Premium பத்தி தெரிஞ்சுக்க</button>
+      <div style="text-align:left;">
+        <div class="field-label">Premium Code இருக்கா? இங்க போடுங்க</div>
+        <input type="text" id="redeemCodeInput" placeholder="e.g. GBP-XXXXXX" style="text-transform:uppercase;">
+        <button class="btn-primary" id="redeemCodeBtn" style="margin-top:12px;">Redeem பண்ணு</button>
+        <div id="redeemError" style="color:#FF4D4D; font-size:12.5px; margin-top:8px; min-height:16px;"></div>
+      </div>
     </div>
   `);
   document.getElementById('closeModalX').addEventListener('click', closeModal);
-  document.getElementById('upgradeContactBtn').addEventListener('click', ()=>{
-    showToast('Payment system இன்னும் வரல — விரைவில் update பண்றோம்! 🙏');
-  });
+  document.getElementById('redeemCodeBtn').addEventListener('click', redeemPremiumCode);
+}
+
+async function redeemPremiumCode(){
+  const input = document.getElementById('redeemCodeInput');
+  const errEl = document.getElementById('redeemError');
+  const code = input.value.trim().toUpperCase();
+  if(!code){ errEl.textContent = 'Code போடுங்க'; return; }
+  const btn = document.getElementById('redeemCodeBtn');
+  btn.disabled = true;
+  errEl.textContent = '';
+  try{
+    const snap = await db.ref('redeemCodes/'+code).once('value');
+    if(!snap.exists()){
+      errEl.textContent = '❌ இந்த code கிடைக்கல, சரி பாருங்க';
+      btn.disabled = false;
+      return;
+    }
+    const data = snap.val();
+    if(data.used){
+      errEl.textContent = '❌ இந்த code already use ஆகிடுச்சு';
+      btn.disabled = false;
+      return;
+    }
+    const updates = {};
+    updates['users/'+currentUser.uid+'/profile/tier'] = 'paid';
+    updates['users/'+currentUser.uid+'/profile/appliedCode'] = code;
+    updates['redeemCodes/'+code+'/used'] = true;
+    updates['redeemCodes/'+code+'/usedBy'] = currentUser.uid;
+    updates['redeemCodes/'+code+'/usedAt'] = firebase.database.ServerValue.TIMESTAMP;
+    await db.ref().update(updates);
+    closeModal();
+    showToast('🎉 Premium Activate ஆயிடுச்சு! Unlimited vehicles இப்போ use பண்ணலாம்');
+  } catch(e){
+    errEl.textContent = 'Fail ஆச்சு: ' + (e.message || 'மறுபடி try பண்ணுங்க');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function openAddVehicleModal(){
