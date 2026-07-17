@@ -1404,21 +1404,24 @@ function openUpgradeModal(){
 
 async function debugTestDbConnection(){
   const resEl = document.getElementById('debugDbResult');
-  resEl.textContent = 'Writing...';
+  resEl.textContent = 'Checking...';
+  const info = 'databaseURL: ' + firebase.app().options.databaseURL + '<br>' +
+               'projectId: ' + firebase.app().options.projectId + '<br>' +
+               'authDomain: ' + firebase.app().options.authDomain + '<br>' +
+               'UID: ' + (currentUser ? currentUser.uid : 'NONE') + '<br><br>';
   try{
     const ts = Date.now();
-    const testPath = 'debugTest/ping';
-    await db.ref(testPath).set({ time: ts, from: (currentUser ? currentUser.uid : 'NONE') });
+    // write into redeemCodes itself since that node has open write rules
+    const testPath = 'redeemCodes/_DEBUGTEST_' + ts;
+    await db.ref(testPath).set({ tier: 'debug', used: false, ts: ts });
     const readBack = await db.ref(testPath).once('value');
-    resEl.innerHTML =
-      '✅ Write OK<br>' +
-      'databaseURL: ' + firebase.app().options.databaseURL + '<br>' +
-      'projectId: ' + firebase.app().options.projectId + '<br>' +
-      'Wrote to: ' + testPath + '<br>' +
+    resEl.innerHTML = info +
+      '✅ Write OK to redeemCodes<br>' +
+      'Wrote key: _DEBUGTEST_' + ts + '<br>' +
       'Read back: ' + JSON.stringify(readBack.val()) + '<br><br>' +
-      '👉 Console-la Realtime Database → debugTest → ping கீழ இந்த timestamp (' + ts + ') தேடுங்க. அது தெரிஞ்சா, app வேற database URL-ku point ஆகுது.';
+      '👉 Console-la Realtime Database → redeemCodes → _DEBUGTEST_' + ts + ' கீழ இந்த entry தேடுங்க.';
   }catch(e){
-    resEl.innerHTML = '❌ Write FAILED: ' + (e.code||'') + ' ' + (e.message||e);
+    resEl.innerHTML = info + '❌ Write FAILED: ' + (e.code||'') + ' ' + (e.message||e);
   }
 }
 
