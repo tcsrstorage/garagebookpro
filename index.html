@@ -1407,10 +1407,12 @@ async function redeemPremiumCode(){
   const btn = document.getElementById('redeemCodeBtn');
   btn.disabled = true;
   errEl.textContent = '';
+  console.log('[Redeem] Searching for code:', JSON.stringify(code), 'currentUser:', currentUser ? currentUser.uid : 'NONE');
   try{
     const snap = await db.ref('redeemCodes/'+code).once('value');
+    console.log('[Redeem] snap.exists():', snap.exists(), 'snap.val():', JSON.stringify(snap.val()));
     if(!snap.exists()){
-      errEl.textContent = '❌ இந்த code கிடைக்கல, சரி பாருங்க';
+      errEl.textContent = '❌ code "' + code + '" கிடைக்கல (debug: read succeeded, no data)';
       btn.disabled = false;
       return;
     }
@@ -1426,11 +1428,13 @@ async function redeemPremiumCode(){
     updates['redeemCodes/'+code+'/used'] = true;
     updates['redeemCodes/'+code+'/usedBy'] = currentUser.uid;
     updates['redeemCodes/'+code+'/usedAt'] = firebase.database.ServerValue.TIMESTAMP;
+    console.log('[Redeem] Attempting update:', JSON.stringify(updates));
     await db.ref().update(updates);
     closeModal();
     showToast('🎉 Premium Activate ஆயிடுச்சு! Unlimited vehicles இப்போ use பண்ணலாம்');
   } catch(e){
-    errEl.textContent = 'Fail ஆச்சு: ' + (e.message || 'மறுபடி try பண்ணுங்க');
+    console.error('[Redeem] Error:', e);
+    errEl.textContent = 'Fail ஆச்சு (' + (e.code || 'unknown') + '): ' + (e.message || 'மறுபடி try பண்ணுங்க');
   } finally {
     btn.disabled = false;
   }
