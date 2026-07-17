@@ -1413,7 +1413,26 @@ async function redeemPremiumCode(){
     const path = 'redeemCodes/'+code;
     const snap = await db.ref(path).once('value');
     if(!snap.exists()){
-      errEl.innerHTML = '❌ NOT FOUND at path: "' + path + '"<br>UID: ' + (currentUser ? currentUser.uid : 'NONE') + '<br>Cleaned code: "' + code + '" (len=' + code.length + ')';
+      // DEBUG: list all actual keys under redeemCodes with char codes to catch hidden characters
+      let debugKeys = 'ஏதும் இல்ல';
+      try{
+        const allSnap = await db.ref('redeemCodes').once('value');
+        if(allSnap.exists()){
+          const rows = [];
+          allSnap.forEach(child => {
+            const k = child.key;
+            const codes = Array.from(k).map(c=>c.charCodeAt(0)).join(',');
+            rows.push('"' + k + '" (len=' + k.length + ', codes=' + codes + ')');
+          });
+          debugKeys = rows.join('<br>');
+        }
+      }catch(dbgErr){
+        debugKeys = 'Debug list fail: ' + (dbgErr.message || dbgErr);
+      }
+      const typedCodes = Array.from(code).map(c=>c.charCodeAt(0)).join(',');
+      errEl.innerHTML = '❌ NOT FOUND at path: "' + path + '"<br>UID: ' + (currentUser ? currentUser.uid : 'NONE') +
+        '<br>Cleaned code: "' + code + '" (len=' + code.length + ', codes=' + typedCodes + ')' +
+        '<br><br><b>Actual keys in redeemCodes:</b><br>' + debugKeys;
       btn.disabled = false;
       return;
     }
