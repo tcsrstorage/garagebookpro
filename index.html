@@ -1409,13 +1409,10 @@ async function redeemPremiumCode(){
   errEl.textContent = '';
   console.log('[Redeem] Searching for code:', JSON.stringify(code), 'currentUser:', currentUser ? currentUser.uid : 'NONE');
   try{
-    const allSnap = await db.ref('redeemCodes').once('value');
-    const allKeys = allSnap.exists() ? Object.keys(allSnap.val()) : [];
-    console.log('[Redeem] All keys under redeemCodes:', JSON.stringify(allKeys));
     const snap = await db.ref('redeemCodes/'+code).once('value');
     console.log('[Redeem] snap.exists():', snap.exists(), 'snap.val():', JSON.stringify(snap.val()));
     if(!snap.exists()){
-      errEl.textContent = 'UID:' + (currentUser ? currentUser.uid.slice(0,8) : 'NONE') + ' | Searched:"' + code + '" | Keys found:[' + allKeys.join(',') + ']';
+      errEl.textContent = '❌ code "' + code + '" கிடைக்கல, சரி பாருங்க';
       btn.disabled = false;
       return;
     }
