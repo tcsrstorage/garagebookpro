@@ -1402,19 +1402,18 @@ function openUpgradeModal(){
 async function redeemPremiumCode(){
   const input = document.getElementById('redeemCodeInput');
   const errEl = document.getElementById('redeemError');
-  const code = input.value.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
-  console.log('[Redeem] Raw input:', JSON.stringify(input.value), 'char codes:', Array.from(input.value).map(c=>c.charCodeAt(0)));
-  console.log('[Redeem] Cleaned code:', JSON.stringify(code));
+  const rawInput = input.value;
+  const code = rawInput.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
+  const charCodes = Array.from(rawInput).map(c=>c.charCodeAt(0)).join(',');
   if(!code){ errEl.textContent = 'Code போடுங்க'; return; }
   const btn = document.getElementById('redeemCodeBtn');
   btn.disabled = true;
-  errEl.textContent = '';
-  console.log('[Redeem] Searching for code:', JSON.stringify(code), 'currentUser:', currentUser ? currentUser.uid : 'NONE');
+  errEl.innerHTML = 'Checking... UID: ' + (currentUser ? currentUser.uid : 'NONE') + '<br>Raw: "' + rawInput + '" (codes: ' + charCodes + ')<br>Cleaned: "' + code + '"';
   try{
-    const snap = await db.ref('redeemCodes/'+code).once('value');
-    console.log('[Redeem] snap.exists():', snap.exists(), 'snap.val():', JSON.stringify(snap.val()));
+    const path = 'redeemCodes/'+code;
+    const snap = await db.ref(path).once('value');
     if(!snap.exists()){
-      errEl.textContent = '❌ code "' + code + '" கிடைக்கல, சரி பாருங்க';
+      errEl.innerHTML = '❌ NOT FOUND at path: "' + path + '"<br>UID: ' + (currentUser ? currentUser.uid : 'NONE') + '<br>Cleaned code: "' + code + '" (len=' + code.length + ')';
       btn.disabled = false;
       return;
     }
@@ -1430,13 +1429,11 @@ async function redeemPremiumCode(){
     updates['redeemCodes/'+code+'/used'] = true;
     updates['redeemCodes/'+code+'/usedBy'] = currentUser.uid;
     updates['redeemCodes/'+code+'/usedAt'] = firebase.database.ServerValue.TIMESTAMP;
-    console.log('[Redeem] Attempting update:', JSON.stringify(updates));
     await db.ref().update(updates);
     closeModal();
     showToast('🎉 Premium Activate ஆயிடுச்சு! Unlimited vehicles இப்போ use பண்ணலாம்');
   } catch(e){
-    console.error('[Redeem] Error:', e);
-    errEl.textContent = 'Fail ஆச்சு (' + (e.code || 'unknown') + '): ' + (e.message || 'மறுபடி try பண்ணுங்க');
+    errEl.innerHTML = 'Fail ஆச்சு (' + (e.code || 'unknown') + '): ' + (e.message || 'மறுபடி try பண்ணுங்க');
   } finally {
     btn.disabled = false;
   }
