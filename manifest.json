@@ -1,6 +1,6 @@
 {
-  "name": "GarageBook Pro - Vehicle Expense Tracker",
-  "short_name": "GarageBook Pro",
+  "name": "Garage Book Pro - Vehicle Expense Tracker",
+  "short_name": "Garage Book Pro",
   "description": "Track petrol, service, repair and all vehicle expenses. Unlimited vehicles with Premium.",
   "start_url": "./index.html",
   "display": "standalone",
