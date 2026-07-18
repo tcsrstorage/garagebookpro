@@ -1521,6 +1521,11 @@ async function redeemPremiumCode(){
       return;
     }
     const data = snap.val();
+    if(data.tier !== 'paid'){
+      errEl.textContent = '❌ இந்த code invalid';
+      btn.disabled = false;
+      return;
+    }
     if(data.used){
       errEl.textContent = '❌ இந்த code already use ஆகிடுச்சு';
       btn.disabled = false;
