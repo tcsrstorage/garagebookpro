@@ -695,9 +695,32 @@ function friendlyAuthError(e){
 }
 
 function doLogout(){
+  if(sessionRef) sessionRef.off();
   auth.signOut();
   STATE.loaded = false;
   location.reload();
+}
+
+// ============ SINGLE ACTIVE SESSION ============
+// Only one device can be logged into an account at a time. On login we write a fresh
+// random session id; if it ever changes (another device logged in), we force-logout here.
+let mySessionId = null;
+let sessionRef = null;
+function startSessionGuard(uid){
+  mySessionId = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  sessionRef = db.ref('users/' + uid + '/activeSession');
+  sessionRef.set({ sessionId: mySessionId, loggedInAt: firebase.database.ServerValue.TIMESTAMP });
+  sessionRef.on('value', snap => {
+    const val = snap.val();
+    if(val && val.sessionId && val.sessionId !== mySessionId){
+      sessionRef.off();
+      auth.signOut().then(()=>{
+        document.getElementById('mainApp').classList.add('hidden');
+        document.getElementById('loginScreen').classList.remove('hidden');
+        setAuthError('⚠️ இந்த account வேற device-ல login ஆச்சு, இங்க logout ஆயிடுச்சு. ஒரே நேரத்துல ஒரு device-ல மட்டும் use பண்ண முடியும்.');
+      });
+    }
+  });
 }
 
 // Watch auth state — this is the single entry point into the app
@@ -708,6 +731,7 @@ auth.onAuthStateChanged(function(user){
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
     ensureUserProfile();
+    startSessionGuard(user.uid);
     initFirebase();
     if(user.uid === ADMIN_UID){
       document.getElementById('adminSectionTitle').style.display = '';
@@ -716,6 +740,7 @@ auth.onAuthStateChanged(function(user){
   } else {
     currentUser = null;
     ROOT = null;
+    if(sessionRef){ sessionRef.off(); sessionRef = null; }
     document.getElementById('loginScreen').classList.remove('hidden');
     document.getElementById('mainApp').classList.add('hidden');
   }
