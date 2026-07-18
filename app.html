@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260719-0508">
+<meta name="app-build" content="20260719-0530">
 <style>
   :root{
     --yellow:#FFC800;
@@ -363,6 +363,9 @@
           <span>⭐ Premium-க்கு switch பண்ணுங்க — <span class="price-highlight">₹21/month</span> மட்டும்</span>
         </div>
         <div id="serviceDueBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:400; font-size:13.5px; line-height:1.5;"></div>
+        <div id="docExpiryBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:400; font-size:13.5px; line-height:1.5;"></div>
+        <div id="recurringBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:400; font-size:13.5px; line-height:1.5;"></div>
+        <div id="budgetBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:400; font-size:13.5px; line-height:1.5;"></div>
         <div class="total-card">
           <div class="total-label">This Month · <span id="homeVehicleName">All Vehicles</span></div>
           <div class="total-amount" id="homeTotalMonth">₹0</div>
@@ -463,6 +466,10 @@
           <div class="settings-row-left"><span class="ic">💳</span><span class="txt">Payment Modes</span></div>
           <span class="arrow">›</span>
         </div>
+        <div class="settings-row" id="openRecurringBtn">
+          <div class="settings-row-left"><span class="ic">🔁</span><span class="txt">Recurring Expenses</span></div>
+          <span class="arrow">›</span>
+        </div>
         <div class="settings-row" id="openAccountBtn">
           <div class="settings-row-left"><span class="ic">👤</span><span class="txt">Account & Logout</span></div>
           <span class="arrow">›</span>
@@ -475,6 +482,10 @@
         <div class="section-title">Data</div>
         <div class="settings-row" id="exportBtn">
           <div class="settings-row-left"><span class="ic">📤</span><span class="txt">Export All Data (JSON)</span></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="settings-row" id="exportCsvBtn">
+          <div class="settings-row-left"><span class="ic">📊</span><span class="txt">Export All Expenses (Excel/CSV)</span></div>
           <span class="arrow">›</span>
         </div>
         <div class="section-title">About</div>
@@ -525,6 +536,7 @@ let STATE = {
   paymodes: {},
   expenses: {},
   dailyLogs: {},
+  recurring: {},
   activeVehicle: "all",
   activeTab: "home",
   monthCursor: new Date(),
@@ -777,6 +789,7 @@ function initFirebase(){
     STATE.paymodes = val.paymodes || DEFAULT_PAYMODES;
     STATE.expenses = val.expenses || {};
     STATE.dailyLogs = val.dailyLogs || {};
+    STATE.recurring = val.recurring || {};
 
     if(!val.categories){ db.ref(ROOT+'/categories').set(DEFAULT_CATEGORIES); }
     if(!val.paymodes){ db.ref(ROOT+'/paymodes').set(DEFAULT_PAYMODES); }
@@ -924,6 +937,203 @@ function renderServiceDueBanner(vid){
   banner.style.display = 'block';
 }
 
+// ============ V2: INSURANCE/PUC/RC EXPIRY REMINDERS ============
+function computeDocExpiry(vehicleId){
+  const v = STATE.vehicles[vehicleId];
+  if(!v) return [];
+  const today = new Date();
+  const docs = [
+    {key:'insuranceExpiry', label:'Insurance', icon:'📄'},
+    {key:'pucExpiry', label:'PUC', icon:'🌫️'},
+    {key:'rcExpiry', label:'RC', icon:'🪪'}
+  ];
+  const results = [];
+  docs.forEach(dc=>{
+    const dateStr = v[dc.key];
+    if(!dateStr) return;
+    const expDate = new Date(dateStr + 'T00:00:00');
+    const daysRemaining = Math.ceil((expDate - today) / 86400000);
+    const overdue = daysRemaining <= 0;
+    const dueSoon = !overdue && daysRemaining <= 30;
+    if(overdue || dueSoon){
+      results.push({ vehicleName: v.name, label: dc.label, icon: dc.icon, overdue, daysRemaining });
+    }
+  });
+  return results;
+}
+function renderDocExpiryBanner(vid){
+  const banner = document.getElementById('docExpiryBanner');
+  let dueList = [];
+  if(vid==='all'){
+    Object.keys(STATE.vehicles).forEach(id=>{ dueList = dueList.concat(computeDocExpiry(id)); });
+  } else {
+    dueList = computeDocExpiry(vid);
+  }
+  if(!dueList.length){ banner.style.display='none'; return; }
+  dueList.sort((a,b)=> (a.overdue===b.overdue) ? 0 : (a.overdue ? -1 : 1));
+  const anyOverdue = dueList.some(d=>d.overdue);
+  banner.style.background = anyOverdue ? 'rgba(255,77,77,0.15)' : 'rgba(255,200,0,0.15)';
+  banner.style.color = anyOverdue ? '#FF4D4D' : '#FFC800';
+  banner.style.border = '1px solid ' + (anyOverdue ? 'rgba(255,77,77,0.4)' : 'rgba(255,200,0,0.4)');
+  banner.innerHTML = dueList.map(d=>{
+    const dayTxt = d.overdue ? Math.abs(d.daysRemaining) + ' நாள் தாமதம்' : d.daysRemaining + ' நாளில் expire';
+    return `${d.icon} <b>${escapeHtml(d.vehicleName)}</b>: ${d.label} ${d.overdue ? 'expire ஆயிடுச்சு' : 'விரைவில் expire'} (${dayTxt})`;
+  }).join('<br>');
+  banner.style.display = 'block';
+}
+
+// ============ V2: RECURRING EXPENSES (EMI, Insurance auto-add) ============
+function addMonths(dateStr, n){
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setMonth(d.getMonth() + n);
+  return d.toISOString().slice(0,10);
+}
+function computeRecurringDue(vid){
+  const today = todayStr();
+  return Object.entries(STATE.recurring||{})
+    .map(([id,r])=>({id,...r}))
+    .filter(r => (vid==='all' || r.vehicleId===vid) && r.nextDueDate && r.nextDueDate <= today);
+}
+function renderRecurringBanner(vid){
+  const banner = document.getElementById('recurringBanner');
+  const dueList = computeRecurringDue(vid);
+  if(!dueList.length){ banner.style.display='none'; return; }
+  banner.style.background = 'rgba(88,166,255,0.12)';
+  banner.style.color = '#58A6FF';
+  banner.style.border = '1px solid rgba(88,166,255,0.35)';
+  banner.innerHTML = dueList.map(r=>{
+    const vname = STATE.vehicles[r.vehicleId]?.name || '-';
+    return `🔁 <b>${escapeHtml(r.label)}</b> (${escapeHtml(vname)}) — ${fmtMoney(r.amount)} due
+      <span class="recurAddBtn" data-id="${r.id}" style="background:#58A6FF; color:#0A0A0A; padding:4px 10px; border-radius:8px; font-weight:700; cursor:pointer; margin-left:6px; display:inline-block;">Add</span>`;
+  }).join('<br><br>');
+  banner.style.display = 'block';
+  document.querySelectorAll('.recurAddBtn').forEach(btn=>{
+    btn.addEventListener('click', ()=> addRecurringEntry(btn.dataset.id));
+  });
+}
+function addRecurringEntry(rid){
+  const r = STATE.recurring[rid];
+  if(!r) return;
+  const expenseId = uid('exp');
+  const entry = {
+    vehicleId: r.vehicleId, categoryId: r.categoryId, paymodeId: r.paymodeId || null,
+    amount: r.amount, date: todayStr(), notes: r.label + ' (recurring)'
+  };
+  const nextDue = r.frequency === 'yearly' ? addMonths(r.nextDueDate, 12) : addMonths(r.nextDueDate, 1);
+  const updates = {};
+  updates['/expenses/'+expenseId] = entry;
+  updates['/recurring/'+rid+'/nextDueDate'] = nextDue;
+  db.ref(ROOT).update(updates).then(()=>{
+    showToast(r.label + ' add ஆச்சு!');
+  }).catch(err=> showToast('Failed: ' + err.message));
+}
+function openManageRecurring(){
+  const rows = Object.entries(STATE.recurring||{}).map(([id,r])=>{
+    const vname = STATE.vehicles[r.vehicleId]?.name || '-';
+    return `<div class="manage-item">
+      <span class="nm">${escapeHtml(r.label)} — ${fmtMoney(r.amount)} / ${r.frequency==='yearly'?'year':'month'} (${escapeHtml(vname)}, next: ${r.nextDueDate})</span>
+      <span class="edit-btn" data-id="${id}" data-kind="recurring">✏️</span>
+      <span class="del-btn" data-id="${id}" data-kind="recurring">🗑️</span>
+    </div>`;
+  }).join('') || '<div style="color:#fff; font-size:13px; padding:10px 0;">இன்னும் recurring expense இல்ல</div>';
+  openModal(`
+    <div class="modal-title">Recurring Expenses<span class="close-x" id="closeModalX">✕</span></div>
+    <div style="color:#fff; font-size:13px; margin-bottom:14px;">EMI, Insurance மாதிரி repeat ஆகற expenses-ஐ இங்க add பண்ணுங்க. Due ஆனா Home screen-ல banner வந்து ஒரு tap-ல add ஆகிடும்.</div>
+    <div id="recurringList">${rows}</div>
+    <button class="btn-primary" id="addRecurringBtn">+ Add Recurring Expense</button>
+  `);
+  document.getElementById('closeModalX').addEventListener('click', closeModal);
+  document.getElementById('addRecurringBtn').addEventListener('click', ()=> openEditRecurringModal());
+  document.querySelectorAll('#recurringList .edit-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=> openEditRecurringModal(btn.dataset.id));
+  });
+  document.querySelectorAll('#recurringList .del-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(confirm('Delete this recurring expense?')){
+        db.ref(ROOT+'/recurring/'+btn.dataset.id).remove().then(()=>{ showToast('Deleted'); openManageRecurring(); });
+      }
+    });
+  });
+}
+function openEditRecurringModal(id){
+  const r = id ? STATE.recurring[id] : null;
+  const vehicleEntries = Object.entries(STATE.vehicles).filter(([vid,v]) => v.active !== false);
+  const catEntries = Object.entries(STATE.categories);
+  openModal(`
+    <div class="modal-title">${r?'Edit':'Add'} Recurring Expense<span class="close-x" id="closeModalX">✕</span></div>
+    <div class="field-label">Label</div>
+    <input type="text" id="rLabel" value="${escapeHtml(r?.label||'')}" placeholder="e.g. Bike EMI, Insurance">
+    <div class="field-label">Vehicle</div>
+    <select id="rVehicle">${vehicleEntries.map(([vid,v])=>`<option value="${vid}" ${r?.vehicleId===vid?'selected':''}>${escapeHtml(v.name)}</option>`).join('')}</select>
+    <div class="field-label">Category</div>
+    <select id="rCategory">${catEntries.map(([cid,c])=>`<option value="${cid}" ${r?.categoryId===cid?'selected':''}>${c.emoji} ${escapeHtml(c.name)}</option>`).join('')}</select>
+    <div class="field-label">Amount (₹)</div>
+    <input type="number" id="rAmount" inputmode="numeric" value="${r?.amount||''}">
+    <div class="field-label">Frequency</div>
+    <div class="chip-grid" id="rFreqChips">
+      <div class="pick-chip ${(!r||r.frequency==='monthly')?'active':''}" data-freq="monthly">Monthly</div>
+      <div class="pick-chip ${r?.frequency==='yearly'?'active':''}" data-freq="yearly">Yearly</div>
+    </div>
+    <div class="field-label">Next Due Date</div>
+    <input type="date" id="rNextDue" value="${r?.nextDueDate||todayStr()}">
+    <button class="btn-primary" id="saveRecurringBtn">Save</button>
+  `);
+  let freq = r?.frequency || 'monthly';
+  document.getElementById('closeModalX').addEventListener('click', closeModal);
+  document.querySelectorAll('#rFreqChips .pick-chip').forEach(c=>{
+    c.addEventListener('click', ()=>{
+      document.querySelectorAll('#rFreqChips .pick-chip').forEach(x=>x.classList.remove('active'));
+      c.classList.add('active'); freq = c.dataset.freq;
+    });
+  });
+  document.getElementById('saveRecurringBtn').addEventListener('click', ()=>{
+    const label = document.getElementById('rLabel').value.trim();
+    const amount = Number(document.getElementById('rAmount').value);
+    if(!label || !amount){ showToast('Label & amount venum'); return; }
+    const data = {
+      label, vehicleId: document.getElementById('rVehicle').value,
+      categoryId: document.getElementById('rCategory').value,
+      amount, frequency: freq,
+      nextDueDate: document.getElementById('rNextDue').value || todayStr()
+    };
+    const path = id ? ('/recurring/'+id) : ('/recurring/'+uid('rec'));
+    db.ref(ROOT+path).set(data).then(()=>{
+      showToast('Saved!'); closeModal();
+    }).catch(err=> showToast('Failed: ' + err.message));
+  });
+}
+
+// ============ V2: BUDGET LIMIT ALERTS ============
+function computeBudgetStatus(vehicleId){
+  const v = STATE.vehicles[vehicleId];
+  if(!v || !v.budgetMonthly) return null;
+  const list = getFilteredExpenses(vehicleId);
+  const thisMonth = expensesInMonth(list, new Date());
+  const spent = sumExpenses(thisMonth);
+  const percent = (spent / v.budgetMonthly) * 100;
+  if(percent < 80) return null;
+  return { vehicleName: v.name, spent, budget: v.budgetMonthly, percent, overBudget: percent >= 100 };
+}
+function renderBudgetBanner(vid){
+  const banner = document.getElementById('budgetBanner');
+  let statuses = [];
+  if(vid==='all'){
+    Object.keys(STATE.vehicles).forEach(id=>{ const s = computeBudgetStatus(id); if(s) statuses.push(s); });
+  } else {
+    const s = computeBudgetStatus(vid); if(s) statuses.push(s);
+  }
+  if(!statuses.length){ banner.style.display='none'; return; }
+  statuses.sort((a,b)=> (a.overBudget===b.overBudget) ? 0 : (a.overBudget ? -1 : 1));
+  const anyOver = statuses.some(s=>s.overBudget);
+  banner.style.background = anyOver ? 'rgba(255,77,77,0.15)' : 'rgba(255,200,0,0.15)';
+  banner.style.color = anyOver ? '#FF4D4D' : '#FFC800';
+  banner.style.border = '1px solid ' + (anyOver ? 'rgba(255,77,77,0.4)' : 'rgba(255,200,0,0.4)');
+  banner.innerHTML = statuses.map(s=>{
+    return `💰 <b>${escapeHtml(s.vehicleName)}</b>: ${fmtMoney(s.spent)} / ${fmtMoney(s.budget)} budget (${Math.round(s.percent)}%) ${s.overBudget ? '— exceed ஆயிடுச்சு!' : '— கிட்ட வந்துடுச்சு'}`;
+  }).join('<br>');
+  banner.style.display = 'block';
+}
+
 // ============ FUEL EFFICIENCY ============
 function computeFuelEfficiency(list){
   const fuelCat = Object.entries(STATE.categories).find(([cid,c]) => /petrol|fuel|diesel/i.test(c.name||''));
@@ -970,6 +1180,9 @@ function renderHome(){
   document.getElementById('homeVehicleName').textContent = vName;
   document.getElementById('vehicleReportBtn').style.display = (vid==='all') ? 'none' : 'block';
   renderServiceDueBanner(vid);
+  renderDocExpiryBanner(vid);
+  renderRecurringBanner(vid);
+  renderBudgetBanner(vid);
 
   const list = getFilteredExpenses(vid);
   const now = new Date();
@@ -1207,10 +1420,12 @@ document.getElementById('fabAdd').addEventListener('click', ()=> openAddEntryMod
 document.getElementById('openVehiclesBtn').addEventListener('click', openManageVehicles);
 document.getElementById('openCategoriesBtn').addEventListener('click', ()=>openManageList('categories'));
 document.getElementById('openPaymodesBtn').addEventListener('click', ()=>openManageList('paymodes'));
+document.getElementById('openRecurringBtn').addEventListener('click', openManageRecurring);
 document.getElementById('openAccountBtn').addEventListener('click', openAccountModal);
 document.getElementById('openAdminGenCodeBtn').addEventListener('click', openAdminGenCodeModal);
 document.getElementById('homePremiumBanner').addEventListener('click', openUpgradeModal);
 document.getElementById('exportBtn').addEventListener('click', exportData);
+document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
 document.getElementById('vehicleReportBtn').addEventListener('click', ()=>{
   if(STATE.activeVehicle !== 'all') openVehicleReport(STATE.activeVehicle);
 });
@@ -1963,6 +2178,14 @@ function openEditVehicleModal(id){
     <input type="number" id="vServiceKm" inputmode="numeric" value="${v.serviceIntervalKm ?? 3000}">
     <div class="field-label">Service Reminder Interval (Months)</div>
     <input type="number" id="vServiceMonths" inputmode="numeric" value="${v.serviceIntervalMonths ?? 6}">
+    <div class="field-label">Insurance Expiry Date (optional)</div>
+    <input type="date" id="vInsuranceExpiry" value="${v.insuranceExpiry||''}">
+    <div class="field-label">PUC Expiry Date (optional)</div>
+    <input type="date" id="vPucExpiry" value="${v.pucExpiry||''}">
+    <div class="field-label">RC Expiry Date (optional)</div>
+    <input type="date" id="vRcExpiry" value="${v.rcExpiry||''}">
+    <div class="field-label">Monthly Budget (optional, ₹)</div>
+    <input type="number" id="vBudgetMonthly" inputmode="numeric" value="${v.budgetMonthly ?? ''}" placeholder="e.g. 3000">
     <button class="btn-primary" id="saveVehicleBtn">Save Changes</button>
   `);
   let type = v.type || 'bike';
@@ -1979,7 +2202,11 @@ function openEditVehicleModal(id){
     db.ref(ROOT+'/vehicles/'+id).update({
       name, type, regNo: document.getElementById('vReg').value.trim() || '',
       serviceIntervalKm: Number(document.getElementById('vServiceKm').value) || 3000,
-      serviceIntervalMonths: Number(document.getElementById('vServiceMonths').value) || 6
+      serviceIntervalMonths: Number(document.getElementById('vServiceMonths').value) || 6,
+      insuranceExpiry: document.getElementById('vInsuranceExpiry').value || null,
+      pucExpiry: document.getElementById('vPucExpiry').value || null,
+      rcExpiry: document.getElementById('vRcExpiry').value || null,
+      budgetMonthly: Number(document.getElementById('vBudgetMonthly').value) || null
     }).then(()=>{
       showToast('Vehicle updated!');
       closeModal();
@@ -2100,6 +2327,26 @@ function exportData(){
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
   showToast('Backup downloaded!');
+}
+function exportCSV(){
+  const rows = [['Date','Vehicle','Category','Amount','Payment Mode','Notes']];
+  Object.values(STATE.expenses||{})
+    .sort((a,b)=> (a.date||'').localeCompare(b.date||''))
+    .forEach(e=>{
+      const vname = STATE.vehicles[e.vehicleId]?.name || 'Unknown';
+      const cname = STATE.categories[e.categoryId]?.name || 'Unknown';
+      const pname = STATE.paymodes[e.paymodeId]?.name || '-';
+      const notes = (e.notes||'').replace(/"/g,'""');
+      rows.push([e.date||'', vname, cname, e.amount||0, pname, notes]);
+    });
+  const csv = rows.map(r=> r.map(c=> `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'garagebook_expenses_' + todayStr() + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  showToast('CSV downloaded!');
 }
 
 // ---- Vehicle Full Report ----
