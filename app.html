@@ -48,12 +48,12 @@
     min-height:100vh; background:var(--yellow); padding:24px; text-align:center;
   }
   .login-logo{font-size:56px; margin-bottom:8px;}
-  .login-title{font-size:28px; font-weight:900; color:var(--black); letter-spacing:-0.5px;}
+  .login-title{font-size:28px; font-weight:700; color:var(--black); letter-spacing:-0.5px;}
   .login-sub{font-size:13px; color:#333; margin-bottom:20px; font-weight:500;}
   .auth-box{width:100%; max-width:340px; text-align:left;}
   .auth-tabs{display:flex; gap:8px; margin-bottom:18px; background:rgba(0,0,0,0.08); border-radius:12px; padding:4px;}
   .auth-tab{flex:1; text-align:center; padding:10px; border-radius:9px; font-weight:600; font-size:13.5px; color:#333; cursor:pointer;}
-  .auth-tab.active{background:var(--black); color:var(--yellow); font-weight:800;}
+  .auth-tab.active{background:var(--black); color:var(--yellow); font-weight:600;}
   .auth-field-label{font-size:14px; font-weight:700; color:#000; margin:10px 0 5px;}
   .auth-input{
     width:100%; padding:13px 14px; border-radius:10px; border:none; font-size:17px;
@@ -62,7 +62,7 @@
   .auth-input::placeholder{color:#666; font-weight:400;}
   .auth-btn{
     width:100%; padding:14px; border-radius:12px; border:none; background:var(--black); color:var(--yellow);
-    font-weight:900; font-size:15px; margin-top:16px; cursor:pointer;
+    font-weight:700; font-size:15px; margin-top:16px; cursor:pointer;
   }
   .auth-btn:disabled{opacity:0.5;}
   .auth-divider{display:flex; align-items:center; gap:10px; margin:18px 0; color:#555; font-size:12px; font-weight:500;}
@@ -84,11 +84,11 @@
     border-bottom:1px solid var(--midgray);
   }
   .topbar-left{display:flex; align-items:center; gap:10px;}
-  .topbar-logo{font-size:22px; font-weight:900; color:var(--yellow); letter-spacing:-0.5px;}
+  .topbar-logo{font-size:22px; font-weight:700; color:var(--yellow); letter-spacing:-0.5px;}
   .live-dot{width:8px; height:8px; border-radius:50%; background:var(--green); animation:pulse 1.6s infinite;}
   @keyframes pulse{0%{opacity:1;} 50%{opacity:.3;} 100%{opacity:1;}}
   .price-highlight{
-    display:inline-block; color:#000; background:var(--yellow); font-weight:900;
+    display:inline-block; color:#000; background:var(--yellow); font-weight:700;
     padding:2px 8px; border-radius:6px; animation:priceGlow 1.4s ease-in-out infinite;
   }
   @keyframes priceGlow{
@@ -101,7 +101,7 @@
     padding:12px 16px; margin-bottom:14px; border-radius:12px; cursor:pointer;
     background:linear-gradient(90deg, #1A1A1A, #000, #1A1A1A);
     background-size:200% 100%; animation:bannerShimmer 3s linear infinite;
-    border:1.5px solid #FFC800; color:var(--white); font-weight:800; font-size:13.5px;
+    border:1.5px solid #FFC800; color:var(--white); font-weight:600; font-size:13.5px;
   }
   @keyframes bannerShimmer{
     0%{ background-position:0% 50%; }
@@ -131,16 +131,16 @@
     background:linear-gradient(135deg, var(--yellow), #FFD84D); border-radius:20px; padding:22px;
     color:var(--black); margin-bottom:16px; position:relative; overflow:hidden;
   }
-  .total-label{font-size:12px; font-weight:800; opacity:.7; text-transform:uppercase; letter-spacing:.5px;}
-  .total-amount{font-size:38px; font-weight:900; margin-top:4px; letter-spacing:-1px;}
+  .total-label{font-size:12px; font-weight:600; opacity:.7; text-transform:uppercase; letter-spacing:.5px;}
+  .total-amount{font-size:38px; font-weight:700; margin-top:4px; letter-spacing:-1px;}
   .total-meta{font-size:12px; font-weight:500; margin-top:8px; opacity:.75;}
 
   .quick-stats{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;}
   .stat-box{background:var(--darkgray); border-radius:14px; padding:14px; border:1px solid var(--midgray);}
-  .stat-box .num{font-size:20px; font-weight:900; color:var(--yellow);}
+  .stat-box .num{font-size:20px; font-weight:700; color:var(--yellow);}
   .stat-box .lbl{font-size:11px; color:#999; font-weight:600; margin-top:2px;}
 
-  .section-title{font-size:14px; font-weight:800; color:#ccc; margin:18px 0 10px; text-transform:uppercase; letter-spacing:.5px;}
+  .section-title{font-size:14px; font-weight:600; color:#ccc; margin:18px 0 10px; text-transform:uppercase; letter-spacing:.5px;}
 
   .cat-bar-row{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
   .cat-bar-emoji{font-size:18px; width:26px; text-align:center;}
@@ -156,14 +156,14 @@
   .entry-info{flex:1; min-width:0;}
   .entry-cat{font-size:14px; font-weight:500; color:var(--white);}
   .entry-sub{font-size:11.5px; color:#999; margin-top:2px;}
-  .entry-amt{font-size:15px; font-weight:900; color:var(--yellow); flex-shrink:0;}
+  .entry-amt{font-size:15px; font-weight:700; color:var(--yellow); flex-shrink:0;}
   .empty-state{text-align:center; padding:40px 20px; color:#666;}
   .empty-state .ic{font-size:40px; margin-bottom:10px;}
 
   /* FAB */
   .fab{
     position:fixed; bottom:calc(78px + var(--safe-bottom)); right:20px; width:58px; height:58px; border-radius:50%;
-    background:var(--yellow); color:var(--black); font-size:28px; font-weight:900; border:none;
+    background:var(--yellow); color:var(--black); font-size:28px; font-weight:700; border:none;
     display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(255,200,0,.4);
     z-index:60; max-width:520px; cursor:pointer;
   }
@@ -189,7 +189,7 @@
     padding:20px; padding-bottom:calc(24px + var(--safe-bottom)); border-top:2px solid var(--yellow);
   }
   .modal-handle{width:40px; height:4px; background:var(--midgray); border-radius:4px; margin:0 auto 16px;}
-  .modal-title{font-size:19px; font-weight:900; color:var(--white); margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;}
+  .modal-title{font-size:19px; font-weight:700; color:var(--white); margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;}
   .close-x{font-size:22px; color:#888; cursor:pointer; padding:4px 8px;}
 
   .field-label{font-size:12px; font-weight:600; color:#999; margin-bottom:6px; margin-top:14px; text-transform:uppercase; letter-spacing:.5px;}
@@ -210,7 +210,7 @@
 
   .btn-primary{
     width:100%; padding:15px; background:var(--yellow); color:var(--black); border:none; border-radius:14px;
-    font-size:16px; font-weight:900; margin-top:20px; cursor:pointer;
+    font-size:16px; font-weight:700; margin-top:20px; cursor:pointer;
   }
   .btn-primary:active{transform:scale(0.98);}
   .btn-secondary{
@@ -220,19 +220,19 @@
   .btn-danger{color:var(--red); border-color:var(--red);}
 
   .amount-input-wrap{position:relative;}
-  .amount-input-wrap .rupee{position:absolute; left:14px; top:50%; transform:translateY(-50%); font-weight:800; color:var(--yellow); font-size:16px;}
-  .amount-input-wrap input{padding-left:32px; font-size:20px; font-weight:800;}
+  .amount-input-wrap .rupee{position:absolute; left:14px; top:50%; transform:translateY(-50%); font-weight:600; color:var(--yellow); font-size:16px;}
+  .amount-input-wrap input{padding-left:32px; font-size:20px; font-weight:600;}
 
   /* month/compare */
   .month-nav{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;}
-  .month-nav-btn{background:var(--darkgray); border:1px solid var(--midgray); color:var(--yellow); width:38px; height:38px; border-radius:10px; font-size:18px; font-weight:900; cursor:pointer;}
-  .month-nav-label{font-size:16px; font-weight:900; color:var(--white);}
+  .month-nav-btn{background:var(--darkgray); border:1px solid var(--midgray); color:var(--yellow); width:38px; height:38px; border-radius:10px; font-size:18px; font-weight:700; cursor:pointer;}
+  .month-nav-label{font-size:16px; font-weight:700; color:var(--white);}
 
   .compare-row{display:flex; gap:10px; margin-bottom:16px;}
   .compare-box{flex:1; background:var(--darkgray); border-radius:14px; padding:16px; border:1px solid var(--midgray);}
   .compare-box .lbl{font-size:11px; color:#999; font-weight:600; text-transform:uppercase;}
-  .compare-box .amt{font-size:20px; font-weight:900; color:var(--white); margin-top:6px;}
-  .delta{font-size:12px; font-weight:800; margin-top:6px; display:inline-block; padding:3px 8px; border-radius:6px;}
+  .compare-box .amt{font-size:20px; font-weight:700; color:var(--white); margin-top:6px;}
+  .delta{font-size:12px; font-weight:600; margin-top:6px; display:inline-block; padding:3px 8px; border-radius:6px;}
   .delta.up{background:rgba(255,77,77,.15); color:var(--red);}
   .delta.down{background:rgba(46,204,113,.15); color:var(--green);}
 
@@ -280,7 +280,7 @@
 
   .toast{
     position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:var(--yellow); color:var(--black);
-    padding:12px 20px; border-radius:12px; font-weight:800; font-size:13px; z-index:200; box-shadow:0 4px 12px rgba(0,0,0,.3);
+    padding:12px 20px; border-radius:12px; font-weight:600; font-size:13px; z-index:200; box-shadow:0 4px 12px rgba(0,0,0,.3);
     max-width:90%; text-align:center;
   }
 
@@ -367,7 +367,7 @@
           <div class="total-label">This Month · <span id="homeVehicleName">All Vehicles</span></div>
           <div class="total-amount" id="homeTotalMonth">₹0</div>
           <div class="total-meta" id="homeMonthMeta">No expenses yet</div>
-          <button class="btn-secondary" id="vehicleReportBtn" style="display:none; margin-top:12px; width:100%; background:#0A0A0A !important; color:#FFC800 !important; font-weight:900 !important; font-size:16px !important; border:2px solid #0A0A0A !important;">📄 Full Vehicle Report</button>
+          <button class="btn-secondary" id="vehicleReportBtn" style="display:none; margin-top:12px; width:100%; background:#0A0A0A !important; color:#FFC800 !important; font-weight:700 !important; font-size:16px !important; border:2px solid #0A0A0A !important;">📄 Full Vehicle Report</button>
         </div>
 
         <div class="quick-stats">
@@ -1091,8 +1091,8 @@ function renderMonthly(){
     const dTotal = sumExpenses(dEntries);
     const dLabel = new Date(day+'T00:00:00').toLocaleDateString('en-IN',{weekday:'short', day:'2-digit', month:'short'});
     html += `<div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 6px;">
-      <span style="font-size:12px;font-weight:800;color:#999;">${dLabel}</span>
-      <span style="font-size:12px;font-weight:800;color:var(--yellow);">${fmtMoney(dTotal)}</span>
+      <span style="font-size:12px;font-weight:600;color:#999;">${dLabel}</span>
+      <span style="font-size:12px;font-weight:600;color:var(--yellow);">${fmtMoney(dTotal)}</span>
     </div>`;
     html += dEntries.map(e=>entryCardHtml(e)).join('');
   });
@@ -1220,8 +1220,8 @@ document.getElementById('addDailyLogBtn').addEventListener('click', openAddDaily
 function openAccountModal(){
   const identity = (currentUser && (currentUser.email || currentUser.phoneNumber)) || '-';
   const tierLabel = STATE.tier === 'paid'
-    ? '<span style="color:#FFC800; font-weight:800;">⭐ Premium</span>'
-    : '<span style="color:#999; font-weight:800;">Free Tier</span>';
+    ? '<span style="color:#FFC800; font-weight:600;">⭐ Premium</span>'
+    : '<span style="color:#999; font-weight:600;">Free Tier</span>';
   openModal(`
     <div class="modal-title">Account<span class="close-x" id="closeModalX">✕</span></div>
     <div class="field-label">Logged in as</div>
@@ -1273,7 +1273,7 @@ function openDeleteAccountModal(){
   openModal(`
     <div class="modal-title">🗑️ Account Delete<span class="close-x" id="closeModalX">✕</span></div>
     <div style="padding:14px; background:rgba(255,59,48,0.1); border:1px solid #FF3B30; border-radius:10px; margin-bottom:16px;">
-      <div style="color:#FF3B30; font-weight:800; font-size:14px; margin-bottom:6px;">⚠️ இது permanent-ஆ delete ஆகும்</div>
+      <div style="color:#FF3B30; font-weight:600; font-size:14px; margin-bottom:6px;">⚠️ இது permanent-ஆ delete ஆகும்</div>
       <div style="color:#ccc; font-size:13px; line-height:1.5;">
         <b>${identity}</b> account-ஓட எல்லா vehicles, expenses, daily logs, categories, payment modes — எல்லாமே நிரந்தரமா அழிக்கப்படும். இதை மறுபடி மீட்டெடுக்க முடியாது.
       </div>
@@ -1390,7 +1390,7 @@ async function handleGenerateCode(){
     resEl.innerHTML = `
       <div style="padding:16px; background:#1A1A1A; border:1px solid #FFC800; border-radius:12px; text-align:center;">
         <div style="color:#999; font-size:12px; margin-bottom:6px;">புது Code</div>
-        <div style="font-size:24px; font-weight:800; color:#FFC800; letter-spacing:1px; margin-bottom:14px;">${code}</div>
+        <div style="font-size:24px; font-weight:600; color:#FFC800; letter-spacing:1px; margin-bottom:14px;">${code}</div>
         <button id="copyCodeBtn" class="btn-secondary" style="margin:0 0 10px 0;">📋 Code Copy பண்ணு</button>
         <a href="https://wa.me/?text=${shareMsg}" target="_blank" style="text-decoration:none;">
           <div class="btn-primary" style="margin:0;">📲 WhatsApp-ல Share பண்ணு</div>
@@ -1775,7 +1775,7 @@ function openUpgradeModal(){
     <div class="modal-title">⭐ Upgrade to Premium<span class="close-x" id="closeModalX">✕</span></div>
     <div style="text-align:center; padding:10px 0 20px;">
       <div style="font-size:48px; margin-bottom:10px;">🚗🏍️🚙</div>
-      <div style="font-weight:800; font-size:17px; margin-bottom:8px;">Free tier-ல 1 vehicle மட்டும்</div>
+      <div style="font-weight:600; font-size:17px; margin-bottom:8px;">Free tier-ல 1 vehicle மட்டும்</div>
       <div style="color:#999; font-size:14px; margin-bottom:20px;">Unlimited vehicles + Full Reports + Compare + Cloud Backup வேணும்னா Premium-க்கு upgrade பண்ணுங்க — ₹250/year (<span class="price-highlight">₹21/month</span>)</div>
       <div style="text-align:left;">
         <div class="field-label">Premium Code இருக்கா? இங்க போடுங்க</div>
