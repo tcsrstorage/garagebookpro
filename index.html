@@ -1083,12 +1083,30 @@ function openAccountModal(){
     <div class="field-label">Plan</div>
     <div style="padding:12px 14px; background:#1A1A1A; border-radius:10px; margin-bottom:20px;">${tierLabel} — ${Object.keys(STATE.vehicles).length}/${STATE.tier==='paid' ? '∞' : FREE_TIER_VEHICLE_LIMIT} vehicles</div>
     ${currentUser && currentUser.email ? `<button class="btn-secondary" id="resetPwFromAccountBtn" style="margin-bottom:12px;">🔑 Password Reset Link அனுப்பு</button>` : ''}
+    ${STATE.tier === 'paid' ? `<button class="btn-secondary btn-danger" id="deactivatePremiumBtn" style="margin-bottom:12px;">⭐ Premium Deactivate பண்ணு</button>` : ''}
     <button class="btn-secondary btn-danger" id="logoutBtn">🚪 Logout</button>
   `);
   document.getElementById('closeModalX').addEventListener('click', closeModal);
   document.getElementById('logoutBtn').addEventListener('click', ()=>{
     if(confirm('Logout பண்ணலாமா?')) doLogout();
   });
+  const deactivateBtn = document.getElementById('deactivatePremiumBtn');
+  if(deactivateBtn){
+    deactivateBtn.addEventListener('click', async ()=>{
+      if(!confirm('Premium-ஐ Deactivate பண்ணலாமா? Free tier-க்கு போயிடுவீங்க — 1 vehicle-க்கு மேல access இருக்காது (data delete ஆகாது).')) return;
+      deactivateBtn.disabled = true;
+      deactivateBtn.textContent = 'Deactivate ஆகுது...';
+      try{
+        await db.ref('users/'+currentUser.uid+'/profile/tier').set('free');
+        showToast('Premium Deactivate ஆயிடுச்சு. Free tier-ல இருக்கீங்க இப்போ.');
+        closeModal();
+      } catch(e){
+        showToast('Fail ஆச்சு, மறுபடி try பண்ணுங்க');
+        deactivateBtn.disabled = false;
+        deactivateBtn.textContent = '⭐ Premium Deactivate பண்ணு';
+      }
+    });
+  }
   const resetBtn = document.getElementById('resetPwFromAccountBtn');
   if(resetBtn){
     resetBtn.addEventListener('click', async ()=>{
