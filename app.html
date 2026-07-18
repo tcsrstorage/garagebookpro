@@ -1,0 +1,2112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#FFC800">
+<title>Garage Book Pro - Vehicle Expense Tracker</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&family=Noto+Sans+Tamil:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Garage Book Pro">
+<meta name="app-build" content="20260718-2115">
+<style>
+  :root{
+    --yellow:#FFC800;
+    --black:#0A0A0A;
+    --darkgray:#1A1A1A;
+    --midgray:#2A2A2A;
+    --white:#FFFFFF;
+    --green:#2ECC71;
+    --red:#FF4D4D;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; font-family:'Poppins','Noto Sans Tamil',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif !important;}
+  html,body{height:100%; overflow-x:hidden;}
+  body{
+    font-family:'Poppins','Noto Sans Tamil',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:var(--black);
+    color:var(--white);
+    padding-top:var(--safe-top);
+    padding-bottom:var(--safe-bottom);
+    user-select:none;
+  }
+  input, textarea{ user-select:text; -webkit-user-select:text;}
+  #app{max-width:520px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; position:relative;}
+
+  /* ===== LOGIN / AUTH ===== */
+  #loginScreen{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    min-height:100vh; background:var(--yellow); padding:24px; text-align:center;
+  }
+  .login-logo{font-size:56px; margin-bottom:8px;}
+  .login-title{font-size:28px; font-weight:900; color:var(--black); letter-spacing:-0.5px;}
+  .login-sub{font-size:13px; color:#333; margin-bottom:20px; font-weight:500;}
+  .auth-box{width:100%; max-width:340px; text-align:left;}
+  .auth-tabs{display:flex; gap:8px; margin-bottom:18px; background:rgba(0,0,0,0.08); border-radius:12px; padding:4px;}
+  .auth-tab{flex:1; text-align:center; padding:10px; border-radius:9px; font-weight:600; font-size:13.5px; color:#333; cursor:pointer;}
+  .auth-tab.active{background:var(--black); color:var(--yellow); font-weight:800;}
+  .auth-field-label{font-size:14px; font-weight:700; color:#000; margin:10px 0 5px;}
+  .auth-input{
+    width:100%; padding:13px 14px; border-radius:10px; border:none; font-size:17px;
+    background:rgba(0,0,0,0.08); color:var(--black); font-weight:500;
+  }
+  .auth-input::placeholder{color:#666; font-weight:400;}
+  .auth-btn{
+    width:100%; padding:14px; border-radius:12px; border:none; background:var(--black); color:var(--yellow);
+    font-weight:900; font-size:15px; margin-top:16px; cursor:pointer;
+  }
+  .auth-btn:disabled{opacity:0.5;}
+  .auth-divider{display:flex; align-items:center; gap:10px; margin:18px 0; color:#555; font-size:12px; font-weight:500;}
+  .auth-divider::before, .auth-divider::after{content:''; flex:1; height:1px; background:rgba(0,0,0,0.15);}
+  .auth-alt-btn{
+    width:100%; padding:13px; border-radius:12px; border:2px solid var(--black); background:transparent; color:var(--black);
+    font-weight:700; font-size:14px; cursor:pointer;
+  }
+  .auth-error{color:#B00020; font-weight:600; font-size:12.5px; margin-top:12px; min-height:16px;}
+  .auth-link{color:var(--black); font-weight:500; font-size:12.5px; text-decoration:underline; text-align:center; margin-top:14px; cursor:pointer;}
+  .auth-back{position:absolute; top:calc(20px + var(--safe-top)); left:20px; font-weight:600; font-size:13px; color:var(--black); cursor:pointer;}
+  #recaptcha-container{margin-top:10px;}
+
+  /* ===== TOP BAR ===== */
+  .topbar{
+    padding:14px 16px; padding-top:calc(14px + var(--safe-top));
+    background:var(--black); position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom:1px solid var(--midgray);
+  }
+  .topbar-left{display:flex; align-items:center; gap:10px;}
+  .topbar-logo{font-size:22px; font-weight:900; color:var(--yellow); letter-spacing:-0.5px;}
+  .live-dot{width:8px; height:8px; border-radius:50%; background:var(--green); animation:pulse 1.6s infinite;}
+  @keyframes pulse{0%{opacity:1;} 50%{opacity:.3;} 100%{opacity:1;}}
+  .price-highlight{
+    display:inline-block; color:#000; background:var(--yellow); font-weight:900;
+    padding:2px 8px; border-radius:6px; animation:priceGlow 1.4s ease-in-out infinite;
+  }
+  @keyframes priceGlow{
+    0%{ box-shadow:0 0 0 0 rgba(255,200,0,0.7); }
+    70%{ box-shadow:0 0 0 8px rgba(255,200,0,0); }
+    100%{ box-shadow:0 0 0 0 rgba(255,200,0,0); }
+  }
+  .home-premium-banner{
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    padding:12px 16px; margin-bottom:14px; border-radius:12px; cursor:pointer;
+    background:linear-gradient(90deg, #1A1A1A, #000, #1A1A1A);
+    background-size:200% 100%; animation:bannerShimmer 3s linear infinite;
+    border:1.5px solid #FFC800; color:var(--white); font-weight:800; font-size:13.5px;
+  }
+  @keyframes bannerShimmer{
+    0%{ background-position:0% 50%; }
+    100%{ background-position:200% 50%; }
+  }
+
+  /* ===== VEHICLE CHIPS ===== */
+  .vehicle-scroll{
+    display:flex; gap:8px; overflow-x:auto; padding:12px 16px; background:var(--black);
+    border-bottom:1px solid var(--midgray); scrollbar-width:none;
+  }
+  .vehicle-scroll::-webkit-scrollbar{display:none;}
+  .vchip{
+    flex-shrink:0; padding:9px 16px; border-radius:20px; background:var(--darkgray); color:var(--white);
+    font-size:13px; font-weight:700; white-space:nowrap; border:1.5px solid var(--midgray); cursor:pointer;
+    display:flex; align-items:center; gap:6px;
+  }
+  .vchip.active{background:var(--yellow); color:var(--black); border-color:var(--yellow);}
+  .vchip.add-chip{background:transparent; border:1.5px dashed #555; color:#999;}
+
+  /* ===== MAIN CONTENT ===== */
+  .content{flex:1; padding:16px; padding-bottom:100px; overflow-y:auto;}
+  .hidden{display:none !important;}
+
+  /* dashboard */
+  .total-card{
+    background:linear-gradient(135deg, var(--yellow), #FFD84D); border-radius:20px; padding:22px;
+    color:var(--black); margin-bottom:16px; position:relative; overflow:hidden;
+  }
+  .total-label{font-size:12px; font-weight:800; opacity:.7; text-transform:uppercase; letter-spacing:.5px;}
+  .total-amount{font-size:38px; font-weight:900; margin-top:4px; letter-spacing:-1px;}
+  .total-meta{font-size:12px; font-weight:500; margin-top:8px; opacity:.75;}
+
+  .quick-stats{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;}
+  .stat-box{background:var(--darkgray); border-radius:14px; padding:14px; border:1px solid var(--midgray);}
+  .stat-box .num{font-size:20px; font-weight:900; color:var(--yellow);}
+  .stat-box .lbl{font-size:11px; color:#999; font-weight:600; margin-top:2px;}
+
+  .section-title{font-size:14px; font-weight:800; color:#ccc; margin:18px 0 10px; text-transform:uppercase; letter-spacing:.5px;}
+
+  .cat-bar-row{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
+  .cat-bar-emoji{font-size:18px; width:26px; text-align:center;}
+  .cat-bar-track{flex:1; height:10px; background:var(--darkgray); border-radius:6px; overflow:hidden;}
+  .cat-bar-fill{height:100%; background:var(--yellow); border-radius:6px;}
+  .cat-bar-amt{font-size:12px; font-weight:700; color:#ddd; width:64px; text-align:right;}
+
+  .entry-card{
+    background:var(--darkgray); border-radius:14px; padding:13px 14px; margin-bottom:8px;
+    display:flex; align-items:center; gap:12px; border:1px solid var(--midgray);
+  }
+  .entry-emoji{font-size:22px; width:38px; height:38px; background:var(--black); border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .entry-info{flex:1; min-width:0;}
+  .entry-cat{font-size:14px; font-weight:500; color:var(--white);}
+  .entry-sub{font-size:11.5px; color:#999; margin-top:2px;}
+  .entry-amt{font-size:15px; font-weight:900; color:var(--yellow); flex-shrink:0;}
+  .empty-state{text-align:center; padding:40px 20px; color:#666;}
+  .empty-state .ic{font-size:40px; margin-bottom:10px;}
+
+  /* FAB */
+  .fab{
+    position:fixed; bottom:calc(78px + var(--safe-bottom)); right:20px; width:58px; height:58px; border-radius:50%;
+    background:var(--yellow); color:var(--black); font-size:28px; font-weight:900; border:none;
+    display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(255,200,0,.4);
+    z-index:60; max-width:520px; cursor:pointer;
+  }
+  .fab:active{transform:scale(0.92);}
+
+  /* bottom nav */
+  .bottomnav{
+    position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 auto;
+    background:var(--black); border-top:1px solid var(--midgray); display:flex;
+    padding-bottom:var(--safe-bottom); z-index:55;
+  }
+  .navbtn{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:10px 0 8px; color:#666; font-size:10px; font-weight:600; cursor:pointer; background:none; border:none;}
+  .navbtn .ic{font-size:20px;}
+  .navbtn.active{color:var(--yellow);}
+
+  /* forms/modals */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:100; display:flex; align-items:flex-end;
+    max-width:520px; margin:0 auto;
+  }
+  .modal-sheet{
+    background:var(--black); width:100%; max-height:92vh; overflow-y:auto; border-radius:20px 20px 0 0;
+    padding:20px; padding-bottom:calc(24px + var(--safe-bottom)); border-top:2px solid var(--yellow);
+  }
+  .modal-handle{width:40px; height:4px; background:var(--midgray); border-radius:4px; margin:0 auto 16px;}
+  .modal-title{font-size:19px; font-weight:900; color:var(--white); margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;}
+  .close-x{font-size:22px; color:#888; cursor:pointer; padding:4px 8px;}
+
+  .field-label{font-size:12px; font-weight:600; color:#999; margin-bottom:6px; margin-top:14px; text-transform:uppercase; letter-spacing:.5px;}
+  .field-label:first-child{margin-top:0;}
+  input[type=text], input[type=number], input[type=date], textarea, select{
+    width:100%; background:var(--darkgray); border:1.5px solid var(--midgray); border-radius:12px;
+    padding:13px 14px; color:var(--white); font-size:15px; font-weight:600;
+  }
+  input:focus, textarea:focus, select:focus{outline:none; border-color:var(--yellow);}
+  textarea{resize:none; min-height:60px;}
+
+  .chip-grid{display:flex; flex-wrap:wrap; gap:8px;}
+  .pick-chip{
+    padding:10px 14px; border-radius:12px; background:var(--darkgray); border:1.5px solid var(--midgray);
+    font-size:13px; font-weight:700; color:var(--white); display:flex; align-items:center; gap:6px; cursor:pointer;
+  }
+  .pick-chip.active{background:var(--yellow); color:var(--black); border-color:var(--yellow);}
+
+  .btn-primary{
+    width:100%; padding:15px; background:var(--yellow); color:var(--black); border:none; border-radius:14px;
+    font-size:16px; font-weight:900; margin-top:20px; cursor:pointer;
+  }
+  .btn-primary:active{transform:scale(0.98);}
+  .btn-secondary{
+    width:100%; padding:13px; background:transparent; color:#999; border:1.5px solid var(--midgray); border-radius:14px;
+    font-size:14px; font-weight:700; margin-top:10px; cursor:pointer;
+  }
+  .btn-danger{color:var(--red); border-color:var(--red);}
+
+  .amount-input-wrap{position:relative;}
+  .amount-input-wrap .rupee{position:absolute; left:14px; top:50%; transform:translateY(-50%); font-weight:800; color:var(--yellow); font-size:16px;}
+  .amount-input-wrap input{padding-left:32px; font-size:20px; font-weight:800;}
+
+  /* month/compare */
+  .month-nav{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;}
+  .month-nav-btn{background:var(--darkgray); border:1px solid var(--midgray); color:var(--yellow); width:38px; height:38px; border-radius:10px; font-size:18px; font-weight:900; cursor:pointer;}
+  .month-nav-label{font-size:16px; font-weight:900; color:var(--white);}
+
+  .compare-row{display:flex; gap:10px; margin-bottom:16px;}
+  .compare-box{flex:1; background:var(--darkgray); border-radius:14px; padding:16px; border:1px solid var(--midgray);}
+  .compare-box .lbl{font-size:11px; color:#999; font-weight:600; text-transform:uppercase;}
+  .compare-box .amt{font-size:20px; font-weight:900; color:var(--white); margin-top:6px;}
+  .delta{font-size:12px; font-weight:800; margin-top:6px; display:inline-block; padding:3px 8px; border-radius:6px;}
+  .delta.up{background:rgba(255,77,77,.15); color:var(--red);}
+  .delta.down{background:rgba(46,204,113,.15); color:var(--green);}
+
+  .yearbar-row{display:flex; align-items:flex-end; gap:6px; height:140px; margin-bottom:8px; padding:0 4px;}
+  .yearbar-col{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;}
+  .yearbar{width:100%; background:var(--yellow); border-radius:4px 4px 0 0; min-height:2px;}
+  .yearbar.prev{background:#555;}
+  .yearbar-lbl{font-size:9px; color:#888; margin-top:4px; font-weight:500;}
+
+  .legend-row{display:flex; gap:16px; justify-content:center; margin-bottom:14px;}
+  .legend-item{display:flex; align-items:center; gap:6px; font-size:11px; color:#aaa; font-weight:500;}
+  .legend-dot{width:9px; height:9px; border-radius:3px;}
+
+  /* settings */
+  .settings-row{
+    display:flex; align-items:center; justify-content:space-between; background:var(--darkgray);
+    border-radius:14px; padding:14px 16px; margin-bottom:8px; border:1px solid var(--midgray); cursor:pointer;
+  }
+  .settings-row-left{display:flex; align-items:center; gap:12px;}
+  .settings-row .ic{font-size:20px;}
+  .settings-row .txt{font-size:14px; font-weight:500; color:var(--white);}
+  .settings-row .arrow{color:#666; font-size:16px;}
+
+  .manage-item{
+    display:flex; align-items:center; gap:10px; background:var(--darkgray); border-radius:12px; padding:12px 14px;
+    margin-bottom:8px; border:1px solid var(--midgray);
+  }
+  .manage-item.inactive{opacity:.45;}
+  .manage-item .emj{font-size:20px; width:28px; text-align:center; flex-shrink:0;}
+  .manage-item .nm{flex:1; font-size:14px; font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .manage-item .edit-btn{color:var(--yellow); font-size:17px; padding:4px 6px; cursor:pointer; flex-shrink:0;}
+  .manage-item .del-btn{color:var(--red); font-size:17px; padding:4px 6px; cursor:pointer; flex-shrink:0;}
+  .toggle-switch{
+    position:relative; width:42px; height:24px; flex-shrink:0; cursor:pointer;
+  }
+  .toggle-switch input{opacity:0; width:0; height:0; position:absolute;}
+  .toggle-slider{
+    position:absolute; inset:0; background:#444; border-radius:24px; transition:.2s;
+  }
+  .toggle-slider:before{
+    content:""; position:absolute; width:18px; height:18px; left:3px; top:3px; background:#ccc; border-radius:50%; transition:.2s;
+  }
+  .toggle-switch input:checked + .toggle-slider{background:var(--yellow);}
+  .toggle-switch input:checked + .toggle-slider:before{transform:translateX(18px); background:var(--black);}
+
+  .toast{
+    position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:var(--yellow); color:var(--black);
+    padding:12px 20px; border-radius:12px; font-weight:800; font-size:13px; z-index:200; box-shadow:0 4px 12px rgba(0,0,0,.3);
+    max-width:90%; text-align:center;
+  }
+
+  .odo-row{display:flex; gap:10px;}
+  .odo-row > div{flex:1;}
+
+  ::-webkit-scrollbar{width:0px;}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- LOGIN / AUTH SCREEN -->
+  <div id="loginScreen">
+    <div class="login-logo">🏍️</div>
+    <div class="login-title">Garage Book Pro</div>
+    <div class="login-sub">வண்டி செலவு கணக்கு, unlimited vehicles</div>
+
+    <div class="auth-box">
+      <div class="auth-tabs">
+        <div class="auth-tab active" id="tabLogin">Login</div>
+        <div class="auth-tab" id="tabSignup">Sign Up</div>
+      </div>
+
+      <!-- Email/Password form -->
+      <div id="emailAuthForm">
+        <div class="auth-field-label">Email</div>
+        <input type="email" class="auth-input" id="authEmail" placeholder="you@email.com" autocomplete="email">
+        <div class="auth-field-label">Password</div>
+        <input type="password" class="auth-input" id="authPassword" placeholder="At least 6 characters" autocomplete="current-password">
+        <button class="auth-btn" id="authSubmitBtn">Login</button>
+        <div class="auth-link" id="forgotPwLink">Password மறந்துவிட்டீர்களா?</div>
+      </div>
+
+      <div class="auth-divider" style="display:none;">OR</div>
+      <button class="auth-alt-btn" id="showPhoneAuthBtn" style="display:none;">📱 Phone Number-ஆல் தொடரவும்</button>
+
+      <!-- Phone OTP form (hidden by default) -->
+      <div id="phoneAuthForm" style="display:none;">
+        <div class="auth-back" id="backToEmailBtn">← Back</div>
+        <div class="auth-field-label" style="margin-top:44px;">Phone Number</div>
+        <input type="tel" class="auth-input" id="authPhone" placeholder="+91 9876543210" autocomplete="tel">
+        <button class="auth-btn" id="sendOtpBtn">OTP அனுப்பு</button>
+
+        <div id="otpStep" style="display:none;">
+          <div class="auth-field-label">OTP Code</div>
+          <input type="tel" class="auth-input" id="authOtp" placeholder="6-digit code" maxlength="6" inputmode="numeric">
+          <button class="auth-btn" id="verifyOtpBtn">Verify & Continue</button>
+        </div>
+        <div id="recaptcha-container"></div>
+      </div>
+
+      <div class="auth-error" id="authError"></div>
+    </div>
+    <div style="margin-top:22px; font-size:11.5px; color:#555;">
+      <a href="./terms.html" style="color:#555; text-decoration:underline;">Terms</a>
+      &nbsp;·&nbsp;
+      <a href="./privacy.html" style="color:#555; text-decoration:underline;">Privacy Policy</a>
+    </div>
+  </div>
+
+  <!-- MAIN APP (hidden until login) -->
+  <div id="mainApp" class="hidden">
+
+    <div class="topbar">
+      <div class="topbar-left">
+        <span class="topbar-logo">🏍️ Garage Book Pro</span>
+      </div>
+      <div class="live-dot" id="liveDot" title="Firebase status"></div>
+    </div>
+
+    <div class="vehicle-scroll" id="vehicleScroll"></div>
+
+    <div class="content" id="content">
+
+      <!-- HOME TAB -->
+      <div id="tab-home">
+        <div id="homePremiumBanner" class="home-premium-banner hidden">
+          <span>⭐ Premium-க்கு switch பண்ணுங்க — <span class="price-highlight">₹21/month</span> மட்டும்</span>
+        </div>
+        <div class="total-card">
+          <div class="total-label">This Month · <span id="homeVehicleName">All Vehicles</span></div>
+          <div class="total-amount" id="homeTotalMonth">₹0</div>
+          <div class="total-meta" id="homeMonthMeta">No expenses yet</div>
+          <button class="btn-secondary" id="vehicleReportBtn" style="display:none; margin-top:12px; width:100%; background:#0A0A0A !important; color:#FFC800 !important; font-weight:900 !important; font-size:16px !important; border:2px solid #0A0A0A !important;">📄 Full Vehicle Report</button>
+        </div>
+
+        <div class="quick-stats">
+          <div class="stat-box">
+            <div class="num" id="homeEntryCount">0</div>
+            <div class="lbl">Entries this month</div>
+          </div>
+          <div class="stat-box">
+            <div class="num" id="homeTopCat">-</div>
+            <div class="lbl">Top category</div>
+          </div>
+        </div>
+        <div class="quick-stats" id="homeKmStatsRow" style="display:none;">
+          <div class="stat-box">
+            <div class="num" id="homeMonthKm">0</div>
+            <div class="lbl">Total KM this month</div>
+          </div>
+          <div class="stat-box">
+            <div class="num" id="homeAvgKmDay">0</div>
+            <div class="lbl">Avg KM/day</div>
+          </div>
+        </div>
+        <div class="quick-stats" id="homePetrolStatsRow" style="display:none;">
+          <div class="stat-box">
+            <div class="num" id="homeMonthPetrol">₹0</div>
+            <div class="lbl">Petrol spend this month</div>
+          </div>
+        </div>
+
+        <div class="section-title" style="display:flex; align-items:center; justify-content:space-between;">
+          <span>Daily KM Log</span>
+          <button class="btn-secondary" id="addDailyLogBtn" style="width:auto; padding:6px 14px; font-size:13px;">+ Add Today</button>
+        </div>
+        <div id="homeDailyLogList"></div>
+
+        <div class="section-title">Category Breakdown</div>
+        <div id="homeCatBreakdown"></div>
+
+        <div class="section-title">Recent Entries</div>
+        <div id="homeRecentEntries"></div>
+      </div>
+
+      <!-- MONTHLY TAB -->
+      <div id="tab-monthly" class="hidden">
+        <div class="month-nav">
+          <button class="month-nav-btn" id="monthPrevBtn">‹</button>
+          <div class="month-nav-label" id="monthLabel">July 2026</div>
+          <button class="month-nav-btn" id="monthNextBtn">›</button>
+        </div>
+        <div class="quick-stats">
+          <div class="stat-box">
+            <div class="num" id="monthTotal">₹0</div>
+            <div class="lbl">Total spent</div>
+          </div>
+          <div class="stat-box">
+            <div class="num" id="monthAvgDay">₹0</div>
+            <div class="lbl">Avg / active day</div>
+          </div>
+        </div>
+        <div class="section-title">Day by Day</div>
+        <div id="monthlyList"></div>
+      </div>
+
+      <!-- COMPARE TAB -->
+      <div id="tab-compare" class="hidden">
+        <div class="section-title" style="margin-top:0;">This Month vs Last Month</div>
+        <div class="compare-row" id="compareMonthRow"></div>
+
+        <div class="section-title">This Year vs Last Year (Month-wise)</div>
+        <div class="legend-row">
+          <div class="legend-item"><span class="legend-dot" style="background:#555;"></span>Last Year</div>
+          <div class="legend-item"><span class="legend-dot" style="background:var(--yellow);"></span>This Year</div>
+        </div>
+        <div class="yearbar-row" id="yearBarChart"></div>
+        <div class="compare-row" id="compareYearRow"></div>
+
+        <div class="section-title">Category Trend (This Month)</div>
+        <div id="compareCatTrend"></div>
+      </div>
+
+      <!-- SETTINGS TAB -->
+      <div id="tab-settings" class="hidden">
+        <div class="section-title" style="margin-top:0;">Manage</div>
+        <div class="settings-row" id="openVehiclesBtn">
+          <div class="settings-row-left"><span class="ic">🚗</span><span class="txt">Vehicles</span></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="settings-row" id="openCategoriesBtn">
+          <div class="settings-row-left"><span class="ic">🏷️</span><span class="txt">Categories</span></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="settings-row" id="openPaymodesBtn">
+          <div class="settings-row-left"><span class="ic">💳</span><span class="txt">Payment Modes</span></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="settings-row" id="openAccountBtn">
+          <div class="settings-row-left"><span class="ic">👤</span><span class="txt">Account & Logout</span></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="section-title" id="adminSectionTitle" style="display:none;">Admin</div>
+        <div class="settings-row" id="openAdminGenCodeBtn" style="display:none;">
+          <div class="settings-row-left"><span class="ic">🔑</span><span class="txt">Generate Redeem Code</span></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="section-title">Data</div>
+        <div class="settings-row" id="exportBtn">
+          <div class="settings-row-left"><span class="ic">📤</span><span class="txt">Export All Data (JSON)</span></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="section-title">About</div>
+        <div style="color:#666; font-size:12px; text-align:center; padding:20px 0;">Garage Book Pro v1.0<br>garagebookpro.in</div>
+      </div>
+
+    </div>
+
+    <button class="fab" id="fabAdd">+</button>
+
+    <div class="bottomnav">
+      <button class="navbtn active" data-tab="home"><span class="ic">🏠</span>Home</button>
+      <button class="navbtn" data-tab="monthly"><span class="ic">📅</span>Monthly</button>
+      <button class="navbtn" data-tab="compare"><span class="ic">📊</span>Compare</button>
+      <button class="navbtn" data-tab="settings"><span class="ic">⚙️</span>Settings</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalRoot"></div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script>
+// ============ FIREBASE CONFIG (GarageBookPro - separate project) ============
+const firebaseConfig = {
+  apiKey: "AIzaSyBDwIc6PLljPA4p6nwBAvoAYBVR6o1ryoA",
+  authDomain: "garagebookpro.firebaseapp.com",
+  databaseURL: "https://garagebookpro-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "garagebookpro",
+  storageBucket: "garagebookpro.firebasestorage.app",
+  messagingSenderId: "471426371631",
+  appId: "1:471426371631:web:e0455a27554655d90636da"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+let currentUser = null;
+const ADMIN_UID = '5BEDkBEWsFUoveA6e2OZUENLmYe2'; // Ramesh's UID — only this account sees the admin code generator
+let ROOT = null; // set to "users/{uid}" after login
+
+// ============ STATE ============
+let STATE = {
+  vehicles: {},
+  categories: {},
+  paymodes: {},
+  expenses: {},
+  dailyLogs: {},
+  activeVehicle: "all",
+  activeTab: "home",
+  monthCursor: new Date(),
+  loaded: false,
+  tier: "free" // "free" or "paid"
+};
+const FREE_TIER_VEHICLE_LIMIT = 1;
+
+const DEFAULT_CATEGORIES = {
+  cat_petrol:{emoji:"⛽",name:"Petrol"},
+  cat_service:{emoji:"🔧",name:"Service"},
+  cat_repair:{emoji:"🛠️",name:"Repair"},
+  cat_spares:{emoji:"⚙️",name:"Spares"},
+  cat_insurance:{emoji:"📄",name:"Insurance"},
+  cat_puncture:{emoji:"🔩",name:"Puncture"},
+  cat_wash:{emoji:"🧼",name:"Wash"},
+  cat_parking:{emoji:"🅿️",name:"Parking"},
+  cat_fine:{emoji:"⚠️",name:"Fine"},
+  cat_others:{emoji:"📦",name:"Others"}
+};
+const DEFAULT_PAYMODES = {
+  pm_cash:{emoji:"💵",name:"Cash"},
+  pm_credit:{emoji:"💳",name:"Credit Card"},
+  pm_debit:{emoji:"💳",name:"Debit Card"},
+  pm_upi:{emoji:"📱",name:"UPI"}
+};
+
+// ============ UTILS ============
+function uid(prefix){ return prefix + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function fmtMoney(n){ n = Number(n)||0; return "₹" + n.toLocaleString('en-IN', {maximumFractionDigits:0}); }
+function todayStr(){ const d = new Date(); return d.toISOString().slice(0,10); }
+function monthKey(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,'0'); }
+function monthLabel(d){ return d.toLocaleString('en-IN', {month:'long', year:'numeric'}); }
+function showToast(msg){
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2200);
+}
+function setLive(ok){
+  const dot = document.getElementById('liveDot');
+  dot.style.background = ok ? 'var(--green)' : 'var(--red)';
+}
+
+// ============ AUTH (Email/Password + Phone OTP) ============
+let authMode = "login"; // "login" | "signup"
+let confirmationResult = null;
+let recaptchaVerifier = null;
+
+function setAuthError(msg){
+  document.getElementById('authError').textContent = msg || '';
+}
+
+document.getElementById('tabLogin').addEventListener('click', ()=>{
+  authMode = 'login';
+  document.getElementById('tabLogin').classList.add('active');
+  document.getElementById('tabSignup').classList.remove('active');
+  document.getElementById('authSubmitBtn').textContent = 'Login';
+  document.getElementById('forgotPwLink').style.display = 'block';
+  setAuthError('');
+});
+document.getElementById('tabSignup').addEventListener('click', ()=>{
+  authMode = 'signup';
+  document.getElementById('tabSignup').classList.add('active');
+  document.getElementById('tabLogin').classList.remove('active');
+  document.getElementById('authSubmitBtn').textContent = 'Create Account';
+  document.getElementById('forgotPwLink').style.display = 'none';
+  setAuthError('');
+});
+
+document.getElementById('authSubmitBtn').addEventListener('click', async ()=>{
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  setAuthError('');
+  if(!email || !email.includes('@')){ setAuthError('சரியான Email போடுங்க'); return; }
+  if(!password || password.length < 6){ setAuthError('Password குறைந்தது 6 characters இருக்கணும்'); return; }
+  const btn = document.getElementById('authSubmitBtn');
+  btn.disabled = true;
+  try{
+    if(authMode === 'login'){
+      await auth.signInWithEmailAndPassword(email, password);
+    } else {
+      await auth.createUserWithEmailAndPassword(email, password);
+    }
+    // onAuthStateChanged handles the rest
+  } catch(e){
+    setAuthError(friendlyAuthError(e));
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('forgotPwLink').addEventListener('click', async ()=>{
+  const email = document.getElementById('authEmail').value.trim();
+  if(!email || !email.includes('@')){ setAuthError('முதல்ல Email போடுங்க, அப்புறம் Reset link அனுப்புவோம்'); return; }
+  try{
+    await auth.sendPasswordResetEmail(email);
+    setAuthError('');
+    showToast('Password reset link உங்க email-க்கு அனுப்பியாச்சு ✓');
+  } catch(e){
+    setAuthError(friendlyAuthError(e));
+  }
+});
+
+document.getElementById('showPhoneAuthBtn').addEventListener('click', ()=>{
+  document.getElementById('emailAuthForm').style.display = 'none';
+  document.querySelector('.auth-divider').style.display = 'none';
+  document.getElementById('showPhoneAuthBtn').style.display = 'none';
+  document.getElementById('phoneAuthForm').style.display = 'block';
+  setAuthError('');
+  setupRecaptcha();
+});
+document.getElementById('backToEmailBtn').addEventListener('click', ()=>{
+  document.getElementById('emailAuthForm').style.display = 'block';
+  document.querySelector('.auth-divider').style.display = 'flex';
+  document.getElementById('showPhoneAuthBtn').style.display = 'block';
+  document.getElementById('phoneAuthForm').style.display = 'none';
+  document.getElementById('otpStep').style.display = 'none';
+  setAuthError('');
+});
+
+function setupRecaptcha(){
+  if(recaptchaVerifier) return;
+  recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'invisible' });
+}
+
+document.getElementById('sendOtpBtn').addEventListener('click', async ()=>{
+  const phone = document.getElementById('authPhone').value.trim();
+  if(!phone || phone.length < 10){ setAuthError('சரியான Phone Number போடுங்க (+91 சேர்த்து)'); return; }
+  const formatted = phone.startsWith('+') ? phone : ('+91' + phone.replace(/\D/g,''));
+  const btn = document.getElementById('sendOtpBtn');
+  btn.disabled = true;
+  try{
+    confirmationResult = await auth.signInWithPhoneNumber(formatted, recaptchaVerifier);
+    document.getElementById('otpStep').style.display = 'block';
+    showToast('OTP அனுப்பியாச்சு ✓');
+    setAuthError('');
+  } catch(e){
+    setAuthError(friendlyAuthError(e));
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('verifyOtpBtn').addEventListener('click', async ()=>{
+  const otp = document.getElementById('authOtp').value.trim();
+  if(!otp || otp.length < 6){ setAuthError('6-digit OTP போடுங்க'); return; }
+  const btn = document.getElementById('verifyOtpBtn');
+  btn.disabled = true;
+  try{
+    await confirmationResult.confirm(otp);
+    // onAuthStateChanged handles the rest
+  } catch(e){
+    setAuthError(friendlyAuthError(e));
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function friendlyAuthError(e){
+  const code = e && e.code || '';
+  const map = {
+    'auth/email-already-in-use': 'இந்த Email already account இருக்கு. Login பண்ணுங்க.',
+    'auth/invalid-email': 'சரியான Email போடுங்க',
+    'auth/user-not-found': 'Account கிடைக்கல். Sign Up பண்ணுங்க.',
+    'auth/wrong-password': 'தவறான Password',
+    'auth/weak-password': 'Password குறைந்தது 6 characters இருக்கணும்',
+    'auth/invalid-phone-number': 'சரியான Phone Number போடுங்க',
+    'auth/invalid-verification-code': 'தவறான OTP',
+    'auth/too-many-requests': 'Try அதிகமா ஆயிடுச்சு, கொஞ்ச நேரம் கழிச்சு try பண்ணுங்க'
+  };
+  return map[code] || (e && e.message) || 'ஏதோ தவறு நடந்துச்சு, மறுபடி try பண்ணுங்க';
+}
+
+function doLogout(){
+  if(sessionRef) sessionRef.off();
+  auth.signOut();
+  STATE.loaded = false;
+  location.reload();
+}
+
+// ============ SINGLE ACTIVE SESSION ============
+// Only one device can be logged into an account at a time. On login we write a fresh
+// random session id; if it ever changes (another device logged in), we force-logout here.
+let mySessionId = null;
+let sessionRef = null;
+function startSessionGuard(uid){
+  mySessionId = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  sessionRef = db.ref('users/' + uid + '/activeSession');
+  sessionRef.set({ sessionId: mySessionId, loggedInAt: firebase.database.ServerValue.TIMESTAMP });
+  sessionRef.on('value', snap => {
+    const val = snap.val();
+    if(val && val.sessionId && val.sessionId !== mySessionId){
+      sessionRef.off();
+      auth.signOut().then(()=>{
+        document.getElementById('mainApp').classList.add('hidden');
+        document.getElementById('loginScreen').classList.remove('hidden');
+        setAuthError('⚠️ இந்த account வேற device-ல login ஆச்சு, இங்க logout ஆயிடுச்சு. ஒரே நேரத்துல ஒரு device-ல மட்டும் use பண்ண முடியும்.');
+      });
+    }
+  });
+}
+
+// Watch auth state — this is the single entry point into the app
+auth.onAuthStateChanged(function(user){
+  if(user){
+    currentUser = user;
+    ROOT = 'users/' + user.uid;
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('mainApp').classList.remove('hidden');
+    ensureUserProfile();
+    startSessionGuard(user.uid);
+    initFirebase();
+    if(user.uid === ADMIN_UID){
+      document.getElementById('adminSectionTitle').style.display = '';
+      document.getElementById('openAdminGenCodeBtn').style.display = '';
+    }
+  } else {
+    currentUser = null;
+    ROOT = null;
+    if(sessionRef){ sessionRef.off(); sessionRef = null; }
+    document.getElementById('loginScreen').classList.remove('hidden');
+    document.getElementById('mainApp').classList.add('hidden');
+  }
+});
+
+function ensureUserProfile(){
+  db.ref(ROOT + '/profile').once('value').then(snap=>{
+    if(!snap.exists()){
+      db.ref(ROOT + '/profile').set({
+        email: currentUser.email || null,
+        phone: currentUser.phoneNumber || null,
+        tier: 'free',
+        createdAt: Date.now()
+      });
+    }
+  });
+}
+
+// ============ FIREBASE LOAD ============
+function initFirebase(){
+  db.ref(ROOT).on('value', snap=>{
+    setLive(true);
+    const val = snap.val() || {};
+    STATE.tier = (val.profile && val.profile.tier) || "free";
+    const bannerEl = document.getElementById('homePremiumBanner');
+    if(bannerEl) bannerEl.classList.toggle('hidden', STATE.tier === 'paid');
+    STATE.vehicles = val.vehicles || {};
+    STATE.categories = val.categories || DEFAULT_CATEGORIES;
+    STATE.paymodes = val.paymodes || DEFAULT_PAYMODES;
+    STATE.expenses = val.expenses || {};
+    STATE.dailyLogs = val.dailyLogs || {};
+
+    if(!val.categories){ db.ref(ROOT+'/categories').set(DEFAULT_CATEGORIES); }
+    if(!val.paymodes){ db.ref(ROOT+'/paymodes').set(DEFAULT_PAYMODES); }
+
+    if(Object.keys(STATE.vehicles).length===0 && !STATE.loaded){
+      const vid = uid('veh');
+      const seed = {}; seed[vid] = {name:"My Bike", type:"bike", regNo:"", createdAt: Date.now()};
+      db.ref(ROOT+'/vehicles').update(seed);
+    }
+
+    STATE.loaded = true;
+    if(!document.getElementById('mainApp').classList.contains('hidden')){
+      renderAll();
+    }
+  }, err=>{
+    setLive(false);
+    console.error(err);
+  });
+}
+
+// ============ RENDER: VEHICLE CHIPS ============
+function renderVehicleChips(){
+  const wrap = document.getElementById('vehicleScroll');
+  const vids = Object.keys(STATE.vehicles).filter(vid => STATE.vehicles[vid].active !== false);
+  let html = `<div class="vchip ${STATE.activeVehicle==='all'?'active':''}" data-v="all">🌐 All</div>`;
+  vids.forEach(vid=>{
+    const v = STATE.vehicles[vid];
+    const icon = v.type==='car' ? '🚗' : v.type==='bike' ? '🏍️' : '🚙';
+    html += `<div class="vchip ${STATE.activeVehicle===vid?'active':''}" data-v="${vid}">${icon} ${escapeHtml(v.name)}</div>`;
+  });
+  html += `<div class="vchip add-chip" id="addVehicleChip">+ Add</div>`;
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('.vchip[data-v]').forEach(c=>{
+    c.addEventListener('click', ()=>{ STATE.activeVehicle = c.dataset.v; renderAll(); });
+  });
+  document.getElementById('addVehicleChip').addEventListener('click', openAddVehicleModal);
+}
+
+function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+
+// ============ EXPENSE HELPERS ============
+function getFilteredExpenses(vehicleId){
+  return Object.entries(STATE.expenses)
+    .map(([id,e])=>({id,...e}))
+    .filter(e => vehicleId==='all' ? true : e.vehicleId===vehicleId)
+    .sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.createdAt||0)-(a.createdAt||0));
+}
+function expensesInMonth(list, d){
+  const mk = monthKey(d);
+  return list.filter(e => (e.date||'').startsWith(mk));
+}
+function sumExpenses(list){ return list.reduce((s,e)=> s + (Number(e.amount)||0), 0); }
+
+// Find the most recent odometer reading for a vehicle (used as default "From Reading")
+function getLastOdometer(vehicleId, excludeId){
+  const list = Object.entries(STATE.expenses)
+    .map(([id,e])=>({id,...e}))
+    .filter(e => e.vehicleId===vehicleId && e.id!==excludeId && e.odometer!=null)
+    .sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.createdAt||0)-(a.createdAt||0));
+  return list.length ? list[0].odometer : null;
+}
+// Build a display label for odometer readings, showing distance covered when available
+function odoLabel(e, sep){
+  sep = sep || ' · ';
+  if(e.odometer==null) return '';
+  if(e.odometerFrom!=null && e.odometer>=e.odometerFrom){
+    return `${sep}${e.odometerFrom}\u2192${e.odometer}km (${e.odometer-e.odometerFrom}km run)`;
+  }
+  return `${sep}${e.odometer}km`;
+}
+// Compute min/max odometer readings recorded for a vehicle's entry list -> total km driven
+function getOdometerStats(list){
+  let minOdo=null, maxOdo=null;
+  list.forEach(e=>{
+    [e.odometer, e.odometerFrom].forEach(val=>{
+      if(val!=null){
+        if(minOdo===null || val<minOdo) minOdo=val;
+        if(maxOdo===null || val>maxOdo) maxOdo=val;
+      }
+    });
+  });
+  const totalKm = (minOdo!=null && maxOdo!=null) ? (maxOdo-minOdo) : null;
+  return {minOdo, maxOdo, totalKm};
+}
+
+// ============ TABS ============
+function switchTab(tab){
+  STATE.activeTab = tab;
+  document.querySelectorAll('[id^="tab-"]').forEach(el=>el.classList.add('hidden'));
+  document.getElementById('tab-'+tab).classList.remove('hidden');
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  renderTab(tab);
+}
+
+function renderAll(){
+  renderVehicleChips();
+  renderTab(STATE.activeTab);
+}
+
+function renderTab(tab){
+  if(tab==='home') renderHome();
+  else if(tab==='monthly') renderMonthly();
+  else if(tab==='compare') renderCompare();
+  else if(tab==='settings'){ /* static */ }
+}
+
+// ============ HOME TAB ============
+function renderHome(){
+  const vid = STATE.activeVehicle;
+  const vName = vid==='all' ? 'All Vehicles' : (STATE.vehicles[vid]?.name || '-');
+  document.getElementById('homeVehicleName').textContent = vName;
+  document.getElementById('vehicleReportBtn').style.display = (vid==='all') ? 'none' : 'block';
+
+  const list = getFilteredExpenses(vid);
+  const now = new Date();
+  const thisMonth = expensesInMonth(list, now);
+  const total = sumExpenses(thisMonth);
+
+  document.getElementById('homeTotalMonth').textContent = fmtMoney(total);
+  document.getElementById('homeMonthMeta').textContent = thisMonth.length ? monthLabel(now) : 'No expenses yet this month';
+  document.getElementById('homeEntryCount').textContent = thisMonth.length;
+
+  // Total KM this month + average KM/day, from Daily KM Logs
+  const dailyLogsList = Object.entries(STATE.dailyLogs||{})
+    .map(([id,d])=>({id,...d}))
+    .filter(d => vid==='all' ? true : d.vehicleId===vid)
+    .filter(d => d.date && d.date.slice(0,7) === todayStr().slice(0,7));
+  const kmRow = document.getElementById('homeKmStatsRow');
+  if(dailyLogsList.length){
+    const monthKm = dailyLogsList.reduce((s,d)=> s + Math.max(0, (d.endKm||0) - (d.startKm||0)), 0);
+    const dayOfMonth = now.getDate(); // days elapsed so far this month, for a running average
+    const avgKm = dayOfMonth > 0 ? (monthKm / dayOfMonth) : 0;
+    kmRow.style.display = '';
+    document.getElementById('homeMonthKm').textContent = monthKm + ' km';
+    document.getElementById('homeAvgKmDay').textContent = avgKm.toFixed(1) + ' km';
+  } else {
+    kmRow.style.display = 'none';
+  }
+  renderDailyLogList();
+
+  // category breakdown
+  const catTotals = {};
+  thisMonth.forEach(e=>{ catTotals[e.categoryId] = (catTotals[e.categoryId]||0) + (Number(e.amount)||0); });
+  const sortedCats = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('homeTopCat').textContent = sortedCats.length ? (STATE.categories[sortedCats[0][0]]?.name || '-') : '-';
+
+  // Petrol spend this month
+  const petrolRow = document.getElementById('homePetrolStatsRow');
+  const petrolCatEntry = Object.entries(STATE.categories).find(([cid,c]) => (c.name||'').toLowerCase()==='petrol');
+  const petrolTotal = petrolCatEntry ? (catTotals[petrolCatEntry[0]] || 0) : 0;
+  if(petrolCatEntry && petrolTotal > 0){
+    petrolRow.style.display = '';
+    document.getElementById('homeMonthPetrol').textContent = fmtMoney(petrolTotal);
+  } else {
+    petrolRow.style.display = 'none';
+  }
+
+
+  const maxCat = sortedCats.length ? sortedCats[0][1] : 1;
+  const catWrap = document.getElementById('homeCatBreakdown');
+  if(sortedCats.length===0){
+    catWrap.innerHTML = `<div class="empty-state"><div class="ic">📊</div>No data yet</div>`;
+  } else {
+    catWrap.innerHTML = sortedCats.map(([cid,amt])=>{
+      const c = STATE.categories[cid] || {emoji:'📦', name:'Unknown'};
+      const pct = Math.max(4, (amt/maxCat)*100);
+      return `<div class="cat-bar-row">
+        <div class="cat-bar-emoji">${c.emoji}</div>
+        <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${pct}%"></div></div>
+        <div class="cat-bar-amt">${fmtMoney(amt)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // recent entries
+  const recent = list.slice(0,8);
+  const recWrap = document.getElementById('homeRecentEntries');
+  if(recent.length===0){
+    recWrap.innerHTML = `<div class="empty-state"><div class="ic">🧾</div>No entries yet<br>Tap + to add one</div>`;
+  } else {
+    recWrap.innerHTML = recent.map(e=>entryCardHtml(e)).join('');
+    attachEntryClicks(recWrap);
+  }
+}
+
+function entryCardHtml(e){
+  const c = STATE.categories[e.categoryId] || {emoji:'📦', name:'Unknown'};
+  const pm = STATE.paymodes[e.paymodeId] || {name:''};
+  const v = STATE.vehicles[e.vehicleId] || {name:''};
+  const dateStr = e.date ? new Date(e.date+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short'}) : '';
+  const sub = (STATE.activeVehicle==='all' ? `${v.name} · ${pm.name} · ${dateStr}` : `${pm.name} · ${dateStr}`) + odoLabel(e);
+  return `<div class="entry-card" data-id="${e.id}">
+    <div class="entry-emoji">${c.emoji}</div>
+    <div class="entry-info">
+      <div class="entry-cat">${escapeHtml(c.name)}</div>
+      <div class="entry-sub">${escapeHtml(sub)}</div>
+    </div>
+    <div class="entry-amt">${fmtMoney(e.amount)}</div>
+  </div>`;
+}
+function attachEntryClicks(wrap){
+  wrap.querySelectorAll('.entry-card').forEach(el=>{
+    el.addEventListener('click', ()=> openEditEntryModal(el.dataset.id));
+  });
+}
+
+// ============ MONTHLY TAB ============
+function renderMonthly(){
+  document.getElementById('monthLabel').textContent = monthLabel(STATE.monthCursor);
+  const vid = STATE.activeVehicle;
+  const list = getFilteredExpenses(vid);
+  const monthList = expensesInMonth(list, STATE.monthCursor);
+  const total = sumExpenses(monthList);
+  document.getElementById('monthTotal').textContent = fmtMoney(total);
+
+  const uniqueDays = new Set(monthList.map(e=>e.date)).size;
+  document.getElementById('monthAvgDay').textContent = fmtMoney(uniqueDays ? total/uniqueDays : 0);
+
+  const wrap = document.getElementById('monthlyList');
+  if(monthList.length===0){
+    wrap.innerHTML = `<div class="empty-state"><div class="ic">📅</div>No expenses this month</div>`;
+    return;
+  }
+  // group by day
+  const byDay = {};
+  monthList.forEach(e=>{ (byDay[e.date] = byDay[e.date]||[]).push(e); });
+  const days = Object.keys(byDay).sort((a,b)=>b.localeCompare(a));
+  let html = '';
+  days.forEach(day=>{
+    const dEntries = byDay[day];
+    const dTotal = sumExpenses(dEntries);
+    const dLabel = new Date(day+'T00:00:00').toLocaleDateString('en-IN',{weekday:'short', day:'2-digit', month:'short'});
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 6px;">
+      <span style="font-size:12px;font-weight:800;color:#999;">${dLabel}</span>
+      <span style="font-size:12px;font-weight:800;color:var(--yellow);">${fmtMoney(dTotal)}</span>
+    </div>`;
+    html += dEntries.map(e=>entryCardHtml(e)).join('');
+  });
+  wrap.innerHTML = html;
+  attachEntryClicks(wrap);
+}
+
+document.getElementById('monthPrevBtn').addEventListener('click', ()=>{
+  STATE.monthCursor = new Date(STATE.monthCursor.getFullYear(), STATE.monthCursor.getMonth()-1, 1);
+  renderMonthly();
+});
+document.getElementById('monthNextBtn').addEventListener('click', ()=>{
+  STATE.monthCursor = new Date(STATE.monthCursor.getFullYear(), STATE.monthCursor.getMonth()+1, 1);
+  renderMonthly();
+});
+
+// ============ COMPARE TAB ============
+function renderCompare(){
+  const vid = STATE.activeVehicle;
+  const list = getFilteredExpenses(vid);
+  const now = new Date();
+  const thisM = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastM = new Date(now.getFullYear(), now.getMonth()-1, 1);
+
+  const thisMTotal = sumExpenses(expensesInMonth(list, thisM));
+  const lastMTotal = sumExpenses(expensesInMonth(list, lastM));
+  const mDelta = lastMTotal ? ((thisMTotal-lastMTotal)/lastMTotal*100) : (thisMTotal>0?100:0);
+
+  document.getElementById('compareMonthRow').innerHTML = `
+    <div class="compare-box">
+      <div class="lbl">${lastM.toLocaleString('en-IN',{month:'short',year:'numeric'})}</div>
+      <div class="amt">${fmtMoney(lastMTotal)}</div>
+    </div>
+    <div class="compare-box">
+      <div class="lbl">${thisM.toLocaleString('en-IN',{month:'short',year:'numeric'})}</div>
+      <div class="amt">${fmtMoney(thisMTotal)}</div>
+      <div class="delta ${mDelta>=0?'up':'down'}">${mDelta>=0?'▲':'▼'} ${Math.abs(mDelta).toFixed(0)}%</div>
+    </div>`;
+
+  // year-wise month bars
+  const thisYear = now.getFullYear();
+  const lastYear = thisYear - 1;
+  const monthTotalsThis = [], monthTotalsLast = [];
+  for(let m=0;m<12;m++){
+    monthTotalsThis.push(sumExpenses(expensesInMonth(list, new Date(thisYear, m, 1))));
+    monthTotalsLast.push(sumExpenses(expensesInMonth(list, new Date(lastYear, m, 1))));
+  }
+  const maxVal = Math.max(1, ...monthTotalsThis, ...monthTotalsLast);
+  const monthNames = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+  let barsHtml = '';
+  for(let m=0;m<12;m++){
+    const hThis = Math.max(2,(monthTotalsThis[m]/maxVal)*100);
+    const hLast = Math.max(2,(monthTotalsLast[m]/maxVal)*100);
+    barsHtml += `<div class="yearbar-col">
+      <div style="display:flex; align-items:flex-end; gap:2px; width:100%; height:120px;">
+        <div class="yearbar prev" style="height:${hLast}%"></div>
+        <div class="yearbar" style="height:${hThis}%"></div>
+      </div>
+      <div class="yearbar-lbl">${monthNames[m]}</div>
+    </div>`;
+  }
+  document.getElementById('yearBarChart').innerHTML = barsHtml;
+
+  const thisYearTotal = monthTotalsThis.reduce((a,b)=>a+b,0);
+  const lastYearTotal = monthTotalsLast.reduce((a,b)=>a+b,0);
+  const yDelta = lastYearTotal ? ((thisYearTotal-lastYearTotal)/lastYearTotal*100) : (thisYearTotal>0?100:0);
+  document.getElementById('compareYearRow').innerHTML = `
+    <div class="compare-box">
+      <div class="lbl">${lastYear}</div>
+      <div class="amt">${fmtMoney(lastYearTotal)}</div>
+    </div>
+    <div class="compare-box">
+      <div class="lbl">${thisYear}</div>
+      <div class="amt">${fmtMoney(thisYearTotal)}</div>
+      <div class="delta ${yDelta>=0?'up':'down'}">${yDelta>=0?'▲':'▼'} ${Math.abs(yDelta).toFixed(0)}%</div>
+    </div>`;
+
+  // category trend this month vs last month
+  const catThis = {}, catLast = {};
+  expensesInMonth(list, thisM).forEach(e=>{ catThis[e.categoryId]=(catThis[e.categoryId]||0)+(Number(e.amount)||0); });
+  expensesInMonth(list, lastM).forEach(e=>{ catLast[e.categoryId]=(catLast[e.categoryId]||0)+(Number(e.amount)||0); });
+  const allCatIds = [...new Set([...Object.keys(catThis), ...Object.keys(catLast)])]
+    .sort((a,b)=>(catThis[b]||0)-(catThis[a]||0));
+  const trendWrap = document.getElementById('compareCatTrend');
+  if(allCatIds.length===0){
+    trendWrap.innerHTML = `<div class="empty-state"><div class="ic">📈</div>No data to compare</div>`;
+  } else {
+    trendWrap.innerHTML = allCatIds.map(cid=>{
+      const c = STATE.categories[cid] || {emoji:'📦', name:'Unknown'};
+      const t = catThis[cid]||0, l = catLast[cid]||0;
+      const d = l ? ((t-l)/l*100) : (t>0?100:0);
+      return `<div class="entry-card">
+        <div class="entry-emoji">${c.emoji}</div>
+        <div class="entry-info">
+          <div class="entry-cat">${escapeHtml(c.name)}</div>
+          <div class="entry-sub">Last: ${fmtMoney(l)}</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="entry-amt">${fmtMoney(t)}</div>
+          <div class="delta ${d>=0?'up':'down'}" style="margin-top:4px;">${d>=0?'▲':'▼'} ${Math.abs(d).toFixed(0)}%</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+// ============ NAV BINDINGS ============
+document.querySelectorAll('.navbtn').forEach(btn=>{
+  btn.addEventListener('click', ()=> switchTab(btn.dataset.tab));
+});
+document.getElementById('fabAdd').addEventListener('click', ()=> openAddEntryModal());
+document.getElementById('openVehiclesBtn').addEventListener('click', openManageVehicles);
+document.getElementById('openCategoriesBtn').addEventListener('click', ()=>openManageList('categories'));
+document.getElementById('openPaymodesBtn').addEventListener('click', ()=>openManageList('paymodes'));
+document.getElementById('openAccountBtn').addEventListener('click', openAccountModal);
+document.getElementById('openAdminGenCodeBtn').addEventListener('click', openAdminGenCodeModal);
+document.getElementById('homePremiumBanner').addEventListener('click', openUpgradeModal);
+document.getElementById('exportBtn').addEventListener('click', exportData);
+document.getElementById('vehicleReportBtn').addEventListener('click', ()=>{
+  if(STATE.activeVehicle !== 'all') openVehicleReport(STATE.activeVehicle);
+});
+document.getElementById('addDailyLogBtn').addEventListener('click', openAddDailyLogModal);
+
+// ============ MODALS ============
+function openAccountModal(){
+  const identity = (currentUser && (currentUser.email || currentUser.phoneNumber)) || '-';
+  const tierLabel = STATE.tier === 'paid'
+    ? '<span style="color:#FFC800; font-weight:800;">⭐ Premium</span>'
+    : '<span style="color:#999; font-weight:800;">Free Tier</span>';
+  openModal(`
+    <div class="modal-title">Account<span class="close-x" id="closeModalX">✕</span></div>
+    <div class="field-label">Logged in as</div>
+    <div style="padding:12px 14px; background:#1A1A1A; border-radius:10px; margin-bottom:14px; font-weight:700;">${identity}</div>
+    <div class="field-label">Plan</div>
+    <div style="padding:12px 14px; background:#1A1A1A; border-radius:10px; margin-bottom:20px;">${tierLabel} — ${Object.keys(STATE.vehicles).length}/${STATE.tier==='paid' ? '∞' : FREE_TIER_VEHICLE_LIMIT} vehicles</div>
+    ${currentUser && currentUser.email ? `<button class="btn-secondary" id="resetPwFromAccountBtn" style="margin-bottom:12px;">🔑 Password Reset Link அனுப்பு</button>` : ''}
+    ${STATE.tier === 'paid' ? `<button class="btn-secondary btn-danger" id="deactivatePremiumBtn" style="margin-bottom:12px;">⭐ Premium Deactivate பண்ணு</button>` : ''}
+    <button class="btn-secondary btn-danger" id="logoutBtn" style="margin-bottom:12px;">🚪 Logout</button>
+    <button class="btn-secondary btn-danger" id="openDeleteAccountBtn" style="border-color:#FF3B30; color:#FF3B30;">🗑️ Account Delete பண்ணு</button>
+  `);
+  document.getElementById('closeModalX').addEventListener('click', closeModal);
+  document.getElementById('logoutBtn').addEventListener('click', ()=>{
+    if(confirm('Logout பண்ணலாமா?')) doLogout();
+  });
+  document.getElementById('openDeleteAccountBtn').addEventListener('click', openDeleteAccountModal);
+  const deactivateBtn = document.getElementById('deactivatePremiumBtn');
+  if(deactivateBtn){
+    deactivateBtn.addEventListener('click', async ()=>{
+      if(!confirm('Premium-ஐ Deactivate பண்ணலாமா? Free tier-க்கு போயிடுவீங்க — 1 vehicle-க்கு மேல access இருக்காது (data delete ஆகாது).')) return;
+      deactivateBtn.disabled = true;
+      deactivateBtn.textContent = 'Deactivate ஆகுது...';
+      try{
+        await db.ref('users/'+currentUser.uid+'/profile/tier').set('free');
+        showToast('Premium Deactivate ஆயிடுச்சு. Free tier-ல இருக்கீங்க இப்போ.');
+        closeModal();
+      } catch(e){
+        showToast('Fail ஆச்சு, மறுபடி try பண்ணுங்க');
+        deactivateBtn.disabled = false;
+        deactivateBtn.textContent = '⭐ Premium Deactivate பண்ணு';
+      }
+    });
+  }
+  const resetBtn = document.getElementById('resetPwFromAccountBtn');
+  if(resetBtn){
+    resetBtn.addEventListener('click', async ()=>{
+      try{
+        await auth.sendPasswordResetEmail(currentUser.email);
+        showToast('Password reset link அனுப்பியாச்சு ✓');
+      } catch(e){
+        showToast('Fail ஆச்சு, மறுபடி try பண்ணுங்க');
+      }
+    });
+  }
+}
+
+function openDeleteAccountModal(){
+  const identity = (currentUser && (currentUser.email || currentUser.phoneNumber)) || '-';
+  openModal(`
+    <div class="modal-title">🗑️ Account Delete<span class="close-x" id="closeModalX">✕</span></div>
+    <div style="padding:14px; background:rgba(255,59,48,0.1); border:1px solid #FF3B30; border-radius:10px; margin-bottom:16px;">
+      <div style="color:#FF3B30; font-weight:800; font-size:14px; margin-bottom:6px;">⚠️ இது permanent-ஆ delete ஆகும்</div>
+      <div style="color:#ccc; font-size:13px; line-height:1.5;">
+        <b>${identity}</b> account-ஓட எல்லா vehicles, expenses, daily logs, categories, payment modes — எல்லாமே நிரந்தரமா அழிக்கப்படும். இதை மறுபடி மீட்டெடுக்க முடியாது.
+      </div>
+    </div>
+    <div class="field-label">உறுதி பண்ண, கீழ "DELETE" என்று type பண்ணுங்க</div>
+    <input type="text" id="deleteConfirmInput" placeholder="DELETE" style="text-transform:uppercase; margin-bottom:16px;">
+    <button class="btn-secondary btn-danger" id="confirmDeleteAccountBtn" style="border-color:#FF3B30; color:#FF3B30;">🗑️ நிரந்தரமா Delete பண்ணு</button>
+    <div id="deleteAccountError" style="color:#FF4D4D; font-size:12.5px; margin-top:10px; min-height:16px;"></div>
+  `);
+  document.getElementById('closeModalX').addEventListener('click', closeModal);
+  document.getElementById('confirmDeleteAccountBtn').addEventListener('click', handleDeleteAccount);
+}
+
+async function handleDeleteAccount(){
+  const input = document.getElementById('deleteConfirmInput');
+  const errEl = document.getElementById('deleteAccountError');
+  const btn = document.getElementById('confirmDeleteAccountBtn');
+  if(input.value.trim().toUpperCase() !== 'DELETE'){
+    errEl.textContent = '"DELETE" என்று சரியா type பண்ணுங்க';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Delete ஆகுது...';
+  errEl.textContent = '';
+  const uid = currentUser.uid;
+  try{
+    // delete all data first, then the auth account itself
+    await db.ref('users/'+uid).remove();
+    await currentUser.delete();
+    showToast('Account Delete ஆயிடுச்சு. Bye 👋');
+    closeModal();
+    // onAuthStateChanged will detect the signed-out state and show login screen
+  } catch(e){
+    if(e.code === 'auth/requires-recent-login'){
+      errEl.innerHTML = '🔒 Security-க்காக, மறுபடி login பண்ணி இதை try பண்ணுங்க (recent login தேவை).';
+      btn.disabled = false;
+      btn.textContent = '🗑️ நிரந்தரமா Delete பண்ணு';
+      // sign the user out so they can log back in and retry immediately
+      setTimeout(()=>{ auth.signOut(); }, 2500);
+    } else {
+      errEl.textContent = 'Fail ஆச்சு: ' + (e.message || 'மறுபடி try பண்ணுங்க');
+      btn.disabled = false;
+      btn.textContent = '🗑️ நிரந்தரமா Delete பண்ணு';
+    }
+  }
+}
+
+async function copyTextToClipboard(text){
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(text);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+function generateRandomCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I to avoid confusion
+  let s = '';
+  for(let i=0;i<6;i++) s += chars[Math.floor(Math.random()*chars.length)];
+  return 'GBP-' + s;
+}
+
+async function openAdminGenCodeModal(){
+  openModal(`
+    <div class="modal-title">🔑 Generate Redeem Code<span class="close-x" id="closeModalX">✕</span></div>
+    <div style="color:#999; font-size:13px; margin-bottom:16px;">புது Premium redeem code create பண்ணி, customer-க்கு WhatsApp share பண்ணலாம்.</div>
+    <button class="btn-primary" id="genCodeBtn" style="margin-bottom:20px;">✨ New Code Generate பண்ணு</button>
+    <div id="genCodeResult"></div>
+    <div class="section-title" style="margin-top:20px;">Recent Codes</div>
+    <div id="recentCodesList" style="max-height:260px; overflow-y:auto;">Loading...</div>
+  `);
+  document.getElementById('closeModalX').addEventListener('click', closeModal);
+  document.getElementById('genCodeBtn').addEventListener('click', handleGenerateCode);
+  loadRecentCodes();
+}
+
+async function handleGenerateCode(){
+  const btn = document.getElementById('genCodeBtn');
+  const resEl = document.getElementById('genCodeResult');
+  btn.disabled = true;
+  btn.textContent = 'Generate ஆகுது...';
+  try{
+    let code, attempts = 0;
+    // ensure uniqueness (extremely unlikely to collide, but check anyway)
+    do{
+      code = generateRandomCode();
+      attempts++;
+      const existing = await db.ref('redeemCodes/'+code).once('value');
+      if(!existing.exists()) break;
+    } while(attempts < 5);
+
+    await db.ref('redeemCodes/'+code).set({
+      tier: 'paid',
+      used: false,
+      createdAt: firebase.database.ServerValue.TIMESTAMP,
+      createdBy: currentUser.uid
+    });
+
+    const shareMsg = encodeURIComponent(
+      `🎉 GarageBook Pro Premium Code!\n\nCode: ${code}\n\nApp-ல Settings → Upgrade to Premium → இந்த code போடுங்க.\nUnlimited vehicles + Full Reports + Cloud Backup ₹250/year!\n\ngaragebookpro.in`
+    );
+    resEl.innerHTML = `
+      <div style="padding:16px; background:#1A1A1A; border:1px solid #FFC800; border-radius:12px; text-align:center;">
+        <div style="color:#999; font-size:12px; margin-bottom:6px;">புது Code</div>
+        <div style="font-size:24px; font-weight:800; color:#FFC800; letter-spacing:1px; margin-bottom:14px;">${code}</div>
+        <button id="copyCodeBtn" class="btn-secondary" style="margin:0 0 10px 0;">📋 Code Copy பண்ணு</button>
+        <a href="https://wa.me/?text=${shareMsg}" target="_blank" style="text-decoration:none;">
+          <div class="btn-primary" style="margin:0;">📲 WhatsApp-ல Share பண்ணு</div>
+        </a>
+      </div>`;
+    document.getElementById('copyCodeBtn').addEventListener('click', async ()=>{
+      const copyBtnEl = document.getElementById('copyCodeBtn');
+      const ok = await copyTextToClipboard(code);
+      copyBtnEl.textContent = ok ? '✅ Copy ஆயிடுச்சு!' : '❌ Copy fail, manual-ஆ select பண்ணுங்க';
+      setTimeout(()=>{ if(copyBtnEl) copyBtnEl.textContent = '📋 Code Copy பண்ணு'; }, 1800);
+    });
+    loadRecentCodes();
+  } catch(e){
+    resEl.innerHTML = `<div style="color:#FF4D4D; font-size:13px;">Fail ஆச்சு: ${e.message || e}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✨ New Code Generate பண்ணு';
+  }
+}
+
+async function loadRecentCodes(){
+  const listEl = document.getElementById('recentCodesList');
+  if(!listEl) return;
+  try{
+    const snap = await db.ref('redeemCodes').once('value');
+    if(!snap.exists()){
+      listEl.innerHTML = '<div style="color:#666; font-size:12.5px;">இன்னும் code இல்ல</div>';
+      return;
+    }
+    const rows = [];
+    snap.forEach(child => {
+      const v = child.val();
+      rows.push({ key: child.key, ...v });
+    });
+    rows.sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+    listEl.innerHTML = rows.slice(0, 15).map(r => {
+      const statusHtml = r.used
+        ? '<span style="color:#FF6B6B; font-size:11.5px;">Used</span>'
+        : '<span style="color:#4CD964; font-size:11.5px;">Available</span>';
+      return `<div class="recentCodeRow" data-code="${r.key}" style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:#161616; border-radius:8px; margin-bottom:6px; cursor:pointer;">
+        <span style="font-weight:700; font-size:13.5px;">📋 ${r.key}</span>
+        ${statusHtml}
+      </div>`;
+    }).join('');
+    listEl.querySelectorAll('.recentCodeRow').forEach(row => {
+      row.addEventListener('click', async ()=>{
+        const code = row.getAttribute('data-code');
+        const ok = await copyTextToClipboard(code);
+        const originalHtml = row.innerHTML;
+        row.innerHTML = `<span style="font-weight:700; font-size:13.5px; color:#FFC800;">${ok ? '✅ Copy ஆயிடுச்சு!' : '❌ Copy fail'}</span>`;
+        setTimeout(()=>{ row.innerHTML = originalHtml; }, 1200);
+      });
+    });
+  } catch(e){
+    listEl.innerHTML = `<div style="color:#FF4D4D; font-size:12.5px;">Load fail: ${e.message||e}</div>`;
+  }
+}
+
+function openModal(innerHtml){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `<div class="modal-overlay" id="modalOverlay">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      ${innerHtml}
+    </div>
+  </div>`;
+  document.getElementById('modalOverlay').addEventListener('click', e=>{
+    if(e.target.id==='modalOverlay') closeModal();
+  });
+}
+function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
+
+// ---- Add/Edit Entry ----
+function openAddEntryModal(){ renderEntryForm(null); }
+function openEditEntryModal(id){ renderEntryForm(STATE.expenses[id] ? {id, ...STATE.expenses[id]} : null); }
+
+// ---- Daily KM Log ----
+function openAddDailyLogModal(){ renderDailyLogForm(null); }
+function openEditDailyLogModal(id){ renderDailyLogForm(STATE.dailyLogs[id] ? {id, ...STATE.dailyLogs[id]} : null); }
+
+function getLastEndKm(vehicleId, excludeId){
+  const logs = Object.entries(STATE.dailyLogs||{})
+    .map(([id,d])=>({id,...d}))
+    .filter(d => d.vehicleId===vehicleId && d.id!==excludeId && d.endKm!=null)
+    .sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.createdAt||0)-(a.createdAt||0));
+  if(logs.length) return logs[0].endKm;
+  return getLastOdometer(vehicleId, null); // fallback to last expense entry's odometer reading
+}
+
+function renderDailyLogForm(existing){
+  const vehicleEntries = Object.entries(STATE.vehicles).filter(([id,v]) => v.active !== false || id===existing?.vehicleId);
+  const vehicleOptions = vehicleEntries.map(([id,v])=>
+    `<option value="${id}">${escapeHtml(v.name)}${v.active===false?' (inactive)':''}</option>`).join('');
+  const defaultVid = existing?.vehicleId || (STATE.activeVehicle!=='all' ? STATE.activeVehicle : vehicleEntries[0]?.[0]);
+
+  openModal(`
+    <div class="modal-title">${existing?'Edit Daily KM Log':'Add Daily KM Log'}<span class="close-x" id="closeModalX">✕</span></div>
+
+    <div class="field-label">Vehicle</div>
+    <select id="dlVehicle">${vehicleOptions}</select>
+
+    <div class="field-label">Date</div>
+    <input type="date" id="dlDate" value="${existing?.date || todayStr()}">
+
+    <div class="field-label">Start KM (Morning Reading)</div>
+    <input type="number" id="dlStart" inputmode="numeric" placeholder="e.g. 12000" value="${existing?.startKm ?? ''}">
+
+    <div class="field-label">End KM (Night Reading)</div>
+    <input type="number" id="dlEnd" inputmode="numeric" placeholder="e.g. 12045" value="${existing?.endKm ?? ''}">
+    <div id="dlDistance" style="font-size:13px; font-weight:600; color:#FFC800; margin-top:8px; margin-bottom:12px; display:none;"></div>
+
+    <button class="btn-primary" id="saveDailyLogBtn">${existing?'Update Log':'Save Log'}</button>
+    ${existing?'<button class="btn-secondary btn-danger" id="deleteDailyLogBtn">Delete Log</button>':''}
+  `);
+
+  if(defaultVid) document.getElementById('dlVehicle').value = defaultVid;
+
+  const startEl = document.getElementById('dlStart');
+  const endEl = document.getElementById('dlEnd');
+  const distEl = document.getElementById('dlDistance');
+  let startTouched = !!existing;
+
+  function updateDist(){
+    const s = startEl.value ? Number(startEl.value) : null;
+    const e = endEl.value ? Number(endEl.value) : null;
+    if(s!=null && e!=null && e>=s){
+      distEl.style.display = 'block';
+      distEl.textContent = `Distance today: ${e-s} km`;
+    } else {
+      distEl.style.display = 'none';
+      distEl.textContent = '';
+    }
+  }
+  function refreshStartDefault(){
+    if(startTouched) return;
+    const vid = document.getElementById('dlVehicle').value;
+    const last = getLastEndKm(vid, existing?.id);
+    if(last!=null) startEl.value = last;
+    updateDist();
+  }
+  startEl.addEventListener('input', ()=>{ startTouched = true; updateDist(); });
+  endEl.addEventListener('input', updateDist);
+  document.getElementById('dlVehicle').addEventListener('change', refreshStartDefault);
+  if(!existing) refreshStartDefault(); else updateDist();
+
+  document.getElementById('closeModalX').addEventListener('click', closeModal);
+
+  document.getElementById('saveDailyLogBtn').addEventListener('click', ()=>{
+    const vehicleId = document.getElementById('dlVehicle').value;
+    const date = document.getElementById('dlDate').value;
+    const startKm = startEl.value ? Number(startEl.value) : null;
+    const endKm = endEl.value ? Number(endEl.value) : null;
+    if(!vehicleId){ alert('Vehicle தேர்வு செய்யுங்க'); return; }
+    if(!date){ alert('Date போடுங்க'); return; }
+    if(startKm==null || endKm==null){ alert('Start & End KM இரண்டையும் போடுங்க'); return; }
+    if(endKm < startKm){ alert('End KM, Start KM-ஐ விட அதிகமா இருக்கணும்'); return; }
+
+    const dup = Object.entries(STATE.dailyLogs||{}).find(([id,d])=> id!==existing?.id && d.vehicleId===vehicleId && d.date===date);
+    if(dup && !confirm('இந்த தேதிக்கு ஏற்கனவே ஒரு log இருக்கு. இன்னொண்ணு சேர்க்கவா?')) return;
+
+    const id = existing?.id || uid('dlog');
+    const data = { vehicleId, date, startKm, endKm, createdAt: existing?.createdAt || Date.now() };
+    db.ref(ROOT+'/dailyLogs/'+id).set(data).then(()=>{
+      closeModal();
+      renderAll();
+    });
+  });
+
+  if(existing){
+    document.getElementById('deleteDailyLogBtn').addEventListener('click', ()=>{
+      if(!confirm('இந்த log-ஐ delete பண்ணலாமா?')) return;
+      db.ref(ROOT+'/dailyLogs/'+existing.id).remove().then(()=>{
+        closeModal();
+        renderAll();
+      });
+    });
+  }
+}
+
+function renderDailyLogList(){
+  const wrap = document.getElementById('homeDailyLogList');
+  if(!wrap) return;
+  const vid = STATE.activeVehicle;
+  const logs = Object.entries(STATE.dailyLogs||{})
+    .map(([id,d])=>({id,...d}))
+    .filter(d => vid==='all' ? true : d.vehicleId===vid)
+    .sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.createdAt||0)-(a.createdAt||0))
+    .slice(0,10);
+  if(!logs.length){
+    wrap.innerHTML = `<div class="empty-state"><div class="ic">🛣️</div>No daily logs yet</div>`;
+    return;
+  }
+  wrap.innerHTML = logs.map(d=>{
+    const v = STATE.vehicles[d.vehicleId] || {name:'-'};
+    const dist = (d.endKm!=null && d.startKm!=null) ? (d.endKm-d.startKm) : null;
+    const dateStr = d.date ? new Date(d.date+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short'}) : '';
+    return `<div class="entry-card" data-dlogid="${d.id}">
+      <div class="entry-emoji">🛣️</div>
+      <div class="entry-info">
+        <div class="entry-cat">${vid==='all' ? escapeHtml(v.name)+' · '+dateStr : dateStr}</div>
+        <div class="entry-sub">${d.startKm}→${d.endKm}km${dist!=null?' ('+dist+'km)':''}</div>
+      </div>
+    </div>`;
+  }).join('');
+  wrap.querySelectorAll('[data-dlogid]').forEach(el=>{
+    el.addEventListener('click', ()=> openEditDailyLogModal(el.dataset.dlogid));
+  });
+}
+
+function renderEntryForm(existing){
+  const vehicleEntries = Object.entries(STATE.vehicles).filter(([id,v]) => v.active !== false || id===existing?.vehicleId);
+  const vehicleOptions = vehicleEntries.map(([id,v])=>
+    `<option value="${id}">${escapeHtml(v.name)}${v.active===false?' (inactive)':''}</option>`).join('');
+  const defaultVid = existing?.vehicleId || (STATE.activeVehicle!=='all' ? STATE.activeVehicle : vehicleEntries[0]?.[0]);
+
+  const catEntries = Object.entries(STATE.categories).filter(([id,c]) => c.active !== false || id===existing?.categoryId);
+  const catChips = catEntries.map(([id,c])=>
+    `<div class="pick-chip ${id===(existing?.categoryId)?'active':''}" data-cat="${id}">${c.emoji} ${escapeHtml(c.name)}</div>`).join('');
+  const pmEntries = Object.entries(STATE.paymodes).filter(([id,p]) => p.active !== false || id===existing?.paymodeId);
+  const pmChips = pmEntries.map(([id,p])=>
+    `<div class="pick-chip ${id===(existing?.paymodeId)?'active':''}" data-pm="${id}">${p.emoji} ${escapeHtml(p.name)}</div>`).join('');
+
+  openModal(`
+    <div class="modal-title">${existing?'Edit Entry':'Add Expense'}<span class="close-x" id="closeModalX">✕</span></div>
+
+    <div class="field-label">Vehicle</div>
+    <select id="fVehicle">${vehicleOptions}</select>
+
+    <div class="field-label">Amount</div>
+    <div class="amount-input-wrap">
+      <span class="rupee">₹</span>
+      <input type="number" id="fAmount" inputmode="decimal" placeholder="0" value="${existing?.amount||''}">
+    </div>
+
+    <div class="field-label">Category</div>
+    <div class="chip-grid" id="fCatChips">${catChips}</div>
+
+    <div class="field-label">Payment Mode</div>
+    <div class="chip-grid" id="fPmChips">${pmChips}</div>
+
+    <div class="field-label">Date</div>
+    <input type="date" id="fDate" value="${existing?.date || todayStr()}">
+
+    <div class="field-label">Odometer - From Reading (optional)</div>
+    <input type="number" id="fOdoFrom" inputmode="numeric" placeholder="e.g. 12000 km" value="${existing?.odometerFrom ?? ''}">
+
+    <div class="field-label">Odometer - To Reading (optional)</div>
+    <input type="number" id="fOdoTo" inputmode="numeric" placeholder="e.g. 12500 km" value="${existing?.odometer ?? existing?.odometerTo ?? ''}">
+    <div id="fOdoDistance" style="font-size:13px; font-weight:600; color:#FFC800; margin-top:8px; margin-bottom:12px; display:none;"></div>
+
+    <div class="field-label">Notes (optional)</div>
+    <textarea id="fNotes" placeholder="Any details...">${existing?.notes||''}</textarea>
+
+    <button class="btn-primary" id="saveEntryBtn">${existing?'Update Entry':'Save Entry'}</button>
+    ${existing?'<button class="btn-secondary btn-danger" id="deleteEntryBtn">Delete Entry</button>':''}
+  `);
+
+  if(defaultVid) document.getElementById('fVehicle').value = defaultVid;
+  let selectedCat = existing?.categoryId || null;
+  let selectedPm = existing?.paymodeId || null;
+
+  document.getElementById('closeModalX').addEventListener('click', closeModal);
+
+  // ---- Odometer From/To auto-fill + live distance ----
+  const fOdoFromEl = document.getElementById('fOdoFrom');
+  const fOdoToEl = document.getElementById('fOdoTo');
+  const fOdoDistEl = document.getElementById('fOdoDistance');
+  let odoFromTouched = !!existing;
+  function updateOdoDistance(){
+    const from = fOdoFromEl.value ? Number(fOdoFromEl.value) : null;
+    const to = fOdoToEl.value ? Number(fOdoToEl.value) : null;
+    if(from!=null && to!=null && to>=from){
+      fOdoDistEl.style.display = 'block';
+      fOdoDistEl.textContent = `Distance covered: ${to-from} km`;
+    } else {
+      fOdoDistEl.style.display = 'none';
+      fOdoDistEl.textContent = '';
+    }
+  }
+  function refreshOdoFromDefault(){
+    if(odoFromTouched) return;
+    const vid = document.getElementById('fVehicle').value;
+    const last = getLastOdometer(vid, existing?.id);
+    if(last!=null) fOdoFromEl.value = last;
+    updateOdoDistance();
+  }
+  fOdoFromEl.addEventListener('input', ()=>{ odoFromTouched = true; updateOdoDistance(); });
+  fOdoToEl.addEventListener('input', updateOdoDistance);
+  document.getElementById('fVehicle').addEventListener('change', refreshOdoFromDefault);
+  if(!existing) refreshOdoFromDefault(); else updateOdoDistance();
+
+  document.querySelectorAll('#fCatChips .pick-chip').forEach(c=>{
+    c.addEventListener('click', ()=>{
+      document.querySelectorAll('#fCatChips .pick-chip').forEach(x=>x.classList.remove('active'));
+      c.classList.add('active'); selectedCat = c.dataset.cat;
+    });
+  });
+  document.querySelectorAll('#fPmChips .pick-chip').forEach(c=>{
+    c.addEventListener('click', ()=>{
+      document.querySelectorAll('#fPmChips .pick-chip').forEach(x=>x.classList.remove('active'));
+      c.classList.add('active'); selectedPm = c.dataset.pm;
+    });
+  });
+
+  document.getElementById('saveEntryBtn').addEventListener('click', ()=>{
+    const amount = parseFloat(document.getElementById('fAmount').value);
+    const vehicleId = document.getElementById('fVehicle').value;
+    const date = document.getElementById('fDate').value;
+    if(!amount || amount<=0){ showToast('Enter valid amount'); return; }
+    if(!vehicleId){ showToast('Add a vehicle first'); return; }
+    if(!selectedCat){ showToast('Pick a category'); return; }
+    if(!selectedPm){ showToast('Pick a payment mode'); return; }
+    if(!date){ showToast('Pick a date'); return; }
+
+    const data = {
+      vehicleId, amount, categoryId:selectedCat, paymodeId:selectedPm, date,
+      odometer: document.getElementById('fOdoTo').value ? Number(document.getElementById('fOdoTo').value) : null,
+      odometerFrom: document.getElementById('fOdoFrom').value ? Number(document.getElementById('fOdoFrom').value) : null,
+      notes: document.getElementById('fNotes').value.trim() || null,
+      createdAt: existing?.createdAt || Date.now()
+    };
+    const id = existing?.id || uid('exp');
+    db.ref(ROOT+'/expenses/'+id).set(data).then(()=>{
+      showToast(existing?'Entry updated!':'Entry saved!');
+      closeModal();
+    }).catch(err=>{
+      showToast('Save failed: ' + err.message);
+      console.error('Firebase write error:', err);
+    });
+  });
+
+  if(existing){
+    document.getElementById('deleteEntryBtn').addEventListener('click', ()=>{
+      if(confirm('Delete this entry?')){
+        db.ref(ROOT+'/expenses/'+existing.id).remove().then(()=>{
+          showToast('Entry deleted');
+          closeModal();
+        }).catch(err=>{
+          showToast('Delete failed: ' + err.message);
+          console.error('Firebase delete error:', err);
+        });
+      }
+    });
+  }
+}
+
+// ---- Add Vehicle ----
+function openUpgradeModal(){
+  openModal(`
+    <div class="modal-title">⭐ Upgrade to Premium<span class="close-x" id="closeModalX">✕</span></div>
+    <div style="text-align:center; padding:10px 0 20px;">
+      <div style="font-size:48px; margin-bottom:10px;">🚗🏍️🚙</div>
+      <div style="font-weight:800; font-size:17px; margin-bottom:8px;">Free tier-ல 1 vehicle மட்டும்</div>
+      <div style="color:#999; font-size:14px; margin-bottom:20px;">Unlimited vehicles + Full Reports + Compare + Cloud Backup வேணும்னா Premium-க்கு upgrade பண்ணுங்க — ₹250/year (<span class="price-highlight">₹21/month</span>)</div>
+      <div style="text-align:left;">
+        <div class="field-label">Premium Code இருக்கா? இங்க போடுங்க</div>
+        <input type="text" id="redeemCodeInput" placeholder="e.g. GBP-XXXXXX" style="text-transform:uppercase;">
+        <button class="btn-primary" id="redeemCodeBtn" style="margin-top:12px;">Redeem பண்ணு</button>
+        <div id="redeemError" style="color:#FF4D4D; font-size:12.5px; margin-top:8px; min-height:16px;"></div>
+      </div>
+    </div>
+  `);
+  document.getElementById('closeModalX').addEventListener('click', closeModal);
+  document.getElementById('redeemCodeBtn').addEventListener('click', redeemPremiumCode);
+}
+
+async function redeemPremiumCode(){
+  const input = document.getElementById('redeemCodeInput');
+  const errEl = document.getElementById('redeemError');
+  const rawInput = input.value;
+  const code = rawInput.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
+  const charCodes = Array.from(rawInput).map(c=>c.charCodeAt(0)).join(',');
+  if(!code){ errEl.textContent = 'Code போடுங்க'; return; }
+  const btn = document.getElementById('redeemCodeBtn');
+  btn.disabled = true;
+  errEl.textContent = 'Checking...';
+  try{
+    const path = 'redeemCodes/'+code;
+    const snap = await db.ref(path).once('value');
+    if(!snap.exists()){
+      errEl.textContent = '❌ இந்த code கிடைக்கல. சரியா type பண்ணீங்களான்னு பாருங்க.';
+      btn.disabled = false;
+      return;
+    }
+    const data = snap.val();
+    if(data.tier !== 'paid'){
+      errEl.textContent = '❌ இந்த code invalid';
+      btn.disabled = false;
+      return;
+    }
+    if(data.used){
+      errEl.textContent = '❌ இந்த code already use ஆகிடுச்சு';
+      btn.disabled = false;
+      return;
+    }
+    // STEP 1: mark the code as used FIRST (committed independently).
+    // This must complete before step 2, so that the security rule for
+    // users/{uid}/profile/tier (which cross-checks redeemCodes/{code}/used)
+    // reads already-committed data instead of a pending multi-path write.
+    await db.ref('redeemCodes/'+code).update({
+      used: true,
+      usedBy: currentUser.uid,
+      usedAt: firebase.database.ServerValue.TIMESTAMP
+    });
+    // STEP 2: now update the user's profile tier; redeemCodes/{code}/used
+    // is already true in the database, so the validate rule passes reliably.
+    try{
+      await db.ref('users/'+currentUser.uid+'/profile').update({
+        tier: 'paid',
+        appliedCode: code
+      });
+    }catch(step2Err){
+      // rollback step 1 so the code isn't burned without granting access
+      await db.ref('redeemCodes/'+code).update({ used: false, usedBy: null, usedAt: null });
+      throw step2Err;
+    }
+    closeModal();
+    showToast('🎉 Premium Activate ஆயிடுச்சு! Unlimited vehicles இப்போ use பண்ணலாம்');
+  } catch(e){
+    errEl.innerHTML = 'Fail ஆச்சு (' + (e.code || 'unknown') + '): ' + (e.message || 'மறுபடி try பண்ணுங்க');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function openAddVehicleModal(){
+  if(STATE.tier !== 'paid' && Object.keys(STATE.vehicles).length >= FREE_TIER_VEHICLE_LIMIT){
+    openUpgradeModal();
+    return;
+  }
+  openModal(`
+    <div class="modal-title">Add Vehicle<span class="close-x" id="closeModalX">✕</span></div>
+    <div class="field-label">Vehicle Name</div>
+    <input type="text" id="vName" placeholder="e.g. Activa, Swift Dzire">
+    <div class="field-label">Type</div>
+    <div class="chip-grid" id="vTypeChips">
+      <div class="pick-chip active" data-type="bike">🏍️ Bike</div>
+      <div class="pick-chip" data-type="car">🚗 Car</div>
+      <div class="pick-chip" data-type="other">🚙 Other</div>
+    </div>
+    <div class="field-label">Registration No. (optional)</div>
+    <input type="text" id="vReg" placeholder="e.g. TN 33 AB 1234">
+    <button class="btn-primary" id="saveVehicleBtn">Add Vehicle</button>
+  `);
+  let type = 'bike';
+  document.getElementById('closeModalX').addEventListener('click', closeModal);
+  document.querySelectorAll('#vTypeChips .pick-chip').forEach(c=>{
+    c.addEventListener('click', ()=>{
+      document.querySelectorAll('#vTypeChips .pick-chip').forEach(x=>x.classList.remove('active'));
+      c.classList.add('active'); type = c.dataset.type;
+    });
+  });
+  document.getElementById('saveVehicleBtn').addEventListener('click', ()=>{
+    const name = document.getElementById('vName').value.trim();
+    if(!name){ showToast('Enter vehicle name'); return; }
+    const id = uid('veh');
+    db.ref(ROOT+'/vehicles/'+id).set({
+      name, type, regNo: document.getElementById('vReg').value.trim() || '', createdAt: Date.now()
+    }).then(()=>{
+      showToast('Vehicle added!');
+      STATE.activeVehicle = id;
+      closeModal();
+    }).catch(err=>{
+      showToast('Save failed: ' + err.message);
+      console.error('Firebase write error:', err);
+    });
+  });
+}
+
+function openManageVehicles(){
+  const rows = Object.entries(STATE.vehicles).map(([id,v])=>{
+    const icon = v.type==='car'?'🚗':v.type==='bike'?'🏍️':'🚙';
+    const isActive = v.active !== false;
+    return `<div class="manage-item ${isActive?'':'inactive'}">
+      <div class="emj">${icon}</div>
+      <div class="nm">${escapeHtml(v.name)}${v.regNo?' · '+escapeHtml(v.regNo):''}</div>
+      <label class="toggle-switch"><input type="checkbox" class="toggle-active" data-id="${id}" data-kind="vehicle" ${isActive?'checked':''}><span class="toggle-slider"></span></label>
+      <div class="edit-btn" data-id="${id}" data-kind="vehicle">✏️</div>
+      <div class="del-btn" data-id="${id}" data-kind="vehicle">🗑️</div>
+    </div>`;
+  }).join('');
+  openModal(`
+    <div class="modal-title">Vehicles<span class="close-x" id="closeModalX">✕</span></div>
+    <div id="manageList">${rows || '<div class="empty-state">No vehicles yet</div>'}</div>
+    <button class="btn-primary" id="addNewBtn">+ Add Vehicle</button>
+  `);
+  document.getElementById('closeModalX').addEventListener('click', closeModal);
+  document.getElementById('addNewBtn').addEventListener('click', ()=>{ closeModal(); openAddVehicleModal(); });
+  bindDeleteButtons();
+  bindToggleSwitches();
+  bindEditButtons();
+}
+
+function bindToggleSwitches(){
+  document.querySelectorAll('.toggle-active').forEach(sw=>{
+    sw.addEventListener('click', e=> e.stopPropagation());
+    sw.addEventListener('change', ()=>{
+      const id = sw.dataset.id, kind = sw.dataset.kind;
+      const path = kind==='vehicle' ? 'vehicles' : kind==='category' ? 'categories' : 'paymodes';
+      db.ref(ROOT+'/'+path+'/'+id).update({active: sw.checked}).then(()=>{
+        showToast(sw.checked ? 'Enabled' : 'Disabled');
+        sw.closest('.manage-item').classList.toggle('inactive', !sw.checked);
+      }).catch(err=>{
+        showToast('Update failed: ' + err.message);
+        console.error('Firebase update error:', err);
+        sw.checked = !sw.checked;
+      });
+    });
+  });
+}
+
+function bindEditButtons(){
+  document.querySelectorAll('.edit-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.dataset.id, kind = btn.dataset.kind;
+      if(kind==='vehicle') openEditVehicleModal(id);
+      else openEditListItemModal(kind, id);
+    });
+  });
+}
+
+function openEditVehicleModal(id){
+  const v = STATE.vehicles[id];
+  if(!v) return;
+  openModal(`
+    <div class="modal-title">Edit Vehicle<span class="close-x" id="closeModalX">✕</span></div>
+    <div class="field-label">Vehicle Name</div>
+    <input type="text" id="vName" value="${escapeHtml(v.name)}">
+    <div class="field-label">Type</div>
+    <div class="chip-grid" id="vTypeChips">
+      <div class="pick-chip ${v.type==='bike'?'active':''}" data-type="bike">🏍️ Bike</div>
+      <div class="pick-chip ${v.type==='car'?'active':''}" data-type="car">🚗 Car</div>
+      <div class="pick-chip ${v.type==='other'?'active':''}" data-type="other">🚙 Other</div>
+    </div>
+    <div class="field-label">Registration No. (optional)</div>
+    <input type="text" id="vReg" value="${escapeHtml(v.regNo||'')}">
+    <button class="btn-primary" id="saveVehicleBtn">Save Changes</button>
+  `);
+  let type = v.type || 'bike';
+  document.getElementById('closeModalX').addEventListener('click', closeModal);
+  document.querySelectorAll('#vTypeChips .pick-chip').forEach(c=>{
+    c.addEventListener('click', ()=>{
+      document.querySelectorAll('#vTypeChips .pick-chip').forEach(x=>x.classList.remove('active'));
+      c.classList.add('active'); type = c.dataset.type;
+    });
+  });
+  document.getElementById('saveVehicleBtn').addEventListener('click', ()=>{
+    const name = document.getElementById('vName').value.trim();
+    if(!name){ showToast('Enter vehicle name'); return; }
+    db.ref(ROOT+'/vehicles/'+id).update({
+      name, type, regNo: document.getElementById('vReg').value.trim() || ''
+    }).then(()=>{
+      showToast('Vehicle updated!');
+      closeModal();
+    }).catch(err=>{
+      showToast('Save failed: ' + err.message);
+      console.error('Firebase write error:', err);
+    });
+  });
+}
+
+function bindDeleteButtons(){
+  document.querySelectorAll('.del-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.dataset.id, kind = btn.dataset.kind;
+      if(confirm('Delete this ' + kind + '? Related expenses will remain but show as Unknown.')){
+        const path = kind==='vehicle' ? 'vehicles' : kind==='category' ? 'categories' : 'paymodes';
+        db.ref(ROOT+'/'+path+'/'+id).remove().then(()=>{
+          showToast('Deleted');
+          if(kind==='vehicle' && STATE.activeVehicle===id) STATE.activeVehicle='all';
+          closeModal();
+        }).catch(err=>{
+          showToast('Delete failed: ' + err.message);
+          console.error('Firebase delete error:', err);
+        });
+      }
+    });
+  });
+}
+
+// ---- Manage Categories / Paymodes ----
+function openManageList(kind){
+  const data = kind==='categories' ? STATE.categories : STATE.paymodes;
+  const kindLabel = kind==='categories' ? 'Categories' : 'Payment Modes';
+  const singularKind = kind==='categories' ? 'category' : 'paymode';
+  const rows = Object.entries(data).map(([id,item])=>{
+    const isActive = item.active !== false;
+    return `
+    <div class="manage-item ${isActive?'':'inactive'}">
+      <div class="emj">${item.emoji}</div>
+      <div class="nm">${escapeHtml(item.name)}</div>
+      <label class="toggle-switch"><input type="checkbox" class="toggle-active" data-id="${id}" data-kind="${singularKind}" ${isActive?'checked':''}><span class="toggle-slider"></span></label>
+      <div class="edit-btn" data-id="${id}" data-kind="${kind}">✏️</div>
+      <div class="del-btn" data-id="${id}" data-kind="${singularKind}">🗑️</div>
+    </div>`;}).join('');
+
+  openModal(`
+    <div class="modal-title">${kindLabel}<span class="close-x" id="closeModalX">✕</span></div>
+    <div id="manageList">${rows || '<div class="empty-state">None yet</div>'}</div>
+    <div class="field-label">Add New</div>
+    <div style="display:flex; gap:8px;">
+      <input type="text" id="newEmoji" placeholder="😀" maxlength="4" style="width:70px; text-align:center; font-size:20px;">
+      <input type="text" id="newName" placeholder="Name" style="flex:1;">
+    </div>
+    <button class="btn-primary" id="addNewItemBtn">+ Add ${kind==='categories'?'Category':'Payment Mode'}</button>
+  `);
+  document.getElementById('closeModalX').addEventListener('click', closeModal);
+  bindDeleteButtons();
+  bindToggleSwitches();
+  bindEditButtons();
+  document.getElementById('addNewItemBtn').addEventListener('click', ()=>{
+    const emoji = document.getElementById('newEmoji').value.trim() || '📦';
+    const name = document.getElementById('newName').value.trim();
+    if(!name){ showToast('Enter a name'); return; }
+    const id = uid(kind==='categories'?'cat':'pm');
+    db.ref(ROOT+'/'+kind+'/'+id).set({emoji, name}).then(()=>{
+      showToast('Added!');
+      closeModal();
+      openManageList(kind);
+    }).catch(err=>{
+      showToast('Save failed: ' + err.message);
+      console.error('Firebase write error:', err);
+    });
+  });
+}
+
+function openEditListItemModal(kind, id){
+  const data = kind==='categories' ? STATE.categories : STATE.paymodes;
+  const item = data[id];
+  if(!item) return;
+  const kindLabel = kind==='categories' ? 'Category' : 'Payment Mode';
+  openModal(`
+    <div class="modal-title">Edit ${kindLabel}<span class="close-x" id="closeModalX">✕</span></div>
+    <div class="field-label">Emoji</div>
+    <input type="text" id="editEmoji" value="${escapeHtml(item.emoji)}" maxlength="4" style="width:70px; text-align:center; font-size:20px;">
+    <div class="field-label">Name</div>
+    <input type="text" id="editName" value="${escapeHtml(item.name)}">
+    <button class="btn-primary" id="saveEditItemBtn">Save Changes</button>
+  `);
+  document.getElementById('closeModalX').addEventListener('click', closeModal);
+  document.getElementById('saveEditItemBtn').addEventListener('click', ()=>{
+    const emoji = document.getElementById('editEmoji').value.trim() || '📦';
+    const name = document.getElementById('editName').value.trim();
+    if(!name){ showToast('Enter a name'); return; }
+    db.ref(ROOT+'/'+kind+'/'+id).update({emoji, name}).then(()=>{
+      showToast('Updated!');
+      closeModal();
+      openManageList(kind);
+    }).catch(err=>{
+      showToast('Save failed: ' + err.message);
+      console.error('Firebase write error:', err);
+    });
+  });
+}
+
+// ---- Export ----
+function exportData(){
+  const payload = {
+    vehicles: STATE.vehicles,
+    categories: STATE.categories,
+    paymodes: STATE.paymodes,
+    expenses: STATE.expenses,
+    exportedAt: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'garagebook_backup_' + todayStr() + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  showToast('Backup downloaded!');
+}
+
+// ---- Vehicle Full Report ----
+function openVehicleReport(vehicleId){
+  const v = STATE.vehicles[vehicleId];
+  if(!v){ showToast('Vehicle not found'); return; }
+
+  const list = getFilteredExpenses(vehicleId); // already sorted newest first
+  const total = sumExpenses(list);
+  const odoStats = getOdometerStats(list);
+
+  // category breakdown (all-time)
+  const catTotals = {};
+  list.forEach(e=>{ catTotals[e.categoryId] = (catTotals[e.categoryId]||0) + (Number(e.amount)||0); });
+  const sortedCats = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]);
+
+  const icon = v.type==='car' ? '🚗' : v.type==='bike' ? '🏍️' : '🚙';
+
+  const catRowsHtml = sortedCats.length ? sortedCats.map(([cid,amt])=>{
+    const c = STATE.categories[cid] || {emoji:'📦', name:'Unknown'};
+    return `<div class="cat-bar-row"><div class="cat-bar-emoji">${c.emoji}</div>
+      <div style="flex:1;">${escapeHtml(c.name)}</div>
+      <div class="cat-bar-amt">${fmtMoney(amt)}</div></div>`;
+  }).join('') : `<div class="empty-state">No expenses yet</div>`;
+
+  const entriesHtml = list.length ? list.map(e=>{
+    const c = STATE.categories[e.categoryId] || {emoji:'📦', name:'Unknown'};
+    const pm = STATE.paymodes[e.paymodeId] || {name:''};
+    const dateStr = e.date ? new Date(e.date+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '';
+    return `<div class="entry-card">
+      <div class="entry-emoji">${c.emoji}</div>
+      <div class="entry-info">
+        <div class="entry-cat">${escapeHtml(c.name)}</div>
+        <div class="entry-sub">${dateStr} · ${escapeHtml(pm.name)}${odoLabel(e)}${e.notes?' · '+escapeHtml(e.notes):''}</div>
+      </div>
+      <div class="entry-amt">${fmtMoney(e.amount)}</div>
+    </div>`;
+  }).join('') : `<div class="empty-state">No entries yet</div>`;
+
+  const firstDate = list.length ? list[list.length-1].date : null;
+  const lastDate = list.length ? list[0].date : null;
+  const rangeStr = firstDate && lastDate ? `${firstDate} to ${lastDate}` : '-';
+
+  openModal(`
+    <div class="modal-title">${icon} ${escapeHtml(v.name)} - Full Report<span class="close-x" id="closeModalX">✕</span></div>
+
+    <div class="section-title" style="margin-top:0;">Vehicle Details</div>
+    <div class="cat-bar-row"><div style="flex:1;">Reg No</div><div class="cat-bar-amt">${escapeHtml(v.regNo||'-')}</div></div>
+    <div class="cat-bar-row"><div style="flex:1;">Type</div><div class="cat-bar-amt">${escapeHtml(v.type||'-')}</div></div>
+    <div class="cat-bar-row"><div style="flex:1;">Total Entries</div><div class="cat-bar-amt">${list.length}</div></div>
+    <div class="cat-bar-row"><div style="flex:1;">Date Range</div><div class="cat-bar-amt">${rangeStr}</div></div>
+    ${odoStats.minOdo!=null?`<div class="cat-bar-row"><div style="flex:1;">Starting Odometer</div><div class="cat-bar-amt">${odoStats.minOdo} km</div></div>`:''}
+    ${odoStats.maxOdo!=null?`<div class="cat-bar-row"><div style="flex:1;">Current Odometer</div><div class="cat-bar-amt">${odoStats.maxOdo} km</div></div>`:''}
+    ${odoStats.totalKm!=null?`<div class="cat-bar-row"><div style="flex:1;">Total KM Driven (recorded)</div><div class="cat-bar-amt">${odoStats.totalKm} km</div></div>`:''}
+
+    <div class="section-title">Total Spent (All Time)</div>
+    <div class="total-amount" style="font-size:32px;">${fmtMoney(total)}</div>
+
+    <div class="section-title">Category Breakdown</div>
+    ${catRowsHtml}
+
+    <div class="section-title">All Entries (${list.length})</div>
+    <div style="max-height:340px; overflow-y:auto;">${entriesHtml}</div>
+
+    <button class="btn-primary" id="shareReportBtn" style="margin-top:16px;">📤 Share Report (WhatsApp)</button>
+  `);
+
+  document.getElementById('closeModalX').addEventListener('click', closeModal);
+  document.getElementById('shareReportBtn').addEventListener('click', ()=>{
+    let text = `*${v.name}* (${v.regNo||'-'})\n`;
+    text += `Type: ${v.type||'-'}\n`;
+    text += `Total spent (all time): ${fmtMoney(total)}\n`;
+    text += `Entries: ${list.length} · Range: ${rangeStr}\n`;
+    if(odoStats.minOdo!=null) text += `Starting Odometer: ${odoStats.minOdo} km\n`;
+    if(odoStats.maxOdo!=null) text += `Current Odometer: ${odoStats.maxOdo} km\n`;
+    if(odoStats.totalKm!=null) text += `Total KM Driven (recorded): ${odoStats.totalKm} km\n`;
+    text += `\n`;
+    text += `*Category Breakdown*\n`;
+    sortedCats.forEach(([cid,amt])=>{
+      const c = STATE.categories[cid] || {emoji:'📦', name:'Unknown'};
+      text += `${c.emoji} ${c.name}: ${fmtMoney(amt)}\n`;
+    });
+    text += `\n*All Entries*\n`;
+    list.forEach(e=>{
+      const c = STATE.categories[e.categoryId] || {emoji:'📦', name:'Unknown'};
+      const pm = STATE.paymodes[e.paymodeId] || {name:''};
+      const dateStr = e.date ? new Date(e.date+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '';
+      text += `${dateStr} - ${c.emoji} ${c.name} - ${fmtMoney(e.amount)} (${pm.name})${odoLabel(e,' - ')}${e.notes?' - '+e.notes:''}\n`;
+    });
+    text += `\n_Garage · sramesh.in_`;
+
+    if(navigator.share){
+      navigator.share({title: v.name + ' Report', text}).catch(()=>{});
+    } else {
+      window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+    }
+  });
+}
+
+// ============ INIT ============
+// Auth listener (defined above) drives initFirebase() once a user is signed in.
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(e=>console.log('SW reg failed', e));
+  });
+}
+
+// ============ RELIABLE AUTO-UPDATE ============
+// Compares the live app.html's build marker against this page's own marker.
+// If a newer deploy is detected, reload automatically — no manual cache
+// clearing or force-closing the app is ever needed again.
+const APP_BUILD = (document.querySelector('meta[name="app-build"]') || {}).content || '';
+async function checkForAppUpdate(){
+  try{
+    const res = await fetch('./app.html', { cache: 'no-store' });
+    const text = await res.text();
+    const match = text.match(/<meta name="app-build" content="([^"]*)"/);
+    if(match && match[1] && APP_BUILD && match[1] !== APP_BUILD){
+      location.reload();
+    }
+  }catch(e){ /* offline or fetch failed — ignore, try again later */ }
+}
+window.addEventListener('load', ()=> setTimeout(checkForAppUpdate, 3000));
+setInterval(checkForAppUpdate, 60*1000);
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible') checkForAppUpdate();
+});
+</script>
+</body>
+</html>
