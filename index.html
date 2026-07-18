@@ -83,6 +83,15 @@
   .topbar-logo{font-size:22px; font-weight:900; color:var(--yellow); letter-spacing:-0.5px;}
   .live-dot{width:8px; height:8px; border-radius:50%; background:var(--green); animation:pulse 1.6s infinite;}
   @keyframes pulse{0%{opacity:1;} 50%{opacity:.3;} 100%{opacity:1;}}
+  .price-highlight{
+    display:inline-block; color:#000; background:var(--yellow); font-weight:900;
+    padding:2px 8px; border-radius:6px; animation:priceGlow 1.4s ease-in-out infinite;
+  }
+  @keyframes priceGlow{
+    0%{ box-shadow:0 0 0 0 rgba(255,200,0,0.7); }
+    70%{ box-shadow:0 0 0 8px rgba(255,200,0,0); }
+    100%{ box-shadow:0 0 0 0 rgba(255,200,0,0); }
+  }
 
   /* ===== VEHICLE CHIPS ===== */
   .vehicle-scroll{
@@ -1546,7 +1555,7 @@ function openUpgradeModal(){
     <div style="text-align:center; padding:10px 0 20px;">
       <div style="font-size:48px; margin-bottom:10px;">🚗🏍️🚙</div>
       <div style="font-weight:800; font-size:17px; margin-bottom:8px;">Free tier-ல 1 vehicle மட்டும்</div>
-      <div style="color:#999; font-size:14px; margin-bottom:20px;">Unlimited vehicles + Full Reports + Compare + Cloud Backup வேணும்னா Premium-க்கு upgrade பண்ணுங்க — ₹240/year (₹20/month)</div>
+      <div style="color:#999; font-size:14px; margin-bottom:20px;">Unlimited vehicles + Full Reports + Compare + Cloud Backup வேணும்னா Premium-க்கு upgrade பண்ணுங்க — ₹240/year (<span class="price-highlight">₹20/month</span>)</div>
       <div style="text-align:left;">
         <div class="field-label">Premium Code இருக்கா? இங்க போடுங்க</div>
         <input type="text" id="redeemCodeInput" placeholder="e.g. GBP-XXXXXX" style="text-transform:uppercase;">
