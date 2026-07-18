@@ -362,6 +362,7 @@
         <div id="homePremiumBanner" class="home-premium-banner hidden">
           <span>⭐ Premium-க்கு switch பண்ணுங்க — <span class="price-highlight">₹21/month</span> மட்டும்</span>
         </div>
+        <div id="serviceDueBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:700; font-size:13.5px; line-height:1.5;"></div>
         <div class="total-card">
           <div class="total-label">This Month · <span id="homeVehicleName">All Vehicles</span></div>
           <div class="total-amount" id="homeTotalMonth">₹0</div>
@@ -498,6 +499,7 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 // ============ FIREBASE CONFIG (GarageBookPro - separate project) ============
 const firebaseConfig = {
@@ -860,6 +862,86 @@ function getOdometerStats(list){
   return {minOdo, maxOdo, totalKm};
 }
 
+// ============ SERVICE DUE REMINDER ============
+function getCurrentOdometer(vehicleId){
+  let maxOdo = null;
+  Object.values(STATE.expenses||{}).forEach(e=>{
+    if(e.vehicleId !== vehicleId) return;
+    [e.odometer, e.odometerFrom].forEach(v=>{ if(v!=null && (maxOdo===null || v>maxOdo)) maxOdo=v; });
+  });
+  Object.values(STATE.dailyLogs||{}).forEach(d=>{
+    if(d.vehicleId !== vehicleId) return;
+    if(d.endKm!=null && (maxOdo===null || d.endKm>maxOdo)) maxOdo=d.endKm;
+  });
+  return maxOdo;
+}
+function computeServiceDue(vehicleId){
+  const v = STATE.vehicles[vehicleId];
+  if(!v) return null;
+  const serviceCat = Object.entries(STATE.categories).find(([cid,c]) => /service/i.test(c.name||''));
+  if(!serviceCat) return null;
+  const serviceEntries = Object.values(STATE.expenses||{})
+    .filter(e => e.vehicleId===vehicleId && e.categoryId===serviceCat[0] && e.date)
+    .sort((a,b)=> b.date.localeCompare(a.date));
+  if(!serviceEntries.length) return null;
+  const last = serviceEntries[0];
+  const lastOdo = last.odometer ?? last.odometerFrom;
+  if(lastOdo==null) return null;
+  const intervalKm = v.serviceIntervalKm || 3000;
+  const intervalMonths = v.serviceIntervalMonths || 6;
+  const nextDueKm = lastOdo + intervalKm;
+  const nextDueDate = new Date(last.date + 'T00:00:00');
+  nextDueDate.setMonth(nextDueDate.getMonth() + intervalMonths);
+  const currentOdo = getCurrentOdometer(vehicleId);
+  const today = new Date();
+  const kmRemaining = currentOdo!=null ? (nextDueKm - currentOdo) : null;
+  const daysRemaining = Math.ceil((nextDueDate - today) / 86400000);
+  const overdue = (kmRemaining!=null && kmRemaining<=0) || daysRemaining<=0;
+  const dueSoon = !overdue && ((kmRemaining!=null && kmRemaining<=300) || daysRemaining<=30);
+  if(!overdue && !dueSoon) return null;
+  return { vehicleName: v.name, overdue, kmRemaining, daysRemaining, nextDueKm, nextDueDate };
+}
+function renderServiceDueBanner(vid){
+  const banner = document.getElementById('serviceDueBanner');
+  const dueList = [];
+  if(vid==='all'){
+    Object.keys(STATE.vehicles).forEach(id=>{ const d = computeServiceDue(id); if(d) dueList.push(d); });
+  } else {
+    const d = computeServiceDue(vid); if(d) dueList.push(d);
+  }
+  if(!dueList.length){ banner.style.display='none'; return; }
+  dueList.sort((a,b)=> (a.overdue===b.overdue) ? 0 : (a.overdue ? -1 : 1));
+  const anyOverdue = dueList.some(d=>d.overdue);
+  banner.style.background = anyOverdue ? 'rgba(255,77,77,0.15)' : 'rgba(255,200,0,0.15)';
+  banner.style.color = anyOverdue ? '#FF4D4D' : '#FFC800';
+  banner.style.border = '1px solid ' + (anyOverdue ? 'rgba(255,77,77,0.4)' : 'rgba(255,200,0,0.4)');
+  banner.innerHTML = dueList.map(d=>{
+    const icon = d.overdue ? '🔧⚠️' : '🔧';
+    const kmTxt = d.kmRemaining!=null ? (d.overdue ? Math.abs(Math.round(d.kmRemaining)) + ' km கடந்துவிட்டது' : Math.round(d.kmRemaining) + ' km-ல service') : '';
+    const dayTxt = d.overdue ? Math.abs(d.daysRemaining) + ' நாள் தாமதம்' : d.daysRemaining + ' நாளில் service';
+    return `${icon} <b>${escapeHtml(d.vehicleName)}</b>: Service ${d.overdue ? 'due ஆயிடுச்சு' : 'விரைவில் due'} (${kmTxt || dayTxt})`;
+  }).join('<br>');
+  banner.style.display = 'block';
+}
+
+// ============ FUEL EFFICIENCY ============
+function computeFuelEfficiency(list){
+  const fuelCat = Object.entries(STATE.categories).find(([cid,c]) => /petrol|fuel|diesel/i.test(c.name||''));
+  if(!fuelCat) return { entries: [], avgKmpl: null };
+  const fuelEntries = list.filter(e => e.categoryId===fuelCat[0] && e.liters>0 && e.odometer!=null)
+    .sort((a,b)=> (a.odometer - b.odometer));
+  const results = [];
+  for(let i=1;i<fuelEntries.length;i++){
+    const prev = fuelEntries[i-1], curr = fuelEntries[i];
+    const dist = curr.odometer - prev.odometer;
+    if(dist>0 && curr.liters>0){
+      results.push({ date: curr.date, distance: dist, liters: curr.liters, kmpl: dist/curr.liters });
+    }
+  }
+  const avgKmpl = results.length ? (results.reduce((s,r)=>s+r.kmpl,0)/results.length) : null;
+  return { entries: results.reverse(), avgKmpl }; // most recent first
+}
+
 // ============ TABS ============
 function switchTab(tab){
   STATE.activeTab = tab;
@@ -887,6 +969,7 @@ function renderHome(){
   const vName = vid==='all' ? 'All Vehicles' : (STATE.vehicles[vid]?.name || '-');
   document.getElementById('homeVehicleName').textContent = vName;
   document.getElementById('vehicleReportBtn').style.display = (vid==='all') ? 'none' : 'block';
+  renderServiceDueBanner(vid);
 
   const list = getFilteredExpenses(vid);
   const now = new Date();
@@ -1574,6 +1657,12 @@ function renderEntryForm(existing){
     <input type="number" id="fOdoTo" inputmode="numeric" placeholder="e.g. 12500 km" value="${existing?.odometer ?? existing?.odometerTo ?? ''}">
     <div id="fOdoDistance" style="font-size:13px; font-weight:600; color:#FFC800; margin-top:8px; margin-bottom:12px; display:none;"></div>
 
+    <div id="fLitersWrap" style="display:none;">
+      <div class="field-label">Fuel Quantity (Liters, optional)</div>
+      <input type="number" id="fLiters" inputmode="decimal" step="0.01" placeholder="e.g. 5.2" value="${existing?.liters ?? ''}">
+      <div style="font-size:12px; color:#999; margin-top:-6px; margin-bottom:12px;">Odometer + Liters இரண்டும் போட்டா, mileage (km/l) auto-calculate ஆகும்</div>
+    </div>
+
     <div class="field-label">Notes (optional)</div>
     <textarea id="fNotes" placeholder="Any details...">${existing?.notes||''}</textarea>
 
@@ -1619,8 +1708,17 @@ function renderEntryForm(existing){
     c.addEventListener('click', ()=>{
       document.querySelectorAll('#fCatChips .pick-chip').forEach(x=>x.classList.remove('active'));
       c.classList.add('active'); selectedCat = c.dataset.cat;
+      updateLitersVisibility();
     });
   });
+  function isFuelCategory(catId){
+    const c = STATE.categories[catId];
+    return c && /petrol|fuel|diesel|gas/i.test(c.name||'');
+  }
+  function updateLitersVisibility(){
+    document.getElementById('fLitersWrap').style.display = isFuelCategory(selectedCat) ? 'block' : 'none';
+  }
+  updateLitersVisibility();
   document.querySelectorAll('#fPmChips .pick-chip').forEach(c=>{
     c.addEventListener('click', ()=>{
       document.querySelectorAll('#fPmChips .pick-chip').forEach(x=>x.classList.remove('active'));
@@ -1642,6 +1740,7 @@ function renderEntryForm(existing){
       vehicleId, amount, categoryId:selectedCat, paymodeId:selectedPm, date,
       odometer: document.getElementById('fOdoTo').value ? Number(document.getElementById('fOdoTo').value) : null,
       odometerFrom: document.getElementById('fOdoFrom').value ? Number(document.getElementById('fOdoFrom').value) : null,
+      liters: document.getElementById('fLiters').value ? Number(document.getElementById('fLiters').value) : null,
       notes: document.getElementById('fNotes').value.trim() || null,
       createdAt: existing?.createdAt || Date.now()
     };
@@ -1860,6 +1959,10 @@ function openEditVehicleModal(id){
     </div>
     <div class="field-label">Registration No. (optional)</div>
     <input type="text" id="vReg" value="${escapeHtml(v.regNo||'')}">
+    <div class="field-label">Service Reminder Interval (KM)</div>
+    <input type="number" id="vServiceKm" inputmode="numeric" value="${v.serviceIntervalKm ?? 3000}">
+    <div class="field-label">Service Reminder Interval (Months)</div>
+    <input type="number" id="vServiceMonths" inputmode="numeric" value="${v.serviceIntervalMonths ?? 6}">
     <button class="btn-primary" id="saveVehicleBtn">Save Changes</button>
   `);
   let type = v.type || 'bike';
@@ -1874,7 +1977,9 @@ function openEditVehicleModal(id){
     const name = document.getElementById('vName').value.trim();
     if(!name){ showToast('Enter vehicle name'); return; }
     db.ref(ROOT+'/vehicles/'+id).update({
-      name, type, regNo: document.getElementById('vReg').value.trim() || ''
+      name, type, regNo: document.getElementById('vReg').value.trim() || '',
+      serviceIntervalKm: Number(document.getElementById('vServiceKm').value) || 3000,
+      serviceIntervalMonths: Number(document.getElementById('vServiceMonths').value) || 6
     }).then(()=>{
       showToast('Vehicle updated!');
       closeModal();
@@ -2005,6 +2110,7 @@ function openVehicleReport(vehicleId){
   const list = getFilteredExpenses(vehicleId); // already sorted newest first
   const total = sumExpenses(list);
   const odoStats = getOdometerStats(list);
+  const fuelEff = computeFuelEfficiency(list);
 
   // category breakdown (all-time)
   const catTotals = {};
@@ -2053,6 +2159,17 @@ function openVehicleReport(vehicleId){
     <div class="section-title">Total Spent (All Time)</div>
     <div class="total-amount" style="font-size:32px;">${fmtMoney(total)}</div>
 
+    ${fuelEff.avgKmpl!=null ? `
+    <div class="section-title">⛽ Fuel Efficiency</div>
+    <div class="cat-bar-row"><div style="flex:1;">Average Mileage</div><div class="cat-bar-amt">${fuelEff.avgKmpl.toFixed(1)} km/l</div></div>
+    <div style="max-height:150px; overflow-y:auto; margin-top:8px;">
+      ${fuelEff.entries.slice(0,10).map(f=>{
+        const dateStr = f.date ? new Date(f.date+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short'}) : '';
+        return `<div class="cat-bar-row" style="font-size:12.5px;"><div style="flex:1;">${dateStr} · ${f.distance}km / ${f.liters}L</div><div class="cat-bar-amt">${f.kmpl.toFixed(1)} km/l</div></div>`;
+      }).join('')}
+    </div>
+    ` : ''}
+
     <div class="section-title">Category Breakdown</div>
     ${catRowsHtml}
 
@@ -2060,6 +2177,7 @@ function openVehicleReport(vehicleId){
     <div style="max-height:340px; overflow-y:auto;">${entriesHtml}</div>
 
     <button class="btn-primary" id="shareReportBtn" style="margin-top:16px;">📤 Share Report (WhatsApp)</button>
+    <button class="btn-secondary" id="pdfReportBtn" style="margin-top:10px;">📄 Download PDF</button>
   `);
 
   document.getElementById('closeModalX').addEventListener('click', closeModal);
@@ -2092,6 +2210,101 @@ function openVehicleReport(vehicleId){
       window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
     }
   });
+
+  document.getElementById('pdfReportBtn').addEventListener('click', ()=>{
+    generateVehiclePdf(v, list, total, odoStats, sortedCats, fuelEff, rangeStr);
+  });
+}
+
+function generateVehiclePdf(v, list, total, odoStats, sortedCats, fuelEff, rangeStr){
+  if(!window.jspdf){ showToast('PDF library load ஆகல, network check பண்ணி மறுபடி try பண்ணுங்க'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const marginX = 40;
+  let y = 50;
+
+  // Header
+  doc.setFillColor(255, 200, 0);
+  doc.rect(0, 0, pageW, 70, 'F');
+  doc.setTextColor(10, 10, 10);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.text('Garage Book Pro', marginX, 30);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Vehicle Expense Report', marginX, 48);
+  y = 95;
+
+  doc.setTextColor(10,10,10);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.text(v.name + (v.regNo ? '  (' + v.regNo + ')' : ''), marginX, y);
+  y += 22;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10.5);
+  const details = [
+    ['Type', v.type || '-'],
+    ['Total Entries', String(list.length)],
+    ['Date Range', rangeStr],
+  ];
+  if(odoStats.minOdo!=null) details.push(['Starting Odometer', odoStats.minOdo + ' km']);
+  if(odoStats.maxOdo!=null) details.push(['Current Odometer', odoStats.maxOdo + ' km']);
+  if(odoStats.totalKm!=null) details.push(['Total KM Driven', odoStats.totalKm + ' km']);
+  if(fuelEff.avgKmpl!=null) details.push(['Average Mileage', fuelEff.avgKmpl.toFixed(1) + ' km/l']);
+  details.forEach(([k,val])=>{
+    doc.text(k + ':', marginX, y);
+    doc.text(String(val), marginX + 160, y);
+    y += 16;
+  });
+
+  y += 8;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text('Total Spent (All Time): ' + fmtMoney(total).replace('₹','Rs.'), marginX, y);
+  y += 24;
+
+  doc.setFontSize(12);
+  doc.text('Category Breakdown', marginX, y);
+  y += 16;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  sortedCats.forEach(([cid,amt])=>{
+    const c = STATE.categories[cid] || {name:'Unknown'};
+    doc.text(c.name, marginX, y);
+    doc.text(fmtMoney(amt).replace('₹','Rs.'), marginX + 400, y);
+    y += 15;
+    if(y > 760){ doc.addPage(); y = 50; }
+  });
+
+  y += 14;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text('All Entries (' + list.length + ')', marginX, y);
+  y += 8;
+  doc.setDrawColor(200,200,200);
+  doc.line(marginX, y, pageW-marginX, y);
+  y += 14;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9.5);
+  list.slice().reverse().forEach(e=>{
+    if(y > 770){ doc.addPage(); y = 50; }
+    const c = STATE.categories[e.categoryId] || {name:'Unknown'};
+    const pm = STATE.paymodes[e.paymodeId] || {name:''};
+    const dateStr = e.date ? new Date(e.date+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '';
+    let line = dateStr + '  -  ' + c.name + '  -  ' + fmtMoney(e.amount).replace('₹','Rs.') + '  (' + pm.name + ')';
+    if(e.odometerFrom!=null && e.odometer!=null) line += '  [' + e.odometerFrom + '->' + e.odometer + 'km]';
+    doc.text(line, marginX, y);
+    y += 14;
+  });
+
+  doc.setFontSize(8);
+  doc.setTextColor(150,150,150);
+  doc.text('Generated by Garage Book Pro · garagebookpro.in', marginX, 820);
+
+  doc.save(v.name.replace(/[^a-zA-Z0-9]/g,'_') + '_report.pdf');
+  showToast('PDF download ஆயிடுச்சு!');
 }
 
 // ============ INIT ============
