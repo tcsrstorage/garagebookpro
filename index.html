@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="app-build" content="20260719-0438">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Garage Book Pro - Track Every Rupee You Spend on Your Vehicle</title>
 <meta name="description" content="Vandi selavu kanakku, simplified. Track fuel, service, insurance and more for unlimited vehicles. Free for 1 vehicle, ₹250/year for unlimited.">
@@ -209,5 +210,34 @@
     <div class="copy">© 2026 Garage Book Pro · garagebookpro.in</div>
   </footer>
 
+<script>
+// ============ AUTO-UPDATE BANNER (landing page) ============
+const PAGE_BUILD = (document.querySelector('meta[name="app-build"]') || {}).content || '';
+let idxUpdateBannerShown = false;
+function showIdxUpdateBanner(){
+  if(idxUpdateBannerShown) return;
+  idxUpdateBannerShown = true;
+  const bar = document.createElement('div');
+  bar.style.cssText = 'position:fixed; left:12px; right:12px; bottom:16px; z-index:999; background:#FFC800; color:#0A0A0A; font-weight:600; font-size:13.5px; padding:12px 14px; border-radius:12px; box-shadow:0 4px 14px rgba(0,0,0,.35); display:flex; align-items:center; justify-content:space-between; gap:10px;';
+  bar.innerHTML = '<span>🔄 புதிய அப்டேட் இருக்கு</span><span style="background:#0A0A0A; color:#FFC800; padding:7px 14px; border-radius:8px; font-weight:700; cursor:pointer;">Refresh</span>';
+  bar.querySelector('span:last-child').addEventListener('click', ()=> location.reload());
+  document.body.appendChild(bar);
+}
+async function checkForPageUpdate(){
+  try{
+    const res = await fetch('./index.html', { cache: 'no-store' });
+    const text = await res.text();
+    const match = text.match(/<meta name="app-build" content="([^"]*)"/);
+    if(match && match[1] && PAGE_BUILD && match[1] !== PAGE_BUILD){
+      showIdxUpdateBanner();
+    }
+  }catch(e){ /* offline or fetch failed — ignore, try again later */ }
+}
+window.addEventListener('load', ()=> setTimeout(checkForPageUpdate, 3000));
+setInterval(checkForPageUpdate, 60*1000);
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible') checkForPageUpdate();
+});
+</script>
 </body>
 </html>
