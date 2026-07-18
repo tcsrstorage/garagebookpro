@@ -92,6 +92,17 @@
     70%{ box-shadow:0 0 0 8px rgba(255,200,0,0); }
     100%{ box-shadow:0 0 0 0 rgba(255,200,0,0); }
   }
+  .home-premium-banner{
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    padding:12px 16px; margin-bottom:14px; border-radius:12px; cursor:pointer;
+    background:linear-gradient(90deg, #1A1A1A, #000, #1A1A1A);
+    background-size:200% 100%; animation:bannerShimmer 3s linear infinite;
+    border:1.5px solid #FFC800; color:var(--white); font-weight:800; font-size:13.5px;
+  }
+  @keyframes bannerShimmer{
+    0%{ background-position:0% 50%; }
+    100%{ background-position:200% 50%; }
+  }
 
   /* ===== VEHICLE CHIPS ===== */
   .vehicle-scroll{
@@ -339,6 +350,9 @@
 
       <!-- HOME TAB -->
       <div id="tab-home">
+        <div id="homePremiumBanner" class="home-premium-banner hidden">
+          <span>⭐ Premium-க்கு switch பண்ணுங்க — <span class="price-highlight">₹20/month</span> மட்டும்</span>
+        </div>
         <div class="total-card">
           <div class="total-label">This Month · <span id="homeVehicleName">All Vehicles</span></div>
           <div class="total-amount" id="homeTotalMonth">₹0</div>
@@ -720,6 +734,8 @@ function initFirebase(){
     setLive(true);
     const val = snap.val() || {};
     STATE.tier = (val.profile && val.profile.tier) || "free";
+    const bannerEl = document.getElementById('homePremiumBanner');
+    if(bannerEl) bannerEl.classList.toggle('hidden', STATE.tier === 'paid');
     STATE.vehicles = val.vehicles || {};
     STATE.categories = val.categories || DEFAULT_CATEGORIES;
     STATE.paymodes = val.paymodes || DEFAULT_PAYMODES;
@@ -1076,6 +1092,7 @@ document.getElementById('openCategoriesBtn').addEventListener('click', ()=>openM
 document.getElementById('openPaymodesBtn').addEventListener('click', ()=>openManageList('paymodes'));
 document.getElementById('openAccountBtn').addEventListener('click', openAccountModal);
 document.getElementById('openAdminGenCodeBtn').addEventListener('click', openAdminGenCodeModal);
+document.getElementById('homePremiumBanner').addEventListener('click', openUpgradeModal);
 document.getElementById('exportBtn').addEventListener('click', exportData);
 document.getElementById('vehicleReportBtn').addEventListener('click', ()=>{
   if(STATE.activeVehicle !== 'all') openVehicleReport(STATE.activeVehicle);
