@@ -1102,6 +1102,26 @@ function openAccountModal(){
   }
 }
 
+async function copyTextToClipboard(text){
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(text);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
 function generateRandomCode(){
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I to avoid confusion
   let s = '';
@@ -1159,25 +1179,9 @@ async function handleGenerateCode(){
       </div>`;
     document.getElementById('copyCodeBtn').addEventListener('click', async ()=>{
       const copyBtnEl = document.getElementById('copyCodeBtn');
-      try{
-        if(navigator.clipboard && navigator.clipboard.writeText){
-          await navigator.clipboard.writeText(code);
-        } else {
-          // fallback for older/webview browsers without clipboard API
-          const ta = document.createElement('textarea');
-          ta.value = code;
-          ta.style.position = 'fixed';
-          ta.style.left = '-9999px';
-          document.body.appendChild(ta);
-          ta.select();
-          document.execCommand('copy');
-          document.body.removeChild(ta);
-        }
-        copyBtnEl.textContent = '✅ Copy ஆயிடுச்சு!';
-        setTimeout(()=>{ if(copyBtnEl) copyBtnEl.textContent = '📋 Code Copy பண்ணு'; }, 1800);
-      }catch(copyErr){
-        copyBtnEl.textContent = '❌ Copy fail, manual-ஆ select பண்ணுங்க';
-      }
+      const ok = await copyTextToClipboard(code);
+      copyBtnEl.textContent = ok ? '✅ Copy ஆயிடுச்சு!' : '❌ Copy fail, manual-ஆ select பண்ணுங்க';
+      setTimeout(()=>{ if(copyBtnEl) copyBtnEl.textContent = '📋 Code Copy பண்ணு'; }, 1800);
     });
     loadRecentCodes();
   } catch(e){
@@ -1207,11 +1211,20 @@ async function loadRecentCodes(){
       const statusHtml = r.used
         ? '<span style="color:#FF6B6B; font-size:11.5px;">Used</span>'
         : '<span style="color:#4CD964; font-size:11.5px;">Available</span>';
-      return `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:#161616; border-radius:8px; margin-bottom:6px;">
-        <span style="font-weight:700; font-size:13.5px;">${r.key}</span>
+      return `<div class="recentCodeRow" data-code="${r.key}" style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:#161616; border-radius:8px; margin-bottom:6px; cursor:pointer;">
+        <span style="font-weight:700; font-size:13.5px;">📋 ${r.key}</span>
         ${statusHtml}
       </div>`;
     }).join('');
+    listEl.querySelectorAll('.recentCodeRow').forEach(row => {
+      row.addEventListener('click', async ()=>{
+        const code = row.getAttribute('data-code');
+        const ok = await copyTextToClipboard(code);
+        const originalHtml = row.innerHTML;
+        row.innerHTML = `<span style="font-weight:700; font-size:13.5px; color:#FFC800;">${ok ? '✅ Copy ஆயிடுச்சு!' : '❌ Copy fail'}</span>`;
+        setTimeout(()=>{ row.innerHTML = originalHtml; }, 1200);
+      });
+    });
   } catch(e){
     listEl.innerHTML = `<div style="color:#FF4D4D; font-size:12.5px;">Load fail: ${e.message||e}</div>`;
   }
