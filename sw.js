@@ -1,5 +1,5 @@
-const CACHE_NAME = 'garagebookpro-v2';
-const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+const CACHE_NAME = 'garagebookpro-v3';
+const ASSETS = ['./', './index.html', './app.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
   self.skipWaiting();
