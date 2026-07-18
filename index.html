@@ -1392,37 +1392,11 @@ function openUpgradeModal(){
         <input type="text" id="redeemCodeInput" placeholder="e.g. GBP-XXXXXX" style="text-transform:uppercase;">
         <button class="btn-primary" id="redeemCodeBtn" style="margin-top:12px;">Redeem பண்ணு</button>
         <div id="redeemError" style="color:#FF4D4D; font-size:12.5px; margin-top:8px; min-height:16px;"></div>
-        <button id="debugDbTestBtn" style="margin-top:16px; width:100%; padding:10px; background:#222; color:#0f0; border:1px dashed #0f0; border-radius:8px; font-size:12.5px;">🔧 Debug: Test DB Connection</button>
-        <div id="debugDbResult" style="color:#0f0; font-size:11.5px; margin-top:8px; word-break:break-all;"></div>
       </div>
     </div>
   `);
   document.getElementById('closeModalX').addEventListener('click', closeModal);
   document.getElementById('redeemCodeBtn').addEventListener('click', redeemPremiumCode);
-  document.getElementById('debugDbTestBtn').addEventListener('click', debugTestDbConnection);
-}
-
-async function debugTestDbConnection(){
-  const resEl = document.getElementById('debugDbResult');
-  resEl.textContent = 'Checking...';
-  const info = 'databaseURL: ' + firebase.app().options.databaseURL + '<br>' +
-               'projectId: ' + firebase.app().options.projectId + '<br>' +
-               'authDomain: ' + firebase.app().options.authDomain + '<br>' +
-               'UID: ' + (currentUser ? currentUser.uid : 'NONE') + '<br><br>';
-  try{
-    const ts = Date.now();
-    // write into redeemCodes itself since that node has open write rules
-    const testPath = 'redeemCodes/_DEBUGTEST_' + ts;
-    await db.ref(testPath).set({ tier: 'debug', used: false, ts: ts });
-    const readBack = await db.ref(testPath).once('value');
-    resEl.innerHTML = info +
-      '✅ Write OK to redeemCodes<br>' +
-      'Wrote key: _DEBUGTEST_' + ts + '<br>' +
-      'Read back: ' + JSON.stringify(readBack.val()) + '<br><br>' +
-      '👉 Console-la Realtime Database → redeemCodes → _DEBUGTEST_' + ts + ' கீழ இந்த entry தேடுங்க.';
-  }catch(e){
-    resEl.innerHTML = info + '❌ Write FAILED: ' + (e.code||'') + ' ' + (e.message||e);
-  }
 }
 
 async function redeemPremiumCode(){
@@ -1434,31 +1408,12 @@ async function redeemPremiumCode(){
   if(!code){ errEl.textContent = 'Code போடுங்க'; return; }
   const btn = document.getElementById('redeemCodeBtn');
   btn.disabled = true;
-  errEl.innerHTML = 'Checking... UID: ' + (currentUser ? currentUser.uid : 'NONE') + '<br>Raw: "' + rawInput + '" (codes: ' + charCodes + ')<br>Cleaned: "' + code + '"';
+  errEl.textContent = 'Checking...';
   try{
     const path = 'redeemCodes/'+code;
     const snap = await db.ref(path).once('value');
     if(!snap.exists()){
-      // DEBUG: list all actual keys under redeemCodes with char codes to catch hidden characters
-      let debugKeys = 'ஏதும் இல்ல';
-      try{
-        const allSnap = await db.ref('redeemCodes').once('value');
-        if(allSnap.exists()){
-          const rows = [];
-          allSnap.forEach(child => {
-            const k = child.key;
-            const codes = Array.from(k).map(c=>c.charCodeAt(0)).join(',');
-            rows.push('"' + k + '" (len=' + k.length + ', codes=' + codes + ')');
-          });
-          debugKeys = rows.join('<br>');
-        }
-      }catch(dbgErr){
-        debugKeys = 'Debug list fail: ' + (dbgErr.message || dbgErr);
-      }
-      const typedCodes = Array.from(code).map(c=>c.charCodeAt(0)).join(',');
-      errEl.innerHTML = '❌ NOT FOUND at path: "' + path + '"<br>UID: ' + (currentUser ? currentUser.uid : 'NONE') +
-        '<br>Cleaned code: "' + code + '" (len=' + code.length + ', codes=' + typedCodes + ')' +
-        '<br><br><b>Actual keys in redeemCodes:</b><br>' + debugKeys;
+      errEl.textContent = '❌ இந்த code கிடைக்கல. சரியா type பண்ணீங்களான்னு பாருங்க.';
       btn.disabled = false;
       return;
     }
@@ -1468,13 +1423,27 @@ async function redeemPremiumCode(){
       btn.disabled = false;
       return;
     }
-    const updates = {};
-    updates['users/'+currentUser.uid+'/profile/tier'] = 'paid';
-    updates['users/'+currentUser.uid+'/profile/appliedCode'] = code;
-    updates['redeemCodes/'+code+'/used'] = true;
-    updates['redeemCodes/'+code+'/usedBy'] = currentUser.uid;
-    updates['redeemCodes/'+code+'/usedAt'] = firebase.database.ServerValue.TIMESTAMP;
-    await db.ref().update(updates);
+    // STEP 1: mark the code as used FIRST (committed independently).
+    // This must complete before step 2, so that the security rule for
+    // users/{uid}/profile/tier (which cross-checks redeemCodes/{code}/used)
+    // reads already-committed data instead of a pending multi-path write.
+    await db.ref('redeemCodes/'+code).update({
+      used: true,
+      usedBy: currentUser.uid,
+      usedAt: firebase.database.ServerValue.TIMESTAMP
+    });
+    // STEP 2: now update the user's profile tier; redeemCodes/{code}/used
+    // is already true in the database, so the validate rule passes reliably.
+    try{
+      await db.ref('users/'+currentUser.uid+'/profile').update({
+        tier: 'paid',
+        appliedCode: code
+      });
+    }catch(step2Err){
+      // rollback step 1 so the code isn't burned without granting access
+      await db.ref('redeemCodes/'+code).update({ used: false, usedBy: null, usedAt: null });
+      throw step2Err;
+    }
     closeModal();
     showToast('🎉 Premium Activate ஆயிடுச்சு! Unlimited vehicles இப்போ use பண்ணலாம்');
   } catch(e){
