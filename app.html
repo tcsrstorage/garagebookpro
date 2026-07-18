@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260718-2115">
+<meta name="app-build" content="20260718-2255">
 <style>
   :root{
     --yellow:#FFC800;
@@ -1347,11 +1347,27 @@ async function loadRecentCodes(){
       const statusHtml = r.used
         ? '<span style="color:#FF6B6B; font-size:11.5px;">Used</span>'
         : '<span style="color:#4CD964; font-size:11.5px;">Available</span>';
+      const deleteBtnHtml = r.used
+        ? `<button class="deleteCodeBtn" data-code="${r.key}" style="background:none; border:none; color:#666; font-size:15px; padding:2px 6px; margin-left:8px; cursor:pointer;">🗑️</button>`
+        : '';
       return `<div class="recentCodeRow" data-code="${r.key}" style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:#161616; border-radius:8px; margin-bottom:6px; cursor:pointer;">
         <span style="font-weight:700; font-size:13.5px;">📋 ${r.key}</span>
-        ${statusHtml}
+        <span style="display:flex; align-items:center;">${statusHtml}${deleteBtnHtml}</span>
       </div>`;
     }).join('');
+    listEl.querySelectorAll('.deleteCodeBtn').forEach(btn => {
+      btn.addEventListener('click', async (ev)=>{
+        ev.stopPropagation();
+        const code = btn.getAttribute('data-code');
+        if(!confirm(`"${code}" code-ah permanent-a delete pannalama?`)) return;
+        try{
+          await db.ref('redeemCodes/'+code).remove();
+          loadRecentCodes();
+        }catch(e){
+          alert('Delete fail: ' + (e.message||e));
+        }
+      });
+    });
     listEl.querySelectorAll('.recentCodeRow').forEach(row => {
       row.addEventListener('click', async ()=>{
         const code = row.getAttribute('data-code');
