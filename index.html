@@ -1152,10 +1152,33 @@ async function handleGenerateCode(){
       <div style="padding:16px; background:#1A1A1A; border:1px solid #FFC800; border-radius:12px; text-align:center;">
         <div style="color:#999; font-size:12px; margin-bottom:6px;">புது Code</div>
         <div style="font-size:24px; font-weight:800; color:#FFC800; letter-spacing:1px; margin-bottom:14px;">${code}</div>
+        <button id="copyCodeBtn" class="btn-secondary" style="margin:0 0 10px 0;">📋 Code Copy பண்ணு</button>
         <a href="https://wa.me/?text=${shareMsg}" target="_blank" style="text-decoration:none;">
           <div class="btn-primary" style="margin:0;">📲 WhatsApp-ல Share பண்ணு</div>
         </a>
       </div>`;
+    document.getElementById('copyCodeBtn').addEventListener('click', async ()=>{
+      const copyBtnEl = document.getElementById('copyCodeBtn');
+      try{
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          await navigator.clipboard.writeText(code);
+        } else {
+          // fallback for older/webview browsers without clipboard API
+          const ta = document.createElement('textarea');
+          ta.value = code;
+          ta.style.position = 'fixed';
+          ta.style.left = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        copyBtnEl.textContent = '✅ Copy ஆயிடுச்சு!';
+        setTimeout(()=>{ if(copyBtnEl) copyBtnEl.textContent = '📋 Code Copy பண்ணு'; }, 1800);
+      }catch(copyErr){
+        copyBtnEl.textContent = '❌ Copy fail, manual-ஆ select பண்ணுங்க';
+      }
+    });
     loadRecentCodes();
   } catch(e){
     resEl.innerHTML = `<div style="color:#FF4D4D; font-size:13px;">Fail ஆச்சு: ${e.message || e}</div>`;
