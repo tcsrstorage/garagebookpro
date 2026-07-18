@@ -49,31 +49,31 @@
   }
   .login-logo{font-size:56px; margin-bottom:8px;}
   .login-title{font-size:28px; font-weight:900; color:var(--black); letter-spacing:-0.5px;}
-  .login-sub{font-size:13px; color:#333; margin-bottom:20px; font-weight:600;}
+  .login-sub{font-size:13px; color:#333; margin-bottom:20px; font-weight:500;}
   .auth-box{width:100%; max-width:340px; text-align:left;}
   .auth-tabs{display:flex; gap:8px; margin-bottom:18px; background:rgba(0,0,0,0.08); border-radius:12px; padding:4px;}
-  .auth-tab{flex:1; text-align:center; padding:10px; border-radius:9px; font-weight:800; font-size:13.5px; color:#333; cursor:pointer;}
-  .auth-tab.active{background:var(--black); color:var(--yellow);}
-  .auth-field-label{font-size:14px; font-weight:900; color:#000; margin:10px 0 5px;}
+  .auth-tab{flex:1; text-align:center; padding:10px; border-radius:9px; font-weight:600; font-size:13.5px; color:#333; cursor:pointer;}
+  .auth-tab.active{background:var(--black); color:var(--yellow); font-weight:800;}
+  .auth-field-label{font-size:14px; font-weight:700; color:#000; margin:10px 0 5px;}
   .auth-input{
     width:100%; padding:13px 14px; border-radius:10px; border:none; font-size:17px;
-    background:rgba(0,0,0,0.08); color:var(--black); font-weight:800;
+    background:rgba(0,0,0,0.08); color:var(--black); font-weight:500;
   }
-  .auth-input::placeholder{color:#333; font-weight:700;}
+  .auth-input::placeholder{color:#666; font-weight:400;}
   .auth-btn{
     width:100%; padding:14px; border-radius:12px; border:none; background:var(--black); color:var(--yellow);
     font-weight:900; font-size:15px; margin-top:16px; cursor:pointer;
   }
   .auth-btn:disabled{opacity:0.5;}
-  .auth-divider{display:flex; align-items:center; gap:10px; margin:18px 0; color:#555; font-size:12px; font-weight:700;}
+  .auth-divider{display:flex; align-items:center; gap:10px; margin:18px 0; color:#555; font-size:12px; font-weight:500;}
   .auth-divider::before, .auth-divider::after{content:''; flex:1; height:1px; background:rgba(0,0,0,0.15);}
   .auth-alt-btn{
     width:100%; padding:13px; border-radius:12px; border:2px solid var(--black); background:transparent; color:var(--black);
-    font-weight:800; font-size:14px; cursor:pointer;
+    font-weight:700; font-size:14px; cursor:pointer;
   }
-  .auth-error{color:#B00020; font-weight:700; font-size:12.5px; margin-top:12px; min-height:16px;}
-  .auth-link{color:var(--black); font-weight:700; font-size:12.5px; text-decoration:underline; text-align:center; margin-top:14px; cursor:pointer;}
-  .auth-back{position:absolute; top:calc(20px + var(--safe-top)); left:20px; font-weight:800; font-size:13px; color:var(--black); cursor:pointer;}
+  .auth-error{color:#B00020; font-weight:600; font-size:12.5px; margin-top:12px; min-height:16px;}
+  .auth-link{color:var(--black); font-weight:500; font-size:12.5px; text-decoration:underline; text-align:center; margin-top:14px; cursor:pointer;}
+  .auth-back{position:absolute; top:calc(20px + var(--safe-top)); left:20px; font-weight:600; font-size:13px; color:var(--black); cursor:pointer;}
   #recaptcha-container{margin-top:10px;}
 
   /* ===== TOP BAR ===== */
@@ -133,7 +133,7 @@
   }
   .total-label{font-size:12px; font-weight:800; opacity:.7; text-transform:uppercase; letter-spacing:.5px;}
   .total-amount{font-size:38px; font-weight:900; margin-top:4px; letter-spacing:-1px;}
-  .total-meta{font-size:12px; font-weight:700; margin-top:8px; opacity:.75;}
+  .total-meta{font-size:12px; font-weight:500; margin-top:8px; opacity:.75;}
 
   .quick-stats{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;}
   .stat-box{background:var(--darkgray); border-radius:14px; padding:14px; border:1px solid var(--midgray);}
@@ -154,7 +154,7 @@
   }
   .entry-emoji{font-size:22px; width:38px; height:38px; background:var(--black); border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
   .entry-info{flex:1; min-width:0;}
-  .entry-cat{font-size:14px; font-weight:700; color:var(--white);}
+  .entry-cat{font-size:14px; font-weight:500; color:var(--white);}
   .entry-sub{font-size:11.5px; color:#999; margin-top:2px;}
   .entry-amt{font-size:15px; font-weight:900; color:var(--yellow); flex-shrink:0;}
   .empty-state{text-align:center; padding:40px 20px; color:#666;}
@@ -175,7 +175,7 @@
     background:var(--black); border-top:1px solid var(--midgray); display:flex;
     padding-bottom:var(--safe-bottom); z-index:55;
   }
-  .navbtn{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:10px 0 8px; color:#666; font-size:10px; font-weight:700; cursor:pointer; background:none; border:none;}
+  .navbtn{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:10px 0 8px; color:#666; font-size:10px; font-weight:600; cursor:pointer; background:none; border:none;}
   .navbtn .ic{font-size:20px;}
   .navbtn.active{color:var(--yellow);}
 
@@ -192,7 +192,7 @@
   .modal-title{font-size:19px; font-weight:900; color:var(--white); margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;}
   .close-x{font-size:22px; color:#888; cursor:pointer; padding:4px 8px;}
 
-  .field-label{font-size:12px; font-weight:700; color:#999; margin-bottom:6px; margin-top:14px; text-transform:uppercase; letter-spacing:.5px;}
+  .field-label{font-size:12px; font-weight:600; color:#999; margin-bottom:6px; margin-top:14px; text-transform:uppercase; letter-spacing:.5px;}
   .field-label:first-child{margin-top:0;}
   input[type=text], input[type=number], input[type=date], textarea, select{
     width:100%; background:var(--darkgray); border:1.5px solid var(--midgray); border-radius:12px;
@@ -230,7 +230,7 @@
 
   .compare-row{display:flex; gap:10px; margin-bottom:16px;}
   .compare-box{flex:1; background:var(--darkgray); border-radius:14px; padding:16px; border:1px solid var(--midgray);}
-  .compare-box .lbl{font-size:11px; color:#999; font-weight:700; text-transform:uppercase;}
+  .compare-box .lbl{font-size:11px; color:#999; font-weight:600; text-transform:uppercase;}
   .compare-box .amt{font-size:20px; font-weight:900; color:var(--white); margin-top:6px;}
   .delta{font-size:12px; font-weight:800; margin-top:6px; display:inline-block; padding:3px 8px; border-radius:6px;}
   .delta.up{background:rgba(255,77,77,.15); color:var(--red);}
@@ -240,10 +240,10 @@
   .yearbar-col{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;}
   .yearbar{width:100%; background:var(--yellow); border-radius:4px 4px 0 0; min-height:2px;}
   .yearbar.prev{background:#555;}
-  .yearbar-lbl{font-size:9px; color:#888; margin-top:4px; font-weight:700;}
+  .yearbar-lbl{font-size:9px; color:#888; margin-top:4px; font-weight:500;}
 
   .legend-row{display:flex; gap:16px; justify-content:center; margin-bottom:14px;}
-  .legend-item{display:flex; align-items:center; gap:6px; font-size:11px; color:#aaa; font-weight:700;}
+  .legend-item{display:flex; align-items:center; gap:6px; font-size:11px; color:#aaa; font-weight:500;}
   .legend-dot{width:9px; height:9px; border-radius:3px;}
 
   /* settings */
@@ -253,7 +253,7 @@
   }
   .settings-row-left{display:flex; align-items:center; gap:12px;}
   .settings-row .ic{font-size:20px;}
-  .settings-row .txt{font-size:14px; font-weight:700; color:var(--white);}
+  .settings-row .txt{font-size:14px; font-weight:500; color:var(--white);}
   .settings-row .arrow{color:#666; font-size:16px;}
 
   .manage-item{
@@ -262,7 +262,7 @@
   }
   .manage-item.inactive{opacity:.45;}
   .manage-item .emj{font-size:20px; width:28px; text-align:center; flex-shrink:0;}
-  .manage-item .nm{flex:1; font-size:14px; font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .manage-item .nm{flex:1; font-size:14px; font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .manage-item .edit-btn{color:var(--yellow); font-size:17px; padding:4px 6px; cursor:pointer; flex-shrink:0;}
   .manage-item .del-btn{color:var(--red); font-size:17px; padding:4px 6px; cursor:pointer; flex-shrink:0;}
   .toggle-switch{
