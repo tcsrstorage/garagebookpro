@@ -13,6 +13,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
+<meta name="app-build" content="20260718-2046">
 <style>
   :root{
     --yellow:#FFC800;
@@ -2049,21 +2050,30 @@ function openVehicleReport(vehicleId){
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw.js').then(reg=>{
-      // check for a newer service worker immediately, and again periodically
-      reg.update();
-      setInterval(()=>reg.update(), 60*1000);
-    }).catch(e=>console.log('SW reg failed', e));
-  });
-  // auto-reload once when a new service worker takes control, so updates
-  // apply immediately without the user manually clearing cache
-  let swRefreshed = false;
-  navigator.serviceWorker.addEventListener('controllerchange', ()=>{
-    if(swRefreshed) return;
-    swRefreshed = true;
-    location.reload();
+    navigator.serviceWorker.register('sw.js').catch(e=>console.log('SW reg failed', e));
   });
 }
+
+// ============ RELIABLE AUTO-UPDATE ============
+// Compares the live index.html's build marker against this page's own marker.
+// If a newer deploy is detected, reload automatically — no manual cache
+// clearing or force-closing the app is ever needed again.
+const APP_BUILD = (document.querySelector('meta[name="app-build"]') || {}).content || '';
+async function checkForAppUpdate(){
+  try{
+    const res = await fetch('./index.html', { cache: 'no-store' });
+    const text = await res.text();
+    const match = text.match(/<meta name="app-build" content="([^"]*)"/);
+    if(match && match[1] && APP_BUILD && match[1] !== APP_BUILD){
+      location.reload();
+    }
+  }catch(e){ /* offline or fetch failed — ignore, try again later */ }
+}
+window.addEventListener('load', ()=> setTimeout(checkForAppUpdate, 3000));
+setInterval(checkForAppUpdate, 60*1000);
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible') checkForAppUpdate();
+});
 </script>
 </body>
 </html>
