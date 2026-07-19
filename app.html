@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260719-0730">
+<meta name="app-build" content="20260719-0735">
 <style>
   :root{
     --yellow:#FFC800;
@@ -892,7 +892,7 @@ function updatePinToggleUI(){
 function openAdminUserListModal(){
   db.ref('adminUserDirectory').once('value').then(snap=>{
     const val = snap.val() || {};
-    const entries = Object.values(val);
+    const entries = Object.entries(val).map(([uid,u])=>({uid, ...u}));
     const now = Date.now();
     entries.sort((a,b)=> (b.updatedAt||0) - (a.updatedAt||0));
     const rows = entries.map(u=>{
@@ -907,9 +907,12 @@ function openAdminUserListModal(){
       } else {
         statusHtml = '<span style="color:#fff; opacity:.6;">Free</span>';
       }
-      return `<div style="padding:10px 0; border-bottom:1px solid #222;">
-        <div style="color:#fff; font-size:13px;">${escapeHtml(u.email||'-')}</div>
-        <div style="font-size:12px; margin-top:2px;">${statusHtml}</div>
+      return `<div style="padding:10px 0; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="color:#fff; font-size:13px;">${escapeHtml(u.email||'-')}</div>
+          <div style="font-size:12px; margin-top:2px;">${statusHtml}</div>
+        </div>
+        <span class="editUserTrialBtn" data-uid="${u.uid}" data-days="${u.trialEndsAt ? Math.max(0, Math.ceil((u.trialEndsAt - now) / 86400000)) : 0}" style="color:#FFC800; font-size:18px; padding:6px 10px; cursor:pointer;">✏️</span>
       </div>`;
     }).join('') || '<div style="color:#fff; font-size:13px; padding:10px 0;">இன்னும் users இல்ல</div>';
     const trialCount = entries.filter(u=> u.tier!=='paid' && u.trialEndsAt && now < u.trialEndsAt).length;
@@ -933,9 +936,24 @@ function openAdminUserListModal(){
       <div>${rows}</div>
     `);
     document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.querySelectorAll('.editUserTrialBtn').forEach(btn=>{
+      btn.addEventListener('click', ()=> editUserTrial(btn.dataset.uid, Number(btn.dataset.days)));
+    });
   }).catch(err=>{
     showToast('Load failed: ' + err.message);
   });
+}
+function editUserTrial(uid, currentDays){
+  const input = prompt('இந்த user-க்கு எத்தனை நாள் trial மிச்சம் இருக்கணும்? (0 போட்டா trial உடனே முடியும்)', currentDays);
+  if(input === null) return;
+  const newDays = Number(input);
+  if(isNaN(newDays) || newDays < 0){ showToast('Correct number போடுங்க'); return; }
+  const trialEndsAt = Date.now() + newDays*24*60*60*1000;
+  db.ref('users/'+uid+'/profile/trialEndsAt').set(trialEndsAt).then(()=>{
+    db.ref('adminUserDirectory/'+uid+'/trialEndsAt').set(trialEndsAt);
+    showToast('Trial update ஆச்சு (' + newDays + ' நாள்)!');
+    openAdminUserListModal(); // refresh
+  }).catch(err=> showToast('Failed: ' + err.message));
 }
 function testMyTrial(){
   db.ref('appConfig/trialDays').once('value').then(cfgSnap=>{
