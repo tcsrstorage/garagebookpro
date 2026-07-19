@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260719-0600">
+<meta name="app-build" content="20260719-0605">
 <style>
   :root{
     --yellow:#FFC800;
@@ -415,6 +415,14 @@
 
         <div class="section-title">Recent Entries</div>
         <div id="homeRecentEntries"></div>
+
+        <div id="allFeaturesCard" style="background:#161616; border-radius:14px; padding:16px; margin-top:14px;">
+          <div id="allFeaturesToggle" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+            <span style="color:#FFC800; font-weight:700; font-size:14px;">✨ App Features (எல்லா features)</span>
+            <span id="allFeaturesArrow" style="color:#fff; font-size:14px;">▼</span>
+          </div>
+          <div id="allFeaturesList" style="display:none; color:#fff; font-size:13px; line-height:2; margin-top:12px;"></div>
+        </div>
       </div>
 
       <!-- MONTHLY TAB -->
@@ -1253,6 +1261,46 @@ function renderTab(tab){
   else if(tab==='settings'){ /* static */ }
 }
 
+// ============ V2.1: ALL FEATURES LIST (Home, permanent) ============
+const ALL_FEATURES = [
+  '🚗 Multi-vehicle management (bike/car/other)',
+  '⛽ Expense tracking — Petrol, Service, Repair, Spares, Insurance, etc.',
+  '💳 Payment Modes management',
+  '🛣️ Daily KM Log — odometer tracking, auto distance calc',
+  '📊 Home Dashboard — monthly total, entries, top category',
+  '🔧 Service Due Reminder (km/month based)',
+  '📄 Insurance/PUC/RC Expiry Reminders',
+  '🔁 Recurring Expenses — EMI/Insurance auto-add',
+  '💰 Budget Limit Alerts per vehicle',
+  '⛽ Fuel Efficiency Calculator (km/l)',
+  '📄 Full Vehicle Report — PDF + WhatsApp share',
+  '📊 Excel/CSV Export of all expenses',
+  '📅 Monthly Tab — category breakdown, day-by-day',
+  '📈 Compare Tab — month vs month, year vs year',
+  '📱 WhatsApp Reminder Share',
+  '🔔 Push Notifications (device dependent)',
+  '📎 Document Vault — Insurance/RC/PUC photo storage',
+  '👨‍👩‍👧 Family Sharing — invite code system',
+  '🔒 Single Active Session (security)',
+  '💾 Full Data Export (JSON backup)',
+  '🔄 Auto-update — always latest version'
+];
+function renderAllFeaturesList(){
+  const list = document.getElementById('allFeaturesList');
+  if(!list) return;
+  list.innerHTML = ALL_FEATURES.map(f=>`• ${f}`).join('<br>');
+  const toggle = document.getElementById('allFeaturesToggle');
+  const arrow = document.getElementById('allFeaturesArrow');
+  if(toggle && !toggle.dataset.bound){
+    toggle.dataset.bound = '1';
+    toggle.addEventListener('click', ()=>{
+      const open = list.style.display !== 'none';
+      list.style.display = open ? 'none' : 'block';
+      arrow.textContent = open ? '▼' : '▲';
+    });
+  }
+}
+
 // ============ V2.1: WHAT'S NEW ON HOME ============
 const WHATS_NEW_VERSION = '2026-07-19';
 const WHATS_NEW_ITEMS = [
@@ -1286,6 +1334,7 @@ function renderWhatsNewCard(){
 // ============ HOME TAB ============
 function renderHome(){
   renderWhatsNewCard();
+  renderAllFeaturesList();
   const vid = STATE.activeVehicle;
   const vName = vid==='all' ? 'All Vehicles' : (STATE.vehicles[vid]?.name || '-');
   document.getElementById('homeVehicleName').textContent = vName;
