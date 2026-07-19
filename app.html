@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260719-0615">
+<meta name="app-build" content="20260719-0620">
 <style>
   :root{
     --yellow:#FFC800;
@@ -2229,14 +2229,32 @@ function renderEntryForm(existing){
 
 // ---- Add Vehicle ----
 function openUpgradeModal(){
+  const payLinkUrl = 'https://paylink.sramesh.in/p/?id=-OxJreZ79F9VcQg0TaG-';
+  const qrImg = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(payLinkUrl);
   openModal(`
     <div class="modal-title">⭐ Upgrade to Premium<span class="close-x" id="closeModalX">✕</span></div>
     <div style="text-align:center; padding:10px 0 20px;">
       <div style="font-size:48px; margin-bottom:10px;">🚗🏍️🚙</div>
       <div style="font-weight:400; font-size:17px; margin-bottom:8px;">Free tier-ல 1 vehicle மட்டும்</div>
       <div style="color:#fff; font-size:14px; margin-bottom:20px;">Unlimited vehicles + Full Reports + Compare + Cloud Backup வேணும்னா Premium-க்கு upgrade பண்ணுங்க — ₹250/year (<span class="price-highlight">₹21/month</span>)</div>
+
+      <div style="background:#161616; border-radius:14px; padding:18px; margin-bottom:20px;">
+        <div style="color:#FFC800; font-weight:700; font-size:14px; margin-bottom:12px;">💳 Step 1: Pay பண்ணுங்க</div>
+        <img src="${qrImg}" alt="Payment QR" style="width:180px; height:180px; border-radius:10px; background:#fff; padding:8px;">
+        <div style="margin-top:12px;">
+          <a href="${payLinkUrl}" target="_blank" rel="noopener" style="display:inline-block; background:var(--yellow); color:#0A0A0A; padding:12px 28px; border-radius:12px; font-weight:700; font-size:15px; text-decoration:none;">₹250 Pay பண்ணு</a>
+        </div>
+        <div style="color:#fff; font-size:12px; margin-top:12px; line-height:1.6;">QR scan பண்ணி, illa button tap பண்ணி UPI-ல pay பண்ணுங்க</div>
+      </div>
+
+      <div style="background:#161616; border-radius:14px; padding:18px; margin-bottom:20px;">
+        <div style="color:#FFC800; font-weight:700; font-size:14px; margin-bottom:8px;">📱 Step 2: Screenshot அனுப்புங்க</div>
+        <div style="color:#fff; font-size:12.5px; line-height:1.6; margin-bottom:12px;">Payment success screenshot-ஐ WhatsApp-ல அனுப்புங்க, உடனே Premium Code கிடைக்கும்.</div>
+        <a href="https://wa.me/919994869502?text=${encodeURIComponent('GarageBookPro Premium payment done, screenshot attached')}" target="_blank" rel="noopener" style="display:inline-block; background:#25D366; color:#0A0A0A; padding:10px 22px; border-radius:10px; font-weight:700; font-size:13.5px; text-decoration:none;">📱 WhatsApp அனுப்பு</a>
+      </div>
+
       <div style="text-align:left;">
-        <div class="field-label">Premium Code இருக்கா? இங்க போடுங்க</div>
+        <div class="field-label">Step 3: Premium Code கிடைச்சதும் இங்க போடுங்க</div>
         <input type="text" id="redeemCodeInput" placeholder="e.g. GBP-XXXXXX" style="text-transform:uppercase;">
         <button class="btn-primary" id="redeemCodeBtn" style="margin-top:12px;">Redeem பண்ணு</button>
         <div id="redeemError" style="color:#FF4D4D; font-size:12.5px; margin-top:8px; min-height:16px;"></div>
