@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260719-0720">
+<meta name="app-build" content="20260719-0725">
 <style>
   :root{
     --yellow:#FFC800;
@@ -523,6 +523,14 @@
           <div class="settings-row-left"><span class="ic">🎁</span><span class="txt">Trial Duration Set பண்ணு</span></div>
           <span class="arrow">›</span>
         </div>
+        <div class="settings-row" id="openAdminUserListBtn" style="display:none;">
+          <div class="settings-row-left"><span class="ic">👥</span><span class="txt">Users & Trial Status</span></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="settings-row" id="testTrialBtn" style="display:none;">
+          <div class="settings-row-left"><span class="ic">🧪</span><span class="txt">Test Trial (என் account-க்கு)</span></div>
+          <span class="arrow">›</span>
+        </div>
         <div class="section-title">Data</div>
         <div class="settings-row" id="exportBtn">
           <div class="settings-row-left"><span class="ic">📤</span><span class="txt">Export All Data (JSON)</span></div>
@@ -815,6 +823,8 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('adminSectionTitle').style.display = '';
         document.getElementById('openAdminGenCodeBtn').style.display = '';
         document.getElementById('openAdminTrialConfigBtn').style.display = '';
+        document.getElementById('openAdminUserListBtn').style.display = '';
+        document.getElementById('testTrialBtn').style.display = '';
       }
     });
   } else {
@@ -879,6 +889,63 @@ function updatePinToggleUI(){
   el.textContent = has ? 'Quick PIN: ON ✅ (tap to remove)' : 'Set Quick PIN Unlock';
 }
 
+function openAdminUserListModal(){
+  db.ref('adminUserDirectory').once('value').then(snap=>{
+    const val = snap.val() || {};
+    const entries = Object.values(val);
+    const now = Date.now();
+    entries.sort((a,b)=> (b.updatedAt||0) - (a.updatedAt||0));
+    const rows = entries.map(u=>{
+      let statusHtml;
+      if(u.tier === 'paid'){
+        statusHtml = '<span style="color:#FFC800;">⭐ Premium</span>';
+      } else if(u.trialEndsAt && now < u.trialEndsAt){
+        const daysLeft = Math.ceil((u.trialEndsAt - now) / 86400000);
+        statusHtml = `<span style="color:#58A6FF;">🎁 Trial — ${daysLeft} நாள்</span>`;
+      } else if(u.trialEndsAt){
+        statusHtml = '<span style="color:#fff; opacity:.6;">Trial முடிஞ்சது</span>';
+      } else {
+        statusHtml = '<span style="color:#fff; opacity:.6;">Free</span>';
+      }
+      return `<div style="padding:10px 0; border-bottom:1px solid #222;">
+        <div style="color:#fff; font-size:13px;">${escapeHtml(u.email||'-')}</div>
+        <div style="font-size:12px; margin-top:2px;">${statusHtml}</div>
+      </div>`;
+    }).join('') || '<div style="color:#fff; font-size:13px; padding:10px 0;">இன்னும் users இல்ல</div>';
+    const trialCount = entries.filter(u=> u.tier!=='paid' && u.trialEndsAt && now < u.trialEndsAt).length;
+    const paidCount = entries.filter(u=> u.tier==='paid').length;
+    openModal(`
+      <div class="modal-title">Users & Trial Status<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="display:flex; gap:10px; margin-bottom:16px;">
+        <div style="flex:1; background:#161616; border-radius:10px; padding:12px; text-align:center;">
+          <div style="color:#FFC800; font-size:20px; font-weight:700;">${paidCount}</div>
+          <div style="color:#fff; font-size:11px;">Premium</div>
+        </div>
+        <div style="flex:1; background:#161616; border-radius:10px; padding:12px; text-align:center;">
+          <div style="color:#58A6FF; font-size:20px; font-weight:700;">${trialCount}</div>
+          <div style="color:#fff; font-size:11px;">On Trial</div>
+        </div>
+        <div style="flex:1; background:#161616; border-radius:10px; padding:12px; text-align:center;">
+          <div style="color:#fff; font-size:20px; font-weight:700;">${entries.length}</div>
+          <div style="color:#fff; font-size:11px;">Total Users</div>
+        </div>
+      </div>
+      <div>${rows}</div>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+  }).catch(err=>{
+    showToast('Load failed: ' + err.message);
+  });
+}
+function testMyTrial(){
+  if(!confirm('Unga own account-ல 30-day trial start பண்ணணுமா? (testing purpose)')) return;
+  const trialEndsAt = Date.now() + 30*24*60*60*1000;
+  db.ref(ROOT+'/profile').update({ trialEndsAt: trialEndsAt }).then(()=>{
+    syncAdminDirectory(STATE.tier, trialEndsAt);
+    showToast('🎁 Trial start ஆச்சு! Home tab-ல பாருங்க');
+  }).catch(err=> showToast('Failed: ' + err.message));
+}
+
 function openAdminTrialConfigModal(){
   db.ref('appConfig/trialDays').once('value').then(snap=>{
     const currentDays = snap.exists() ? snap.val() : 30;
@@ -920,16 +987,31 @@ function ensureUserProfile(){
     if(!snap.exists()){
       db.ref('appConfig/trialDays').once('value').then(cfgSnap=>{
         const trialDays = cfgSnap.exists() ? Number(cfgSnap.val()) : 30;
+        const trialEndsAt = Date.now() + trialDays*24*60*60*1000;
         db.ref(ROOT + '/profile').set({
           email: currentUser.email || null,
           phone: currentUser.phoneNumber || null,
           tier: 'free',
-          trialEndsAt: Date.now() + trialDays*24*60*60*1000,
+          trialEndsAt: trialEndsAt,
           createdAt: Date.now()
         });
+        syncAdminDirectory('free', trialEndsAt);
       });
+    } else {
+      const p = snap.val();
+      syncAdminDirectory(p.tier || 'free', p.trialEndsAt || null);
     }
   });
+}
+function syncAdminDirectory(tier, trialEndsAt){
+  // Lightweight self-written directory entry so admin can see who's on trial
+  // without needing broad read access to every user's private data.
+  db.ref('adminUserDirectory/' + currentUser.uid).set({
+    email: currentUser.email || currentUser.phoneNumber || '-',
+    tier: tier,
+    trialEndsAt: trialEndsAt || null,
+    updatedAt: Date.now()
+  }).catch(()=>{ /* rules may not be updated yet — ignore silently */ });
 }
 
 // ============ FIREBASE LOAD ============
@@ -1728,6 +1810,8 @@ updateNotifToggleUI();
 document.getElementById('openAccountBtn').addEventListener('click', openAccountModal);
 document.getElementById('openAdminGenCodeBtn').addEventListener('click', openAdminGenCodeModal);
 document.getElementById('openAdminTrialConfigBtn').addEventListener('click', openAdminTrialConfigModal);
+document.getElementById('openAdminUserListBtn').addEventListener('click', openAdminUserListModal);
+document.getElementById('testTrialBtn').addEventListener('click', testMyTrial);
 document.getElementById('homePremiumBanner').addEventListener('click', openUpgradeModal);
 document.getElementById('exportBtn').addEventListener('click', exportData);
 document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
