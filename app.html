@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260719-0715">
+<meta name="app-build" content="20260719-0720">
 <style>
   :root{
     --yellow:#FFC800;
@@ -374,6 +374,7 @@
       <!-- HOME TAB -->
       <div id="tab-home">
         <div id="whatsNewCard" style="display:none; background:linear-gradient(135deg,#1A1400,#0A0A0A); border:1px solid #FFC800; border-radius:14px; padding:16px; margin-bottom:14px;"></div>
+        <div id="trialBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center;"></div>
         <div id="homePremiumBanner" class="home-premium-banner hidden">
           <span>⭐ Premium-க்கு switch பண்ணுங்க — <span class="price-highlight">₹21/month</span> மட்டும்</span>
           <div style="margin-top:8px; font-size:12.5px; font-weight:700; text-decoration:underline;">👉 Payment பண்ண இங்க Click பண்ணுங்க</div>
@@ -516,6 +517,10 @@
         <div class="section-title" id="adminSectionTitle" style="display:none;">Admin</div>
         <div class="settings-row" id="openAdminGenCodeBtn" style="display:none;">
           <div class="settings-row-left"><span class="ic">🔑</span><span class="txt">Generate Redeem Code</span></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="settings-row" id="openAdminTrialConfigBtn" style="display:none;">
+          <div class="settings-row-left"><span class="ic">🎁</span><span class="txt">Trial Duration Set பண்ணு</span></div>
           <span class="arrow">›</span>
         </div>
         <div class="section-title">Data</div>
@@ -809,6 +814,7 @@ auth.onAuthStateChanged(function(user){
       if(user.uid === ADMIN_UID){
         document.getElementById('adminSectionTitle').style.display = '';
         document.getElementById('openAdminGenCodeBtn').style.display = '';
+        document.getElementById('openAdminTrialConfigBtn').style.display = '';
       }
     });
   } else {
@@ -873,14 +879,54 @@ function updatePinToggleUI(){
   el.textContent = has ? 'Quick PIN: ON ✅ (tap to remove)' : 'Set Quick PIN Unlock';
 }
 
+function openAdminTrialConfigModal(){
+  db.ref('appConfig/trialDays').once('value').then(snap=>{
+    const currentDays = snap.exists() ? snap.val() : 30;
+    openModal(`
+      <div class="modal-title">Trial Duration<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#fff; font-size:13px; margin-bottom:16px;">புது signup பண்ணற customers-க்கு எத்தனை நாள் free trial கொடுக்கணும் நு set பண்ணுங்க. இப்போ existing trial-ல இருக்கறவங்கள மாத்தாது, புது signups-க்கு மட்டும் apply ஆகும்.</div>
+      <div class="field-label">Trial Days</div>
+      <input type="number" id="trialDaysInput" inputmode="numeric" value="${currentDays}">
+      <button class="btn-primary" id="saveTrialDaysBtn" style="margin-top:14px;">Save</button>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.getElementById('saveTrialDaysBtn').addEventListener('click', ()=>{
+      const days = Number(document.getElementById('trialDaysInput').value);
+      if(!days || days < 0){ showToast('Correct number போடுங்க'); return; }
+      db.ref('appConfig/trialDays').set(days).then(()=>{
+        showToast('Trial duration ' + days + ' நாள்-ஆ set ஆச்சு!');
+        closeModal();
+      }).catch(err=> showToast('Failed: ' + err.message));
+    });
+  });
+}
+function renderTrialBanner(){
+  const banner = document.getElementById('trialBanner');
+  if(!banner) return;
+  if(!STATE.trialActive){ banner.style.display = 'none'; return; }
+  const daysLeft = Math.ceil((STATE.trialEndsAt - Date.now()) / 86400000);
+  const soon = daysLeft <= 3;
+  banner.style.background = soon ? 'rgba(255,77,77,0.15)' : 'rgba(88,166,255,0.12)';
+  banner.style.color = soon ? '#FF4D4D' : '#58A6FF';
+  banner.style.border = '1px solid ' + (soon ? 'rgba(255,77,77,0.4)' : 'rgba(88,166,255,0.35)');
+  banner.style.cursor = 'pointer';
+  banner.innerHTML = `🎁 Free Trial — ${daysLeft} நாள் மிச்சம் இருக்கு. Trial முடிஞ்சதும் Free Tier-க்கு switch ஆகும். <u>Premium-க்கு switch பண்ண Click பண்ணுங்க</u>`;
+  banner.onclick = openUpgradeModal;
+  banner.style.display = 'block';
+}
+
 function ensureUserProfile(){
   db.ref(ROOT + '/profile').once('value').then(snap=>{
     if(!snap.exists()){
-      db.ref(ROOT + '/profile').set({
-        email: currentUser.email || null,
-        phone: currentUser.phoneNumber || null,
-        tier: 'free',
-        createdAt: Date.now()
+      db.ref('appConfig/trialDays').once('value').then(cfgSnap=>{
+        const trialDays = cfgSnap.exists() ? Number(cfgSnap.val()) : 30;
+        db.ref(ROOT + '/profile').set({
+          email: currentUser.email || null,
+          phone: currentUser.phoneNumber || null,
+          tier: 'free',
+          trialEndsAt: Date.now() + trialDays*24*60*60*1000,
+          createdAt: Date.now()
+        });
       });
     }
   });
@@ -892,8 +938,12 @@ function initFirebase(){
     setLive(true);
     const val = snap.val() || {};
     STATE.tier = (val.profile && val.profile.tier) || "free";
+    STATE.trialEndsAt = (val.profile && val.profile.trialEndsAt) || null;
+    STATE.trialActive = STATE.tier !== 'paid' && STATE.trialEndsAt && Date.now() < STATE.trialEndsAt;
+    STATE.isPremiumActive = STATE.tier === 'paid' || STATE.trialActive;
     const bannerEl = document.getElementById('homePremiumBanner');
-    if(bannerEl) bannerEl.classList.toggle('hidden', STATE.tier === 'paid');
+    if(bannerEl) bannerEl.classList.toggle('hidden', STATE.isPremiumActive);
+    renderTrialBanner();
     STATE.vehicles = val.vehicles || {};
     STATE.categories = val.categories || DEFAULT_CATEGORIES;
     STATE.paymodes = val.paymodes || DEFAULT_PAYMODES;
@@ -1677,6 +1727,7 @@ document.getElementById('pinToggleBtn').addEventListener('click', ()=>{
 updateNotifToggleUI();
 document.getElementById('openAccountBtn').addEventListener('click', openAccountModal);
 document.getElementById('openAdminGenCodeBtn').addEventListener('click', openAdminGenCodeModal);
+document.getElementById('openAdminTrialConfigBtn').addEventListener('click', openAdminTrialConfigModal);
 document.getElementById('homePremiumBanner').addEventListener('click', openUpgradeModal);
 document.getElementById('exportBtn').addEventListener('click', exportData);
 document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
@@ -1688,15 +1739,21 @@ document.getElementById('addDailyLogBtn').addEventListener('click', openAddDaily
 // ============ MODALS ============
 function openAccountModal(){
   const identity = (currentUser && (currentUser.email || currentUser.phoneNumber)) || '-';
-  const tierLabel = STATE.tier === 'paid'
-    ? '<span style="color:#FFC800; font-weight:400;">⭐ Premium</span>'
-    : '<span style="color:#fff; font-weight:400;">Free Tier</span>';
+  let tierLabel;
+  if(STATE.tier === 'paid'){
+    tierLabel = '<span style="color:#FFC800; font-weight:400;">⭐ Premium</span>';
+  } else if(STATE.trialActive){
+    const daysLeft = Math.ceil((STATE.trialEndsAt - Date.now()) / 86400000);
+    tierLabel = `<span style="color:#58A6FF; font-weight:400;">🎁 Free Trial — ${daysLeft} நாள் மிச்சம்</span>`;
+  } else {
+    tierLabel = '<span style="color:#fff; font-weight:400;">Free Tier</span>';
+  }
   openModal(`
     <div class="modal-title">Account<span class="close-x" id="closeModalX">✕</span></div>
     <div class="field-label">Logged in as</div>
     <div style="padding:12px 14px; background:#1A1A1A; border-radius:10px; margin-bottom:14px; font-weight:400;">${identity}</div>
     <div class="field-label">Plan</div>
-    <div style="padding:12px 14px; background:#1A1A1A; border-radius:10px; margin-bottom:20px;">${tierLabel} — ${Object.keys(STATE.vehicles).length}/${STATE.tier==='paid' ? '∞' : FREE_TIER_VEHICLE_LIMIT} vehicles</div>
+    <div style="padding:12px 14px; background:#1A1A1A; border-radius:10px; margin-bottom:20px;">${tierLabel} — ${Object.keys(STATE.vehicles).length}/${STATE.isPremiumActive ? '∞' : FREE_TIER_VEHICLE_LIMIT} vehicles</div>
     ${currentUser && currentUser.email ? `<button class="btn-secondary" id="resetPwFromAccountBtn" style="margin-bottom:12px;">🔑 Password Reset Link அனுப்பு</button>` : ''}
     ${STATE.tier === 'paid' ? `<button class="btn-secondary btn-danger" id="deactivatePremiumBtn" style="margin-bottom:12px;">⭐ Premium Deactivate பண்ணு</button>` : ''}
     <button class="btn-secondary btn-danger" id="logoutBtn" style="margin-bottom:12px;">🚪 Logout</button>
@@ -2335,7 +2392,7 @@ async function redeemPremiumCode(){
 }
 
 function openAddVehicleModal(){
-  if(STATE.tier !== 'paid' && Object.keys(STATE.vehicles).length >= FREE_TIER_VEHICLE_LIMIT){
+  if(!STATE.isPremiumActive && Object.keys(STATE.vehicles).length >= FREE_TIER_VEHICLE_LIMIT){
     openUpgradeModal();
     return;
   }
