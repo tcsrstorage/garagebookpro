@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260719-0605">
+<meta name="app-build" content="20260719-0615">
 <style>
   :root{
     --yellow:#FFC800;
@@ -346,6 +346,17 @@
   <!-- MAIN APP (hidden until login) -->
   <div id="mainApp" class="hidden">
 
+  <!-- QUICK PIN UNLOCK OVERLAY -->
+  <div id="pinLockScreen" class="hidden" style="position:fixed; inset:0; z-index:2000; background:#0A0A0A; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px;">
+    <div style="font-size:44px; margin-bottom:10px;">🏍️</div>
+    <div style="color:#FFC800; font-weight:700; font-size:22px; margin-bottom:6px;">Garage Book Pro</div>
+    <div style="color:#fff; font-size:13.5px; margin-bottom:28px;">Quick PIN போட்டு open பண்ணுங்க</div>
+    <input type="tel" id="pinLockInput" maxlength="4" inputmode="numeric" placeholder="****" style="width:180px; text-align:center; font-size:28px; letter-spacing:14px; padding:14px; border-radius:12px; border:none; background:#161616; color:#fff; font-weight:700;">
+    <div id="pinLockError" style="color:#FF4D4D; font-size:12.5px; margin-top:10px; min-height:16px;"></div>
+    <button class="btn-primary" id="pinUnlockBtn" style="width:180px; margin-top:16px;">Unlock</button>
+    <div style="color:#fff; font-size:12.5px; margin-top:20px; text-decoration:underline; cursor:pointer;" id="pinForgotLink">PIN மறந்துடீங்களா? Logout பண்ணு</div>
+  </div>
+
     <div class="topbar">
       <div class="topbar-left">
         <span class="topbar-logo">🏍️ Garage Book Pro</span>
@@ -488,6 +499,10 @@
         </div>
         <div class="settings-row" id="openFamilyShareBtn">
           <div class="settings-row-left"><span class="ic">👨‍👩‍👧</span><span class="txt">Family Sharing</span></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="settings-row" id="pinToggleBtn">
+          <div class="settings-row-left"><span class="ic">🔢</span><span class="txt" id="pinToggleTxt">Set Quick PIN Unlock</span></div>
           <span class="arrow">›</span>
         </div>
         <div class="settings-row" id="openAccountBtn">
@@ -766,6 +781,13 @@ auth.onAuthStateChanged(function(user){
     currentUser = user;
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
+    updatePinToggleUI();
+    const pinHash = localStorage.getItem('gbp_pin_' + user.uid);
+    if(pinHash){
+      document.getElementById('pinLockScreen').classList.remove('hidden');
+    } else {
+      document.getElementById('pinLockScreen').classList.add('hidden');
+    }
     // Check if this account is linked (family shared) to another owner's data
     db.ref('linkMap/'+user.uid).once('value').then(snap=>{
       const linkedOwnerUid = snap.val();
@@ -782,10 +804,63 @@ auth.onAuthStateChanged(function(user){
     currentUser = null;
     ROOT = null;
     if(sessionRef){ sessionRef.off(); sessionRef = null; }
+    document.getElementById('pinLockScreen').classList.add('hidden');
     document.getElementById('loginScreen').classList.remove('hidden');
     document.getElementById('mainApp').classList.add('hidden');
   }
 });
+
+// ============ V2.1: QUICK PIN UNLOCK ============
+async function sha256Hex(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+document.getElementById('pinUnlockBtn').addEventListener('click', tryPinUnlock);
+document.getElementById('pinLockInput').addEventListener('keydown', e=>{ if(e.key==='Enter') tryPinUnlock(); });
+async function tryPinUnlock(){
+  const entered = document.getElementById('pinLockInput').value.trim();
+  const errEl = document.getElementById('pinLockError');
+  if(entered.length !== 4){ errEl.textContent = '4 digit PIN போடுங்க'; return; }
+  const hash = await sha256Hex(entered);
+  const stored = localStorage.getItem('gbp_pin_' + currentUser.uid);
+  if(hash === stored){
+    document.getElementById('pinLockScreen').classList.add('hidden');
+    document.getElementById('pinLockInput').value = '';
+    errEl.textContent = '';
+  } else {
+    errEl.textContent = 'தப்பு PIN, மறுபடியும் try பண்ணுங்க';
+    document.getElementById('pinLockInput').value = '';
+  }
+}
+document.getElementById('pinForgotLink').addEventListener('click', ()=>{
+  if(confirm('PIN reset ஆகும், Logout ஆகி மறுபடியும் Email/Password-ஆல் login பண்ணணும். தொடரவா?')){
+    localStorage.removeItem('gbp_pin_' + currentUser.uid);
+    auth.signOut();
+  }
+});
+async function setupQuickPin(){
+  const p1 = prompt('புது 4-digit PIN போடுங்க:');
+  if(!p1 || !/^\d{4}$/.test(p1)){ showToast('4 digit எண் மட்டும் போடுங்க'); return; }
+  const p2 = prompt('மறுபடியும் அதே PIN போடுங்க (confirm):');
+  if(p1 !== p2){ showToast('PIN match ஆகல, மறுபடியும் try பண்ணுங்க'); return; }
+  const hash = await sha256Hex(p1);
+  localStorage.setItem('gbp_pin_' + currentUser.uid, hash);
+  showToast('Quick PIN set ஆச்சு!');
+  updatePinToggleUI();
+}
+function removeQuickPin(){
+  if(confirm('Quick PIN remove பண்ணணுமா? அடுத்த முறை Email/Password மட்டும் வேணும்.')){
+    localStorage.removeItem('gbp_pin_' + currentUser.uid);
+    showToast('PIN removed');
+    updatePinToggleUI();
+  }
+}
+function updatePinToggleUI(){
+  const el = document.getElementById('pinToggleTxt');
+  if(!el || !currentUser) return;
+  const has = !!localStorage.getItem('gbp_pin_' + currentUser.uid);
+  el.textContent = has ? 'Quick PIN: ON ✅ (tap to remove)' : 'Set Quick PIN Unlock';
+}
 
 function ensureUserProfile(){
   db.ref(ROOT + '/profile').once('value').then(snap=>{
@@ -1584,6 +1659,10 @@ document.getElementById('openPaymodesBtn').addEventListener('click', ()=>openMan
 document.getElementById('openRecurringBtn').addEventListener('click', openManageRecurring);
 document.getElementById('notifToggleBtn').addEventListener('click', requestNotificationPermission);
 document.getElementById('openFamilyShareBtn').addEventListener('click', openFamilyShareModal);
+document.getElementById('pinToggleBtn').addEventListener('click', ()=>{
+  const has = currentUser && !!localStorage.getItem('gbp_pin_' + currentUser.uid);
+  if(has) removeQuickPin(); else setupQuickPin();
+});
 updateNotifToggleUI();
 document.getElementById('openAccountBtn').addEventListener('click', openAccountModal);
 document.getElementById('openAdminGenCodeBtn').addEventListener('click', openAdminGenCodeModal);
