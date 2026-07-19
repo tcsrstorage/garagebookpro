@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260719-0710">
+<meta name="app-build" content="20260719-0715">
 <style>
   :root{
     --yellow:#FFC800;
@@ -2281,7 +2281,6 @@ async function redeemPremiumCode(){
   const errEl = document.getElementById('redeemError');
   const rawInput = input.value;
   const code = rawInput.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
-  const charCodes = Array.from(rawInput).map(c=>c.charCodeAt(0)).join(',');
   if(!code){ errEl.textContent = 'Code போடுங்க'; return; }
   const btn = document.getElementById('redeemCodeBtn');
   btn.disabled = true;
@@ -2317,7 +2316,7 @@ async function redeemPremiumCode(){
     // STEP 2: now update the user's profile tier; redeemCodes/{code}/used
     // is already true in the database, so the validate rule passes reliably.
     try{
-      await db.ref('users/'+currentUser.uid+'/profile').update({
+      await db.ref(ROOT+'/profile').update({
         tier: 'paid',
         appliedCode: code
       });
