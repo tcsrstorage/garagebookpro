@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260719-0640">
+<meta name="app-build" content="20260719-0645">
 <style>
   :root{
     --yellow:#FFC800;
@@ -71,7 +71,7 @@
     width:100%; padding:13px; border-radius:12px; border:2px solid var(--black); background:transparent; color:var(--black);
     font-weight:400; font-size:14px; cursor:pointer;
   }
-  .auth-error{color:#B00020; font-weight:400; font-size:12.5px; margin-top:12px; min-height:16px;}
+  .auth-error{display:none; color:#FF4D4D; background:rgba(0,0,0,0.75); border:1px solid #FF4D4D; border-radius:10px; padding:10px 12px; font-weight:600; font-size:12.5px; margin-top:12px; line-height:1.5;}
   .auth-link{color:var(--black); font-weight:700; font-size:13px; text-decoration:underline; text-align:center; margin-top:14px; cursor:pointer;}
   .auth-back{position:absolute; top:calc(20px + var(--safe-top)); left:20px; font-weight:400; font-size:13px; color:var(--black); cursor:pointer;}
   #recaptcha-container{margin-top:10px;}
@@ -631,7 +631,9 @@ let confirmationResult = null;
 let recaptchaVerifier = null;
 
 function setAuthError(msg){
-  document.getElementById('authError').textContent = msg || '';
+  const el = document.getElementById('authError');
+  el.textContent = msg || '';
+  el.style.display = msg ? 'block' : 'none';
 }
 
 document.getElementById('tabLogin').addEventListener('click', ()=>{
