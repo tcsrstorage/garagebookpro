@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260719-0725">
+<meta name="app-build" content="20260719-0730">
 <style>
   :root{
     --yellow:#FFC800;
@@ -938,12 +938,15 @@ function openAdminUserListModal(){
   });
 }
 function testMyTrial(){
-  if(!confirm('Unga own account-ல 30-day trial start பண்ணணுமா? (testing purpose)')) return;
-  const trialEndsAt = Date.now() + 30*24*60*60*1000;
-  db.ref(ROOT+'/profile').update({ trialEndsAt: trialEndsAt }).then(()=>{
-    syncAdminDirectory(STATE.tier, trialEndsAt);
-    showToast('🎁 Trial start ஆச்சு! Home tab-ல பாருங்க');
-  }).catch(err=> showToast('Failed: ' + err.message));
+  db.ref('appConfig/trialDays').once('value').then(cfgSnap=>{
+    const trialDays = cfgSnap.exists() ? Number(cfgSnap.val()) : 30;
+    if(!confirm('Unga own account-ல ' + trialDays + '-day trial start பண்ணணுமா? (testing purpose)')) return;
+    const trialEndsAt = Date.now() + trialDays*24*60*60*1000;
+    db.ref(ROOT+'/profile').update({ trialEndsAt: trialEndsAt }).then(()=>{
+      syncAdminDirectory(STATE.tier, trialEndsAt);
+      showToast('🎁 Trial start ஆச்சு (' + trialDays + ' நாள்)! Home tab-ல பாருங்க');
+    }).catch(err=> showToast('Failed: ' + err.message));
+  });
 }
 
 function openAdminTrialConfigModal(){
