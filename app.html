@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260719-0547">
+<meta name="app-build" content="20260719-0550">
 <style>
   :root{
     --yellow:#FFC800;
@@ -2788,27 +2788,15 @@ if('serviceWorker' in navigator){
 
 // ============ RELIABLE AUTO-UPDATE (with banner) ============
 // Compares the live app.html's build marker against this page's own marker.
-// If a newer deploy is detected, show a small "Update available" banner
-// instead of reloading instantly — so mid-entry typing is never interrupted.
+// If a newer deploy is detected, reload automatically — no manual tap needed.
 const APP_BUILD = (document.querySelector('meta[name="app-build"]') || {}).content || '';
-let updateBannerShown = false;
-function showUpdateBanner(){
-  if(updateBannerShown) return;
-  updateBannerShown = true;
-  const bar = document.createElement('div');
-  bar.id = 'appUpdateBanner';
-  bar.style.cssText = 'position:fixed; left:12px; right:12px; bottom:78px; z-index:999; background:#FFC800; color:#0A0A0A; font-weight:600; font-size:13.5px; padding:12px 14px; border-radius:12px; box-shadow:0 4px 14px rgba(0,0,0,.35); display:flex; align-items:center; justify-content:space-between; gap:10px;';
-  bar.innerHTML = '<span>🔄 புதிய அப்டேட் இருக்கு</span><span style="background:#0A0A0A; color:#FFC800; padding:7px 14px; border-radius:8px; font-weight:700; cursor:pointer;">Refresh</span>';
-  bar.querySelector('span:last-child').addEventListener('click', ()=> location.reload());
-  document.body.appendChild(bar);
-}
 async function checkForAppUpdate(){
   try{
     const res = await fetch('./app.html', { cache: 'no-store' });
     const text = await res.text();
     const match = text.match(/<meta name="app-build" content="([^"]*)"/);
     if(match && match[1] && APP_BUILD && match[1] !== APP_BUILD){
-      showUpdateBanner();
+      location.reload();
     }
   }catch(e){ /* offline or fetch failed — ignore, try again later */ }
 }
