@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260719-0750">
+<meta name="app-build" content="20260719-0755">
 <style>
   :root{
     --yellow:#FFC800;
@@ -1603,7 +1603,12 @@ const ALL_FEATURES = [
 function renderAllFeaturesList(){
   const list = document.getElementById('allFeaturesList');
   if(!list) return;
-  list.innerHTML = ALL_FEATURES.map(f=>`• ${f}`).join('<br>');
+  list.innerHTML = ALL_FEATURES.map((f,i)=>
+    `<div style="display:flex; gap:10px; margin-bottom:12px; align-items:flex-start;">
+      <span style="color:var(--yellow); font-weight:700; min-width:20px;">${i+1}.</span>
+      <span style="flex:1;">${f}</span>
+    </div>`
+  ).join('');
   const toggle = document.getElementById('allFeaturesToggle');
   const arrow = document.getElementById('allFeaturesArrow');
   if(toggle && !toggle.dataset.bound){
