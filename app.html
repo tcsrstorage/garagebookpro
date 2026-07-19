@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260719-0735">
+<meta name="app-build" content="20260719-0745">
 <style>
   :root{
     --yellow:#FFC800;
@@ -357,6 +357,16 @@
     <div style="color:#fff; font-size:12.5px; margin-top:20px; text-decoration:underline; cursor:pointer;" id="pinForgotLink">PIN மறந்துடீங்களா? Logout பண்ணு</div>
   </div>
 
+  <!-- FIRST-TIME ONBOARDING TUTORIAL -->
+  <div id="onboardingScreen" class="hidden" style="position:fixed; inset:0; z-index:2100; background:#0A0A0A; display:flex; flex-direction:column; padding:24px; overflow-y:auto;">
+    <div id="onboardingSlides" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;"></div>
+    <div style="display:flex; justify-content:center; gap:8px; margin:16px 0;" id="onboardingDots"></div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn-secondary" id="onboardingSkipBtn" style="flex:1;">Skip</button>
+      <button class="btn-primary" id="onboardingNextBtn" style="flex:1;">அடுத்து</button>
+    </div>
+  </div>
+
     <div class="topbar">
       <div class="topbar-left">
         <span class="topbar-logo">🏍️ Garage Book Pro</span>
@@ -504,6 +514,14 @@
         </div>
         <div class="settings-row" id="openFamilyShareBtn">
           <div class="settings-row-left"><span class="ic">👨‍👩‍👧</span><span class="txt">Family Sharing</span></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="settings-row" id="openYearlyWrapBtn">
+          <div class="settings-row-left"><span class="ic">🎉</span><span class="txt">Yearly Wrap-up</span></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="settings-row" id="openReferralBtn">
+          <div class="settings-row-left"><span class="ic">🎁</span><span class="txt">Refer & Earn Free Days</span></div>
           <span class="arrow">›</span>
         </div>
         <div class="settings-row" id="pinToggleBtn">
@@ -806,6 +824,7 @@ auth.onAuthStateChanged(function(user){
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
     updatePinToggleUI();
+    checkAndShowOnboarding();
     const pinHash = localStorage.getItem('gbp_pin_' + user.uid);
     if(pinHash){
       document.getElementById('pinLockScreen').classList.remove('hidden');
@@ -888,6 +907,48 @@ function updatePinToggleUI(){
   const has = !!localStorage.getItem('gbp_pin_' + currentUser.uid);
   el.textContent = has ? 'Quick PIN: ON ✅ (tap to remove)' : 'Set Quick PIN Unlock';
 }
+
+// ============ V2.2: FIRST-TIME ONBOARDING TUTORIAL ============
+const ONBOARDING_SLIDES = [
+  { icon: '🚗', title: 'Garage Book Pro-க்கு வரவேற்கிறோம்!', body: 'உங்க bike/car expenses எல்லாம் ஒரே இடத்துல track பண்ணலாம் — fuel, service, insurance எல்லாம்.' },
+  { icon: '➕', title: 'Vehicle Add பண்ணுங்க', body: 'Home screen-ல "+ Add Vehicle" tap பண்ணி உங்க bike/car சேர்க்கவும். Free tier-ல 1 vehicle, Premium-ல unlimited.' },
+  { icon: '⛽', title: 'Expense Log பண்ணுங்க', body: 'Yellow "+" button tap பண்ணி petrol, service, repair expenses ஒரு tap-ல add பண்ணலாம்.' },
+  { icon: '🔔', title: 'Reminders Automatic', body: 'Service due, Insurance/PUC/RC expiry, Budget limits — எல்லாம் automatic-ஆ Home screen-ல banner-ஆ காட்டும்.' },
+  { icon: '📊', title: 'Reports & Family Sharing', body: 'Monthly/Yearly reports, PDF/CSV export, Family Sharing — Settings-ல எல்லா features-உம் இருக்கு. Start பண்ணலாம்!' }
+];
+let onboardingIndex = 0;
+function checkAndShowOnboarding(){
+  if(!currentUser) return;
+  const seen = localStorage.getItem('gbp_onboarding_seen_' + currentUser.uid);
+  if(seen) return;
+  onboardingIndex = 0;
+  renderOnboardingSlide();
+  document.getElementById('onboardingScreen').classList.remove('hidden');
+}
+function renderOnboardingSlide(){
+  const slide = ONBOARDING_SLIDES[onboardingIndex];
+  const container = document.getElementById('onboardingSlides');
+  container.innerHTML = `
+    <div style="font-size:64px; margin-bottom:24px;">${slide.icon}</div>
+    <div style="color:#FFC800; font-weight:700; font-size:20px; margin-bottom:14px;">${slide.title}</div>
+    <div style="color:#fff; font-size:14px; line-height:1.7; max-width:320px;">${slide.body}</div>
+  `;
+  const dots = document.getElementById('onboardingDots');
+  dots.innerHTML = ONBOARDING_SLIDES.map((_,i)=>
+    `<div style="width:8px; height:8px; border-radius:50%; background:${i===onboardingIndex ? '#FFC800' : '#333'};"></div>`
+  ).join('');
+  document.getElementById('onboardingNextBtn').textContent = (onboardingIndex === ONBOARDING_SLIDES.length-1) ? 'தொடங்குங்க!' : 'அடுத்து';
+}
+function finishOnboarding(){
+  localStorage.setItem('gbp_onboarding_seen_' + currentUser.uid, '1');
+  document.getElementById('onboardingScreen').classList.add('hidden');
+}
+document.getElementById('onboardingNextBtn').addEventListener('click', ()=>{
+  if(onboardingIndex === ONBOARDING_SLIDES.length-1){ finishOnboarding(); return; }
+  onboardingIndex++;
+  renderOnboardingSlide();
+});
+document.getElementById('onboardingSkipBtn').addEventListener('click', finishOnboarding);
 
 function openAdminUserListModal(){
   db.ref('adminUserDirectory').once('value').then(snap=>{
@@ -1009,20 +1070,35 @@ function ensureUserProfile(){
       db.ref('appConfig/trialDays').once('value').then(cfgSnap=>{
         const trialDays = cfgSnap.exists() ? Number(cfgSnap.val()) : 30;
         const trialEndsAt = Date.now() + trialDays*24*60*60*1000;
+        const referralCode = genReferralCode();
         db.ref(ROOT + '/profile').set({
           email: currentUser.email || null,
           phone: currentUser.phoneNumber || null,
           tier: 'free',
           trialEndsAt: trialEndsAt,
+          referralCode: referralCode,
           createdAt: Date.now()
         });
+        db.ref('referralCodes/'+referralCode).set({ ownerUid: currentUser.uid, ownerEmail: currentUser.email || '-' });
         syncAdminDirectory('free', trialEndsAt);
       });
     } else {
       const p = snap.val();
       syncAdminDirectory(p.tier || 'free', p.trialEndsAt || null);
+      if(!p.referralCode){
+        // backfill for accounts created before referral feature existed
+        const referralCode = genReferralCode();
+        db.ref(ROOT+'/profile/referralCode').set(referralCode);
+        db.ref('referralCodes/'+referralCode).set({ ownerUid: currentUser.uid, ownerEmail: currentUser.email || '-' });
+      }
     }
   });
+}
+function genReferralCode(){
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for(let i=0;i<5;i++) code += chars[Math.floor(Math.random()*chars.length)];
+  return code;
 }
 function syncAdminDirectory(tier, trialEndsAt){
   // Lightweight self-written directory entry so admin can see who's on trial
@@ -1823,6 +1899,8 @@ document.getElementById('openPaymodesBtn').addEventListener('click', ()=>openMan
 document.getElementById('openRecurringBtn').addEventListener('click', openManageRecurring);
 document.getElementById('notifToggleBtn').addEventListener('click', requestNotificationPermission);
 document.getElementById('openFamilyShareBtn').addEventListener('click', openFamilyShareModal);
+document.getElementById('openYearlyWrapBtn').addEventListener('click', openYearlyWrapModal);
+document.getElementById('openReferralBtn').addEventListener('click', openReferralModal);
 document.getElementById('pinToggleBtn').addEventListener('click', ()=>{
   const has = currentUser && !!localStorage.getItem('gbp_pin_' + currentUser.uid);
   if(has) removeQuickPin(); else setupQuickPin();
@@ -2923,6 +3001,136 @@ function exportCSV(){
 }
 
 // ---- Vehicle Full Report ----
+// ============ V2.2: YEARLY WRAP-UP REPORT ============
+// ============ V2.2: REFERRAL SYSTEM ============
+const REFERRAL_BONUS_DAYS = 7;
+function openReferralModal(){
+  db.ref(ROOT+'/profile').once('value').then(snap=>{
+    const p = snap.val() || {};
+    const myCode = p.referralCode || '-';
+    const applied = p.appliedReferral;
+    const shareText = `🎁 Garage Book Pro use பண்ணுங்க! என் referral code "${myCode}" போட்டு signup பண்ணா, உங்களுக்கும் எனக்கும் ${REFERRAL_BONUS_DAYS} நாள் extra free trial கிடைக்கும்.\n\ngaragebookpro.in`;
+    openModal(`
+      <div class="modal-title">Refer & Earn<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#fff; font-size:13px; margin-bottom:16px;">உங்க friends/family-க்கு Garage Book Pro-ஐ suggest பண்ணுங்க. அவங்க உங்க code போட்டா, ரெண்டு பேருக்கும் ${REFERRAL_BONUS_DAYS} நாள் extra trial கிடைக்கும்!</div>
+      <div style="background:#161616; border-radius:12px; padding:18px; text-align:center; margin-bottom:16px;">
+        <div style="color:#fff; font-size:11px; opacity:.7; text-transform:uppercase;">உங்க Referral Code</div>
+        <div style="color:#FFC800; font-size:28px; font-weight:900; letter-spacing:3px; margin:8px 0;">${escapeHtml(myCode)}</div>
+      </div>
+      <button class="btn-primary" id="shareReferralBtn" style="margin-bottom:20px;">📱 WhatsApp-ல Share பண்ணுங்க</button>
+      ${applied ? `
+        <div style="color:#58A6FF; font-size:13px; text-align:center;">✅ நீங்க ஏற்கனவே ஒரு referral code apply பண்ணிட்டீங்க (${escapeHtml(applied)})</div>
+      ` : `
+        <div class="field-label">வேற ஒருவர் Code இருந்தா போடுங்க</div>
+        <input type="text" id="referralInput" placeholder="e.g. AB3XY" style="text-transform:uppercase;">
+        <button class="btn-secondary" id="applyReferralBtn" style="margin-top:10px;">Apply பண்ணுங்க</button>
+        <div id="referralError" style="color:#FF4D4D; font-size:12px; margin-top:8px; min-height:16px;"></div>
+      `}
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.getElementById('shareReferralBtn').addEventListener('click', ()=>{
+      window.open('https://wa.me/?text=' + encodeURIComponent(shareText), '_blank');
+    });
+    const applyBtn = document.getElementById('applyReferralBtn');
+    if(applyBtn){
+      applyBtn.addEventListener('click', ()=> applyReferralCode(myCode));
+    }
+  });
+}
+function applyReferralCode(myOwnCode){
+  const input = document.getElementById('referralInput').value.trim().toUpperCase();
+  const errEl = document.getElementById('referralError');
+  if(!input){ errEl.textContent = 'Code போடுங்க'; return; }
+  if(input === myOwnCode){ errEl.textContent = 'இது உங்க own code'; return; }
+  db.ref('referralCodes/'+input).once('value').then(snap=>{
+    const data = snap.val();
+    if(!data || !data.ownerUid){ errEl.textContent = 'Code தப்பா இருக்கு'; return; }
+    // Extend my own trial by REFERRAL_BONUS_DAYS
+    db.ref(ROOT+'/profile').once('value').then(pSnap=>{
+      const p = pSnap.val() || {};
+      const baseTime = (p.trialEndsAt && p.trialEndsAt > Date.now()) ? p.trialEndsAt : Date.now();
+      const newTrialEnd = baseTime + REFERRAL_BONUS_DAYS*24*60*60*1000;
+      db.ref(ROOT+'/profile').update({ trialEndsAt: newTrialEnd, appliedReferral: input }).then(()=>{
+        // Log redemption under own uid so admin can see and manually credit the referrer
+        db.ref('referralRedemptions/'+input+'/'+currentUser.uid).set({ at: Date.now() });
+        showToast('🎁 ' + REFERRAL_BONUS_DAYS + ' நாள் extra trial கிடைச்சது!');
+        closeModal();
+      }).catch(err=> errEl.textContent = 'Failed: ' + err.message);
+    });
+  }).catch(err=> errEl.textContent = 'Failed: ' + err.message);
+}
+
+function openYearlyWrapModal(){
+  const years = new Set();
+  Object.values(STATE.expenses).forEach(e=>{ if(e.date) years.add(e.date.slice(0,4)); });
+  const yearList = Array.from(years).sort().reverse();
+  const currentYear = String(new Date().getFullYear());
+  if(!yearList.includes(currentYear)) yearList.unshift(currentYear);
+  renderYearlyWrap(yearList[0], yearList);
+}
+function renderYearlyWrap(year, yearList){
+  const allExpenses = Object.values(STATE.expenses).filter(e => (e.date||'').startsWith(year));
+  const total = sumExpenses(allExpenses);
+  const catTotals = {};
+  allExpenses.forEach(e=>{
+    const cname = STATE.categories[e.categoryId]?.name || 'Other';
+    catTotals[cname] = (catTotals[cname]||0) + (Number(e.amount)||0);
+  });
+  const topCat = Object.entries(catTotals).sort((a,b)=>b[1]-a[1])[0];
+  const entryCount = allExpenses.length;
+  const vehicleCount = new Set(allExpenses.map(e=>e.vehicleId)).size;
+  let totalKm = 0;
+  Object.values(STATE.dailyLogs||{}).forEach(v=>{
+    Object.values(v||{}).forEach(log=>{
+      if((log.date||'').startsWith(year) && log.startKm!=null && log.endKm!=null){
+        totalKm += (log.endKm - log.startKm);
+      }
+    });
+  });
+  const payModeTotals = {};
+  allExpenses.forEach(e=>{
+    const pname = STATE.paymodes[e.paymodeId]?.name || 'Cash';
+    payModeTotals[pname] = (payModeTotals[pname]||0) + (Number(e.amount)||0);
+  });
+  const topPayMode = Object.entries(payModeTotals).sort((a,b)=>b[1]-a[1])[0];
+
+  const yearOptions = yearList.map(y=>`<option value="${y}" ${y===year?'selected':''}>${y}</option>`).join('');
+  const shareText = `🎉 My ${year} Garage Book Pro Wrap-up:\n\n💰 Total Spend: ${fmtMoney(total)}\n📝 Entries: ${entryCount}\n${topCat ? `🏆 Top Category: ${topCat[0]} (${fmtMoney(topCat[1])})\n` : ''}${totalKm>0 ? `🛣️ Total KM Driven: ${totalKm.toLocaleString('en-IN')} km\n` : ''}\n#GarageBookPro`;
+
+  openModal(`
+    <div class="modal-title">🎉 Yearly Wrap-up<span class="close-x" id="closeModalX">✕</span></div>
+    <select id="wrapYearSelect" style="margin-bottom:16px;">${yearOptions}</select>
+    <div style="background:linear-gradient(135deg,#1A1400,#0A0A0A); border:1px solid #FFC800; border-radius:16px; padding:22px; text-align:center;">
+      <div style="color:#FFC800; font-weight:700; font-size:18px; margin-bottom:4px;">${year} Wrap-up</div>
+      <div style="color:#fff; font-size:12px; margin-bottom:18px;">Garage Book Pro</div>
+      <div style="color:#fff; font-size:12px; opacity:.7;">TOTAL SPEND</div>
+      <div style="color:var(--yellow); font-size:34px; font-weight:900; margin-bottom:14px;">${fmtMoney(total)}</div>
+      <div style="display:flex; gap:10px; margin-bottom:14px;">
+        <div style="flex:1; background:#161616; border-radius:10px; padding:12px;">
+          <div style="color:#fff; font-size:20px; font-weight:700;">${entryCount}</div>
+          <div style="color:#fff; font-size:11px; opacity:.7;">Entries</div>
+        </div>
+        <div style="flex:1; background:#161616; border-radius:10px; padding:12px;">
+          <div style="color:#fff; font-size:20px; font-weight:700;">${vehicleCount}</div>
+          <div style="color:#fff; font-size:11px; opacity:.7;">Vehicles</div>
+        </div>
+        <div style="flex:1; background:#161616; border-radius:10px; padding:12px;">
+          <div style="color:#fff; font-size:20px; font-weight:700;">${totalKm>0 ? totalKm.toLocaleString('en-IN') : '-'}</div>
+          <div style="color:#fff; font-size:11px; opacity:.7;">KM Driven</div>
+        </div>
+      </div>
+      ${topCat ? `<div style="text-align:left; color:#fff; font-size:13px; margin-bottom:6px;">🏆 Top Category: <b style="color:var(--yellow);">${escapeHtml(topCat[0])}</b> (${fmtMoney(topCat[1])})</div>` : ''}
+      ${topPayMode ? `<div style="text-align:left; color:#fff; font-size:13px;">💳 Most Used: <b style="color:var(--yellow);">${escapeHtml(topPayMode[0])}</b></div>` : ''}
+    </div>
+    <button class="btn-primary" id="shareWrapBtn" style="margin-top:16px;">📱 WhatsApp-ல Share பண்ணுங்க</button>
+  `);
+  document.getElementById('closeModalX').addEventListener('click', closeModal);
+  document.getElementById('wrapYearSelect').addEventListener('change', e=> renderYearlyWrap(e.target.value, yearList));
+  document.getElementById('shareWrapBtn').addEventListener('click', ()=>{
+    window.open('https://wa.me/?text=' + encodeURIComponent(shareText), '_blank');
+  });
+}
+
 function openVehicleReport(vehicleId){
   const v = STATE.vehicles[vehicleId];
   if(!v){ showToast('Vehicle not found'); return; }
