@@ -972,12 +972,11 @@ function openAnalyticsModal(){
     const rows = allDates.map(d=>{
       const v = visitsByDate[d] || 0;
       const s = signupsByDate[d] || 0;
-      const dayConv = v > 0 ? ((s/v)*100).toFixed(1) : '0.0';
       return `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #222; font-size:12.5px; gap:6px;">
         <span style="color:#fff;">${d}</span>
         <span style="color:#58A6FF;">👁️ ${v}</span>
         <span style="color:#FFC800;">✅ ${s}</span>
-        <span style="color:#2ECC71;">📊 ${dayConv}%</span>
+        <span style="color:#2ECC71;">📊 ${s}</span>
       </div>`;
     }).join('') || '<div style="color:#fff; font-size:13px; padding:10px 0;">Data இன்னும் இல்ல</div>';
 
@@ -994,7 +993,7 @@ function openAnalyticsModal(){
         </div>
         <div style="flex:1; background:#161616; border-radius:10px; padding:14px; text-align:center;">
           <div style="color:#2ECC71; font-size:22px; font-weight:700;">${totalSignups}</div>
-          <div style="color:#fff; font-size:11px;">Conversion (${conversionRate}%)</div>
+          <div style="color:#fff; font-size:11px;">Conversion</div>
         </div>
       </div>
       <div class="section-title" style="margin-top:0;">Last 7 Days</div>
