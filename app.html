@@ -972,10 +972,12 @@ function openAnalyticsModal(){
     const rows = allDates.map(d=>{
       const v = visitsByDate[d] || 0;
       const s = signupsByDate[d] || 0;
-      return `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #222; font-size:12.5px;">
+      const dayConv = v > 0 ? ((s/v)*100).toFixed(1) : '0.0';
+      return `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #222; font-size:12.5px; gap:6px;">
         <span style="color:#fff;">${d}</span>
-        <span style="color:#58A6FF;">👁️ ${v} visits</span>
-        <span style="color:#FFC800;">✅ ${s} signups</span>
+        <span style="color:#58A6FF;">👁️ ${v}</span>
+        <span style="color:#FFC800;">✅ ${s}</span>
+        <span style="color:#2ECC71;">📊 ${dayConv}%</span>
       </div>`;
     }).join('') || '<div style="color:#fff; font-size:13px; padding:10px 0;">Data இன்னும் இல்ல</div>';
 
