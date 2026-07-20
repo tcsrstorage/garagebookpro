@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="20260719-0800">
+<meta name="app-build" content="20260719-0810">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Garage Book Pro - Track Every Rupee You Spend on Your Vehicle</title>
 <meta name="description" content="Vandi selavu kanakku, simplified. Track fuel, service, insurance and more for unlimited vehicles. Free for 1 vehicle, ₹250/year for unlimited.">
@@ -298,6 +298,30 @@ setInterval(checkForPageUpdate, 60*1000);
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible') checkForPageUpdate();
 });
+</script>
+
+<!-- Visit Counter (anonymous, no login needed) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script>
+const visitFirebaseConfig = {
+  apiKey: "AIzaSyBDwIc6PLljPA4p6nwBAvoAYBVR6o1ryoA",
+  authDomain: "garagebookpro.firebaseapp.com",
+  databaseURL: "https://garagebookpro-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "garagebookpro",
+  storageBucket: "garagebookpro.firebasestorage.app",
+  messagingSenderId: "471426371631",
+  appId: "1:471426371631:web:e0455a27554655d90636da"
+};
+firebase.initializeApp(visitFirebaseConfig);
+const visitDb = firebase.database();
+// Count once per browser session (avoid inflating count on every page refresh)
+if(!sessionStorage.getItem('gbp_visit_counted')){
+  sessionStorage.setItem('gbp_visit_counted', '1');
+  const today = new Date().toISOString().slice(0,10);
+  visitDb.ref('siteStats/visits/total').transaction(v => (v||0)+1);
+  visitDb.ref('siteStats/visits/byDate/'+today).transaction(v => (v||0)+1);
+}
 </script>
 </body>
 </html>
