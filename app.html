@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260719-0755">
+<meta name="app-build" content="20260719-0810">
 <style>
   :root{
     --yellow:#FFC800;
@@ -545,6 +545,10 @@
           <div class="settings-row-left"><span class="ic">👥</span><span class="txt">Users & Trial Status</span></div>
           <span class="arrow">›</span>
         </div>
+        <div class="settings-row" id="openAnalyticsBtn" style="display:none;">
+          <div class="settings-row-left"><span class="ic">📈</span><span class="txt">Visits & Signups</span></div>
+          <span class="arrow">›</span>
+        </div>
         <div class="settings-row" id="testTrialBtn" style="display:none;">
           <div class="settings-row-left"><span class="ic">🧪</span><span class="txt">Test Trial (என் account-க்கு)</span></div>
           <span class="arrow">›</span>
@@ -843,6 +847,7 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('openAdminGenCodeBtn').style.display = '';
         document.getElementById('openAdminTrialConfigBtn').style.display = '';
         document.getElementById('openAdminUserListBtn').style.display = '';
+        document.getElementById('openAnalyticsBtn').style.display = '';
         document.getElementById('testTrialBtn').style.display = '';
       }
     });
@@ -949,6 +954,56 @@ document.getElementById('onboardingNextBtn').addEventListener('click', ()=>{
   renderOnboardingSlide();
 });
 document.getElementById('onboardingSkipBtn').addEventListener('click', finishOnboarding);
+
+function openAnalyticsModal(){
+  Promise.all([
+    db.ref('siteStats/visits/total').once('value'),
+    db.ref('siteStats/signups/total').once('value'),
+    db.ref('siteStats/visits/byDate').once('value'),
+    db.ref('siteStats/signups/byDate').once('value')
+  ]).then(([visitsSnap, signupsSnap, visitsByDateSnap, signupsByDateSnap])=>{
+    const totalVisits = visitsSnap.val() || 0;
+    const totalSignups = signupsSnap.val() || 0;
+    const conversionRate = totalVisits > 0 ? ((totalSignups/totalVisits)*100).toFixed(1) : '0.0';
+
+    const visitsByDate = visitsByDateSnap.val() || {};
+    const signupsByDate = signupsByDateSnap.val() || {};
+    const allDates = Array.from(new Set([...Object.keys(visitsByDate), ...Object.keys(signupsByDate)])).sort().reverse().slice(0,7);
+    const rows = allDates.map(d=>{
+      const v = visitsByDate[d] || 0;
+      const s = signupsByDate[d] || 0;
+      return `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #222; font-size:12.5px;">
+        <span style="color:#fff;">${d}</span>
+        <span style="color:#58A6FF;">👁️ ${v} visits</span>
+        <span style="color:#FFC800;">✅ ${s} signups</span>
+      </div>`;
+    }).join('') || '<div style="color:#fff; font-size:13px; padding:10px 0;">Data இன்னும் இல்ல</div>';
+
+    openModal(`
+      <div class="modal-title">Visits & Signups<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="display:flex; gap:10px; margin-bottom:16px;">
+        <div style="flex:1; background:#161616; border-radius:10px; padding:14px; text-align:center;">
+          <div style="color:#58A6FF; font-size:22px; font-weight:700;">${totalVisits}</div>
+          <div style="color:#fff; font-size:11px;">Total Visits</div>
+        </div>
+        <div style="flex:1; background:#161616; border-radius:10px; padding:14px; text-align:center;">
+          <div style="color:#FFC800; font-size:22px; font-weight:700;">${totalSignups}</div>
+          <div style="color:#fff; font-size:11px;">Total Signups</div>
+        </div>
+        <div style="flex:1; background:#161616; border-radius:10px; padding:14px; text-align:center;">
+          <div style="color:#2ECC71; font-size:22px; font-weight:700;">${conversionRate}%</div>
+          <div style="color:#fff; font-size:11px;">Conversion</div>
+        </div>
+      </div>
+      <div class="section-title" style="margin-top:0;">Last 7 Days</div>
+      <div>${rows}</div>
+      <div style="color:#fff; font-size:11px; margin-top:14px; opacity:.6;">Visits = landing page (garagebookpro.in) opens. Signups = new accounts created in app.</div>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+  }).catch(err=>{
+    showToast('Load failed: ' + err.message);
+  });
+}
 
 function openAdminUserListModal(){
   db.ref('adminUserDirectory').once('value').then(snap=>{
@@ -1081,6 +1136,9 @@ function ensureUserProfile(){
         });
         db.ref('referralCodes/'+referralCode).set({ ownerUid: currentUser.uid, ownerEmail: currentUser.email || '-' });
         syncAdminDirectory('free', trialEndsAt);
+        const today = todayStr();
+        db.ref('siteStats/signups/total').transaction(v => (v||0)+1);
+        db.ref('siteStats/signups/byDate/'+today).transaction(v => (v||0)+1);
       });
     } else {
       const p = snap.val();
@@ -1915,6 +1973,7 @@ document.getElementById('openAccountBtn').addEventListener('click', openAccountM
 document.getElementById('openAdminGenCodeBtn').addEventListener('click', openAdminGenCodeModal);
 document.getElementById('openAdminTrialConfigBtn').addEventListener('click', openAdminTrialConfigModal);
 document.getElementById('openAdminUserListBtn').addEventListener('click', openAdminUserListModal);
+document.getElementById('openAnalyticsBtn').addEventListener('click', openAnalyticsModal);
 document.getElementById('testTrialBtn').addEventListener('click', testMyTrial);
 document.getElementById('homePremiumBanner').addEventListener('click', openUpgradeModal);
 document.getElementById('exportBtn').addEventListener('click', exportData);
