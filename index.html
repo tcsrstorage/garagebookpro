@@ -315,21 +315,11 @@ const visitFirebaseConfig = {
 };
 firebase.initializeApp(visitFirebaseConfig);
 const visitDb = firebase.database();
-// TEMP DEBUG: shows a small toast confirming visit-write success/failure. Remove after verifying.
-function gbpDebugToast(msg, ok){
-  const t = document.createElement('div');
-  t.textContent = msg;
-  t.style.cssText = 'position:fixed;bottom:16px;left:16px;right:16px;z-index:99999;padding:10px 14px;border-radius:8px;font-size:13px;font-family:sans-serif;color:#fff;background:'+(ok?'#1b8a3a':'#b91c1c')+';box-shadow:0 2px 8px rgba(0,0,0,.3)';
-  document.body.appendChild(t);
-  setTimeout(()=>t.remove(), 6000);
-}
-sessionStorage.removeItem('gbp_visit_counted'); // TEMP: force recount for this debug test
+// Count once per browser session (avoid inflating count on every page refresh)
 if(!sessionStorage.getItem('gbp_visit_counted')){
   sessionStorage.setItem('gbp_visit_counted', '1');
   const today = new Date().toISOString().slice(0,10);
-  visitDb.ref('siteStats/visits/total').transaction(v => (v||0)+1)
-    .then(()=> gbpDebugToast('✅ Visit counted OK', true))
-    .catch(e => gbpDebugToast('❌ Visit write failed: '+e.message, false));
+  visitDb.ref('siteStats/visits/total').transaction(v => (v||0)+1);
   visitDb.ref('siteStats/visits/byDate/'+today).transaction(v => (v||0)+1);
 }
 </script>
