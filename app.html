@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260721-0648">
+<meta name="app-build" content="20260721-0845">
 <style>
   :root{
     --yellow:#FFC800;
@@ -554,7 +554,15 @@
           <div class="settings-row-left"><span class="ic">🔄</span><span class="txt">Check for Update</span></div>
           <span class="arrow">›</span>
         </div>
+        <div class="settings-row" id="contactUsBtn">
+          <div class="settings-row-left"><span class="ic">💬</span><span class="txt">Contact Us / Feedback</span><span id="contactUnreadDot" style="display:none; width:8px; height:8px; border-radius:50%; background:#FF6B6B; margin-left:6px;"></span></div>
+          <span class="arrow">›</span>
+        </div>
         <div class="section-title" id="adminSectionTitle" style="display:none;">Admin</div>
+        <div class="settings-row" id="openAdminSupportBtn" style="display:none;">
+          <div class="settings-row-left"><span class="ic">📨</span><span class="txt">Support Messages</span><span id="adminSupportUnreadDot" style="display:none; width:8px; height:8px; border-radius:50%; background:#FF6B6B; margin-left:6px;"></span></div>
+          <span class="arrow">›</span>
+        </div>
         <div class="settings-row" id="openAdminGenCodeBtn" style="display:none;">
           <div class="settings-row-left"><span class="ic">🔑</span><span class="txt">Generate Redeem Code</span></div>
           <span class="arrow">›</span>
@@ -889,8 +897,11 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('openAnalyticsBtn').style.display = '';
         document.getElementById('testTrialBtn').style.display = '';
         document.getElementById('adminStatsWidget').style.display = '';
+        document.getElementById('openAdminSupportBtn').style.display = '';
         loadAdminHomeStats();
+        checkAdminUnreadSupport();
       }
+      checkMyUnreadSupport();
     });
   } else {
     currentUser = null;
@@ -1742,9 +1753,11 @@ function renderAllFeaturesList(){
 }
 
 // ============ V2.1: WHAT'S NEW ON HOME ============
-const WHATS_NEW_VERSION = '2026-07-21c';
+const WHATS_NEW_VERSION = '2026-07-21d';
 const WHATS_NEW_ITEMS = [
+  '💬 Contact Us / Feedback — chat with developer directly in the app',
   '🔒 Family Sharing — restrict a driver to only their assigned vehicle',
+  '💬 Contact Us / Feedback — in-app chat with developer, no phone number needed',
   '👨‍👩‍👧 Family Sharing — now switch between multiple linked family accounts',
   '🔧 Mechanic QR Share — vehicle service/expiry info via QR scan',
   '📈 Visits & Signups tracking (admin)',
@@ -3113,6 +3126,144 @@ function openFamilyShareModal(){
     });
   });
 }
+
+// ============ IN-APP SUPPORT MESSAGING (no phone number needed) ============
+function fmtMsgTime(ts){
+  const d = new Date(ts);
+  return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'}) + ', ' + d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+}
+function checkMyUnreadSupport(){
+  if(!currentUser) return;
+  db.ref('supportThreads/'+currentUser.uid+'/unreadForUser').once('value').then(snap=>{
+    const dot = document.getElementById('contactUnreadDot');
+    if(dot) dot.style.display = snap.val() ? 'inline-block' : 'none';
+  });
+}
+function checkAdminUnreadSupport(){
+  db.ref('supportThreads').orderByChild('unreadForAdmin').equalTo(true).limitToFirst(1).once('value').then(snap=>{
+    const dot = document.getElementById('adminSupportUnreadDot');
+    if(dot) dot.style.display = snap.exists() ? 'inline-block' : 'none';
+  });
+}
+function renderSupportThread(msgs, isAdminView){
+  const arr = Object.entries(msgs||{}).sort((a,b)=> (a[1].timestamp||0)-(b[1].timestamp||0));
+  if(!arr.length) return '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">இன்னும் message எதுவும் இல்ல. கீழ type பண்ணி அனுப்புங்க.</div>';
+  return arr.map(([id,m])=>{
+    const mine = isAdminView ? m.from==='admin' : m.from==='user';
+    return `<div style="display:flex; justify-content:${mine?'flex-end':'flex-start'}; margin-bottom:8px;">
+      <div style="max-width:78%; background:${mine?'#FFC800':'#1c1c1c'}; color:${mine?'#0A0A0A':'#fff'}; padding:9px 13px; border-radius:12px; font-size:13.5px;">
+        ${escapeHtml(m.text)}
+        <div style="font-size:10px; opacity:0.6; margin-top:3px; text-align:right;">${fmtMsgTime(m.timestamp)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function openContactUsModal(){
+  db.ref('supportMessages/'+currentUser.uid).once('value').then(snap=>{
+    const msgs = snap.val() || {};
+    openModal(`
+      <div class="modal-title">💬 Contact Us / Feedback<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#fff; font-size:12.5px; margin-bottom:12px;">Doubt/feedback இருந்தா இங்க message பண்ணுங்க — நேரடியா developer-க்கு போகும், reply இங்கயே வரும்.</div>
+      <div id="supportThreadBody" style="max-height:340px; overflow-y:auto; padding:6px; background:#0A0A0A; border-radius:10px; margin-bottom:12px;">${renderSupportThread(msgs, false)}</div>
+      <div style="display:flex; gap:8px;">
+        <input type="text" id="supportMsgInput" placeholder="Message type பண்ணுங்க..." style="flex:1;">
+        <button class="btn-primary" id="supportSendBtn" style="width:auto; padding:0 16px;">Send</button>
+      </div>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    db.ref('supportThreads/'+currentUser.uid+'/unreadForUser').set(false);
+    checkMyUnreadSupport();
+    const sendFn = ()=>{
+      const input = document.getElementById('supportMsgInput');
+      const text = input.value.trim();
+      if(!text) return;
+      const msgId = uid('msg');
+      const timestamp = Date.now();
+      const updates = {};
+      updates['supportMessages/'+currentUser.uid+'/'+msgId] = { from:'user', text, timestamp };
+      updates['supportThreads/'+currentUser.uid] = {
+        userEmail: currentUser.email || '',
+        lastMessage: text, lastTimestamp: timestamp, lastFrom: 'user',
+        unreadForAdmin: true, unreadForUser: false
+      };
+      db.ref().update(updates).then(()=>{
+        input.value = '';
+        db.ref('supportMessages/'+currentUser.uid).once('value').then(s2=>{
+          document.getElementById('supportThreadBody').innerHTML = renderSupportThread(s2.val()||{}, false);
+          document.getElementById('supportThreadBody').scrollTop = 999999;
+        });
+      });
+    };
+    document.getElementById('supportSendBtn').addEventListener('click', sendFn);
+    document.getElementById('supportMsgInput').addEventListener('keydown', e=>{ if(e.key==='Enter') sendFn(); });
+    setTimeout(()=>{ const b=document.getElementById('supportThreadBody'); if(b) b.scrollTop = 999999; }, 100);
+  });
+}
+document.getElementById('contactUsBtn').addEventListener('click', openContactUsModal);
+
+function openAdminSupportInbox(){
+  db.ref('supportThreads').once('value').then(snap=>{
+    const threads = snap.val() || {};
+    const list = Object.entries(threads).sort((a,b)=> (b[1].lastTimestamp||0)-(a[1].lastTimestamp||0));
+    const rows = list.map(([uidKey,t])=>`
+      <div class="settings-row admin-thread-row" data-uid="${uidKey}" style="cursor:pointer;">
+        <div class="settings-row-left">
+          <span class="ic">${t.unreadForAdmin?'🔴':'⚪'}</span>
+          <span class="txt">${escapeHtml(t.userEmail || uidKey.slice(0,8))}<br><span style="color:#888; font-size:11.5px;">${escapeHtml((t.lastFrom==='admin'?'You: ':'')+ (t.lastMessage||''))}</span></span>
+        </div>
+        <span class="arrow">›</span>
+      </div>`).join('');
+    openModal(`
+      <div class="modal-title">📨 Support Messages<span class="close-x" id="closeModalX">✕</span></div>
+      ${rows || '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Messages எதுவும் இல்ல</div>'}
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.querySelectorAll('.admin-thread-row').forEach(row=>{
+      row.addEventListener('click', ()=> openAdminThreadView(row.dataset.uid));
+    });
+  });
+}
+function openAdminThreadView(userUid){
+  db.ref('supportMessages/'+userUid).once('value').then(snap=>{
+    const msgs = snap.val() || {};
+    openModal(`
+      <div class="modal-title">💬 ${userUid.slice(0,8)}...<span class="close-x" id="closeModalX">✕</span></div>
+      <div id="supportThreadBody" style="max-height:340px; overflow-y:auto; padding:6px; background:#0A0A0A; border-radius:10px; margin-bottom:12px;">${renderSupportThread(msgs, true)}</div>
+      <div style="display:flex; gap:8px;">
+        <input type="text" id="supportMsgInput" placeholder="Reply type பண்ணுங்க..." style="flex:1;">
+        <button class="btn-primary" id="supportSendBtn" style="width:auto; padding:0 16px;">Send</button>
+      </div>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    db.ref('supportThreads/'+userUid+'/unreadForAdmin').set(false);
+    checkAdminUnreadSupport();
+    const sendFn = ()=>{
+      const input = document.getElementById('supportMsgInput');
+      const text = input.value.trim();
+      if(!text) return;
+      const msgId = uid('msg');
+      const timestamp = Date.now();
+      const updates = {};
+      updates['supportMessages/'+userUid+'/'+msgId] = { from:'admin', text, timestamp };
+      updates['supportThreads/'+userUid+'/lastMessage'] = text;
+      updates['supportThreads/'+userUid+'/lastTimestamp'] = timestamp;
+      updates['supportThreads/'+userUid+'/lastFrom'] = 'admin';
+      updates['supportThreads/'+userUid+'/unreadForUser'] = true;
+      updates['supportThreads/'+userUid+'/unreadForAdmin'] = false;
+      db.ref().update(updates).then(()=>{
+        input.value = '';
+        db.ref('supportMessages/'+userUid).once('value').then(s2=>{
+          document.getElementById('supportThreadBody').innerHTML = renderSupportThread(s2.val()||{}, true);
+          document.getElementById('supportThreadBody').scrollTop = 999999;
+        });
+      });
+    };
+    document.getElementById('supportSendBtn').addEventListener('click', sendFn);
+    document.getElementById('supportMsgInput').addEventListener('keydown', e=>{ if(e.key==='Enter') sendFn(); });
+    setTimeout(()=>{ const b=document.getElementById('supportThreadBody'); if(b) b.scrollTop = 999999; }, 100);
+  });
+}
+document.getElementById('openAdminSupportBtn').addEventListener('click', openAdminSupportInbox);
 
 function bindDeleteButtons(){
   document.querySelectorAll('.del-btn').forEach(btn=>{
