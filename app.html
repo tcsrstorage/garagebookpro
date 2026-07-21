@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260721-0904">
+<meta name="app-build" content="20260721-0926">
 <style>
   :root{
     --yellow:#FFC800;
@@ -170,9 +170,9 @@
   .fab:active{transform:scale(0.92);}
 
   .fab-chat{
-    position:fixed; bottom:calc(78px + var(--safe-bottom)); left:20px; width:50px; height:50px; border-radius:50%;
-    background:#161616; color:#FFC800; font-size:22px; font-weight:400; border:1px solid #333;
-    display:flex; align-items:center; justify-content:center; box-shadow:0 4px 14px rgba(0,0,0,.5);
+    position:fixed; bottom:calc(78px + var(--safe-bottom)); left:20px; width:58px; height:58px; border-radius:50%;
+    background:var(--green); color:#08130D; font-size:26px; font-weight:400; border:none;
+    display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(46,204,113,.45);
     z-index:60; max-width:520px; cursor:pointer;
   }
   .fab-chat:active{transform:scale(0.92);}
@@ -412,6 +412,10 @@
               <div style="color:#fff; font-size:10.5px;">Conversion</div>
             </div>
           </div>
+        </div>
+        <div id="customerSupportBanner" style="display:none; background:#0F2E1A; border:1px solid #2ECC71; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openContactUsModal()">
+          <div style="color:#2ECC71; font-weight:700; font-size:14px;">💬 உங்க message-க்கு reply வந்திருக்கு!</div>
+          <div id="customerSupportBannerText" style="color:#fff; font-size:12.5px; margin-top:4px;"></div>
         </div>
         <div id="whatsNewCard" style="display:none; background:linear-gradient(135deg,#1A1400,#0A0A0A); border:1px solid #FFC800; border-radius:14px; padding:16px; margin-bottom:14px;"></div>
         <div id="trialBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center;"></div>
@@ -3148,12 +3152,22 @@ function fmtMsgTime(ts){
 }
 function checkMyUnreadSupport(){
   if(!currentUser) return;
-  db.ref('supportThreads/'+currentUser.uid+'/unreadForUser').once('value').then(snap=>{
-    const hasUnread = !!snap.val();
+  db.ref('supportThreads/'+currentUser.uid).once('value').then(snap=>{
+    const t = snap.val() || {};
+    const hasUnread = !!t.unreadForUser;
     const dot = document.getElementById('contactUnreadDot');
     if(dot) dot.style.display = hasUnread ? 'inline-block' : 'none';
     const fabDot = document.getElementById('fabChatDot');
     if(fabDot) fabDot.style.display = hasUnread ? 'block' : 'none';
+    const banner = document.getElementById('customerSupportBanner');
+    const bannerText = document.getElementById('customerSupportBannerText');
+    if(!banner) return;
+    if(hasUnread && t.lastFrom === 'admin'){
+      bannerText.textContent = '"' + (t.lastMessage||'').slice(0,80) + '"';
+      banner.style.display = 'block';
+    } else {
+      banner.style.display = 'none';
+    }
   });
 }
 function checkAdminUnreadSupport(){
@@ -3810,6 +3824,7 @@ async function checkForAppUpdate(){
 window.addEventListener('load', ()=> setTimeout(checkForAppUpdate, 3000));
 setInterval(checkForAppUpdate, 60*1000);
 setInterval(()=>{ if(currentUser && currentUser.uid === ADMIN_UID) checkAdminUnreadSupport(); }, 60*1000);
+setInterval(()=>{ if(currentUser) checkMyUnreadSupport(); }, 60*1000);
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible') checkForAppUpdate();
 });
