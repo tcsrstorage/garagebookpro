@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260721-0845">
+<meta name="app-build" content="20260721-0904">
 <style>
   :root{
     --yellow:#FFC800;
@@ -168,6 +168,15 @@
     z-index:60; max-width:520px; cursor:pointer;
   }
   .fab:active{transform:scale(0.92);}
+
+  .fab-chat{
+    position:fixed; bottom:calc(78px + var(--safe-bottom)); left:20px; width:50px; height:50px; border-radius:50%;
+    background:#161616; color:#FFC800; font-size:22px; font-weight:400; border:1px solid #333;
+    display:flex; align-items:center; justify-content:center; box-shadow:0 4px 14px rgba(0,0,0,.5);
+    z-index:60; max-width:520px; cursor:pointer;
+  }
+  .fab-chat:active{transform:scale(0.92);}
+  #fabChatDot{position:absolute; top:4px; right:4px; width:11px; height:11px; border-radius:50%; background:#FF6B6B; border:2px solid #0A0A0A;}
 
   /* bottom nav */
   .bottomnav{
@@ -383,6 +392,10 @@
 
       <!-- HOME TAB -->
       <div id="tab-home">
+        <div id="adminSupportBanner" style="display:none; background:#3A0E0E; border:1px solid #FF6B6B; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openAdminSupportInbox()">
+          <div style="color:#FF6B6B; font-weight:700; font-size:14px;">🔴 புது Support Message வந்திருக்கு!</div>
+          <div id="adminSupportBannerText" style="color:#fff; font-size:12.5px; margin-top:4px;"></div>
+        </div>
         <div id="adminStatsWidget" style="display:none; background:#121212; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openAnalyticsModal()">
           <div style="color:#888; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">📈 ADMIN — VISITS & SIGNUPS</div>
           <div style="display:flex; gap:10px;">
@@ -599,6 +612,7 @@
     </div>
 
     <button class="fab" id="fabAdd">+</button>
+    <button class="fab-chat" id="fabChat" title="Contact Us">💬<span id="fabChatDot" style="display:none;"></span></button>
 
     <div class="bottomnav">
       <button class="navbtn active" data-tab="home"><span class="ic">🏠</span>Home</button>
@@ -3135,14 +3149,26 @@ function fmtMsgTime(ts){
 function checkMyUnreadSupport(){
   if(!currentUser) return;
   db.ref('supportThreads/'+currentUser.uid+'/unreadForUser').once('value').then(snap=>{
+    const hasUnread = !!snap.val();
     const dot = document.getElementById('contactUnreadDot');
-    if(dot) dot.style.display = snap.val() ? 'inline-block' : 'none';
+    if(dot) dot.style.display = hasUnread ? 'inline-block' : 'none';
+    const fabDot = document.getElementById('fabChatDot');
+    if(fabDot) fabDot.style.display = hasUnread ? 'block' : 'none';
   });
 }
 function checkAdminUnreadSupport(){
-  db.ref('supportThreads').orderByChild('unreadForAdmin').equalTo(true).limitToFirst(1).once('value').then(snap=>{
+  db.ref('supportThreads').orderByChild('unreadForAdmin').equalTo(true).once('value').then(snap=>{
     const dot = document.getElementById('adminSupportUnreadDot');
     if(dot) dot.style.display = snap.exists() ? 'inline-block' : 'none';
+    const banner = document.getElementById('adminSupportBanner');
+    const bannerText = document.getElementById('adminSupportBannerText');
+    if(!banner) return;
+    if(!snap.exists()){ banner.style.display = 'none'; return; }
+    const threads = snap.val() || {};
+    const count = Object.keys(threads).length;
+    const latest = Object.values(threads).sort((a,b)=>(b.lastTimestamp||0)-(a.lastTimestamp||0))[0];
+    bannerText.textContent = count + ' நபர்(கள்) reply-க்கு wait பண்றாங்க — சமீபத்தில்: "' + (latest.lastMessage||'').slice(0,60) + '"';
+    banner.style.display = 'block';
   });
 }
 function renderSupportThread(msgs, isAdminView){
@@ -3200,6 +3226,7 @@ function openContactUsModal(){
   });
 }
 document.getElementById('contactUsBtn').addEventListener('click', openContactUsModal);
+document.getElementById('fabChat').addEventListener('click', openContactUsModal);
 
 function openAdminSupportInbox(){
   db.ref('supportThreads').once('value').then(snap=>{
@@ -3782,6 +3809,7 @@ async function checkForAppUpdate(){
 }
 window.addEventListener('load', ()=> setTimeout(checkForAppUpdate, 3000));
 setInterval(checkForAppUpdate, 60*1000);
+setInterval(()=>{ if(currentUser && currentUser.uid === ADMIN_UID) checkAdminUnreadSupport(); }, 60*1000);
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible') checkForAppUpdate();
 });
