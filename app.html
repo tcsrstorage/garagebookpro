@@ -383,6 +383,23 @@
 
       <!-- HOME TAB -->
       <div id="tab-home">
+        <div id="adminStatsWidget" style="display:none; background:#121212; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openAnalyticsModal()">
+          <div style="color:#888; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">📈 ADMIN — VISITS & SIGNUPS</div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1; text-align:center;">
+              <div id="adminStatsVisits" style="color:#58A6FF; font-size:22px; font-weight:700;">0</div>
+              <div style="color:#fff; font-size:10.5px;">Visits</div>
+            </div>
+            <div style="flex:1; text-align:center;">
+              <div id="adminStatsSignups" style="color:#FFC800; font-size:22px; font-weight:700;">0</div>
+              <div style="color:#fff; font-size:10.5px;">Signups</div>
+            </div>
+            <div style="flex:1; text-align:center;">
+              <div id="adminStatsConversion" style="color:#2ECC71; font-size:22px; font-weight:700;">0</div>
+              <div style="color:#fff; font-size:10.5px;">Conversion</div>
+            </div>
+          </div>
+        </div>
         <div id="whatsNewCard" style="display:none; background:linear-gradient(135deg,#1A1400,#0A0A0A); border:1px solid #FFC800; border-radius:14px; padding:16px; margin-bottom:14px;"></div>
         <div id="trialBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center;"></div>
         <div id="homePremiumBanner" class="home-premium-banner hidden">
@@ -849,6 +866,8 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('openAdminUserListBtn').style.display = '';
         document.getElementById('openAnalyticsBtn').style.display = '';
         document.getElementById('testTrialBtn').style.display = '';
+        document.getElementById('adminStatsWidget').style.display = '';
+        loadAdminHomeStats();
       }
     });
   } else {
@@ -1711,6 +1730,21 @@ function renderWhatsNewCard(){
 }
 
 // ============ HOME TAB ============
+function loadAdminHomeStats(){
+  db.ref('siteStats/visits/total').once('value').then(vSnap=>{
+    db.ref('siteStats/signups/total').once('value').then(sSnap=>{
+      const v = vSnap.val() || 0;
+      const s = sSnap.val() || 0;
+      const elV = document.getElementById('adminStatsVisits');
+      const elS = document.getElementById('adminStatsSignups');
+      const elC = document.getElementById('adminStatsConversion');
+      if(elV) elV.textContent = v;
+      if(elS) elS.textContent = s;
+      if(elC) elC.textContent = s;
+    });
+  });
+}
+
 function renderHome(){
   renderWhatsNewCard();
   renderAllFeaturesList();
