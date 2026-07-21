@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260721-0257">
+<meta name="app-build" content="20260721-0324">
 <style>
   :root{
     --yellow:#FFC800;
@@ -1681,7 +1681,8 @@ const ALL_FEATURES = [
   '👨‍👩‍👧 Family Sharing — invite code system',
   '🔒 Single Active Session (security)',
   '💾 Full Data Export (JSON backup)',
-  '🔄 Auto-update — always latest version'
+  '🔄 Auto-update — always latest version',
+  '🔧 Mechanic QR Share — vehicle service/expiry info via QR scan'
 ];
 function renderAllFeaturesList(){
   const list = document.getElementById('allFeaturesList');
@@ -1705,8 +1706,11 @@ function renderAllFeaturesList(){
 }
 
 // ============ V2.1: WHAT'S NEW ON HOME ============
-const WHATS_NEW_VERSION = '2026-07-19';
+const WHATS_NEW_VERSION = '2026-07-21';
 const WHATS_NEW_ITEMS = [
+  '🔧 Mechanic QR Share — vehicle service/expiry info via QR scan',
+  '📈 Visits & Signups tracking (admin)',
+  '🔄 Manual "Check for Update" button',
   '🔁 Recurring Expenses — EMI/Insurance auto-add reminders',
   '📄 Insurance/PUC/RC Expiry Reminders',
   '💰 Budget Limit Alerts per vehicle',
