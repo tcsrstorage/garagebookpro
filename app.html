@@ -417,7 +417,7 @@
           <div style="color:#2ECC71; font-weight:700; font-size:14px;">💬 உங்க message-க்கு reply வந்திருக்கு!</div>
           <div id="customerSupportBannerText" style="color:#fff; font-size:12.5px; margin-top:4px;"></div>
         </div>
-        <div id="whatsNewCard" style="display:none; background:linear-gradient(135deg,#1A1400,#0A0A0A); border:1px solid #FFC800; border-radius:14px; padding:16px; margin-bottom:14px;"></div>
+        <div id="whatsNewCard" style="display:none; background:linear-gradient(135deg,#1A1400,#0A0A0A); border:1px solid #FFC800; border-radius:14px; padding:18px 16px; margin-bottom:14px;"></div>
         <div id="trialBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center;"></div>
         <div id="homePremiumBanner" class="home-premium-banner hidden">
           <span>⭐ Premium-க்கு switch பண்ணுங்க — <span class="price-highlight">₹21/month</span> மட்டும்</span>
@@ -1789,11 +1789,24 @@ function renderWhatsNewCard(){
   const seen = localStorage.getItem('gbp_whatsnew_seen');
   if(seen === WHATS_NEW_VERSION){ card.style.display='none'; return; }
   card.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-      <span style="color:#FFC800; font-weight:700; font-size:15px;">🎉 What's New</span>
-      <span id="whatsNewClose" style="color:#fff; font-size:18px; cursor:pointer; padding:2px 6px;">✕</span>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <span style="color:#FFC800; font-weight:700; font-size:16px;">🎉 What's New</span>
+      <span id="whatsNewClose" style="color:#fff; font-size:20px; cursor:pointer; padding:2px 8px; line-height:1;">✕</span>
     </div>
-    <div style="color:#fff; font-size:13px; line-height:1.9;">${WHATS_NEW_ITEMS.map(i=>`• ${i}`).join('<br>')}</div>
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      ${WHATS_NEW_ITEMS.map(i=>{
+        const parts = i.split(' — ');
+        const title = parts[0];
+        const desc = parts.slice(1).join(' — ');
+        return `
+        <div style="display:flex; align-items:flex-start; gap:10px;">
+          <span style="color:#FFC800; font-size:14px; line-height:1.5; flex-shrink:0; margin-top:1px;">•</span>
+          <span style="font-size:14px; line-height:1.5;">
+            <span style="color:#fff; font-weight:600;">${title}</span>${desc ? `<span style="color:#B8B8B8;"> — ${desc}</span>` : ''}
+          </span>
+        </div>`;
+      }).join('')}
+    </div>
   `;
   card.style.display = 'block';
   document.getElementById('whatsNewClose').addEventListener('click', ()=>{
