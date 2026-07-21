@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260721-0237-LIVE-TEST">
+<meta name="app-build" content="20260721-0246">
 <style>
   :root{
     --yellow:#FFC800;
@@ -547,6 +547,10 @@
         </div>
         <div class="settings-row" id="openAccountBtn">
           <div class="settings-row-left"><span class="ic">👤</span><span class="txt">Account & Logout</span></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="settings-row" id="checkUpdateBtn" onclick="manualCheckForUpdate()">
+          <div class="settings-row-left"><span class="ic">🔄</span><span class="txt">Check for Update</span></div>
           <span class="arrow">›</span>
         </div>
         <div class="section-title" id="adminSectionTitle" style="display:none;">Admin</div>
@@ -3456,6 +3460,21 @@ function showUpdateNotice(){
   bar.innerHTML = '🔄 புதிய அப்டேட் இருக்கு — Refresh ஆகுது...';
   document.body.appendChild(bar);
   setTimeout(()=> location.reload(), 2000);
+}
+async function manualCheckForUpdate(){
+  showToast('🔄 Check பண்றோம்...');
+  try{
+    const res = await fetch('./app.html', { cache: 'no-store' });
+    const text = await res.text();
+    const match = text.match(/<meta name="app-build" content="([^"]*)"/);
+    if(match && match[1] && APP_BUILD && match[1] !== APP_BUILD){
+      showUpdateNotice();
+    } else {
+      showToast('✅ App already latest version-ல இருக்கு');
+    }
+  }catch(e){
+    showToast('❌ Check பண்ண முடியல — internet பாருங்க');
+  }
 }
 async function checkForAppUpdate(){
   try{
