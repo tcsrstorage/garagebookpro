@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260721-1209">
+<meta name="app-build" content="20260721-1215">
 <style>
   :root{
     --yellow:#FFC800;
@@ -1747,7 +1747,9 @@ const ALL_FEATURES = [
   '🔒 Single Active Session (security)',
   '💾 Full Data Export (JSON backup)',
   '🔄 Auto-update — always latest version',
-  '🔧 Mechanic QR Share — vehicle service/expiry info via QR scan'
+  '🔧 Mechanic QR Share — vehicle service/expiry info via QR scan',
+  '💬 Contact Us / Feedback — in-app chat with developer, no phone number needed',
+  '📜 Resale Certificate — professional PDF with QR-verified vehicle history'
 ];
 function renderAllFeaturesList(){
   const list = document.getElementById('allFeaturesList');
@@ -1775,20 +1777,11 @@ const WHATS_NEW_VERSION = '2026-07-21e';
 const WHATS_NEW_ITEMS = [
   '📜 Resale Certificate — PDF with QR-verified live vehicle data, great for resale',
   '💬 Contact Us / Feedback — chat with developer directly in the app',
-  '📜 Resale Certificate — professional PDF with QR-verified vehicle history',
   '🔒 Family Sharing — restrict a driver to only their assigned vehicle',
-  '💬 Contact Us / Feedback — in-app chat with developer, no phone number needed',
   '👨‍👩‍👧 Family Sharing — now switch between multiple linked family accounts',
   '🔧 Mechanic QR Share — vehicle service/expiry info via QR scan',
   '📈 Visits & Signups tracking (admin)',
-  '🔄 Manual "Check for Update" button',
-  '🔁 Recurring Expenses — EMI/Insurance auto-add reminders',
-  '📄 Insurance/PUC/RC Expiry Reminders',
-  '💰 Budget Limit Alerts per vehicle',
-  '📊 Excel/CSV Export of all expenses',
-  '📎 Document Vault — Insurance/RC/PUC photo storage',
-  '👨‍👩‍👧 Family Sharing — invite code to share data',
-  '📱 WhatsApp reminder share button'
+  '🔄 Manual "Check for Update" button'
 ];
 function renderWhatsNewCard(){
   const card = document.getElementById('whatsNewCard');
