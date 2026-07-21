@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260721-0246">
+<meta name="app-build" content="20260721-0257">
 <style>
   :root{
     --yellow:#FFC800;
@@ -418,6 +418,7 @@
           <div class="total-amount" id="homeTotalMonth">₹0</div>
           <div class="total-meta" id="homeMonthMeta">No expenses yet</div>
           <button class="btn-secondary" id="vehicleReportBtn" style="display:none; margin-top:12px; width:100%; background:#0A0A0A !important; color:#FFC800 !important; font-weight:400 !important; font-size:16px !important; border:2px solid #0A0A0A !important;">📄 Full Vehicle Report</button>
+          <button class="btn-secondary" id="mechanicQrBtn" onclick="openMechanicQrModal()" style="display:none; margin-top:10px; width:100%; background:#0A0A0A !important; color:#25D366 !important; font-weight:400 !important; font-size:16px !important; border:2px solid #0A0A0A !important;">🔧 Mechanic QR Share</button>
         </div>
 
         <div class="quick-stats">
@@ -1756,6 +1757,7 @@ function renderHome(){
   const vName = vid==='all' ? 'All Vehicles' : (STATE.vehicles[vid]?.name || '-');
   document.getElementById('homeVehicleName').textContent = vName;
   document.getElementById('vehicleReportBtn').style.display = (vid==='all') ? 'none' : 'block';
+  document.getElementById('mechanicQrBtn').style.display = (vid==='all') ? 'none' : 'block';
   renderServiceDueBanner(vid);
   renderDocExpiryBanner(vid);
   renderRecurringBanner(vid);
@@ -2277,6 +2279,45 @@ async function loadRecentCodes(){
   }
 }
 
+function openMechanicQrModal(){
+  const vid = STATE.activeVehicle;
+  if(vid==='all'){ showToast('ஒரு vehicle-ஐ select பண்ணுங்க'); return; }
+  const v = STATE.vehicles[vid];
+  if(!v){ showToast('Vehicle கிடைக்கல'); return; }
+
+  const svc = computeServiceDue(vid);
+  const currentOdo = getCurrentOdometer(vid);
+  const publicInfo = {
+    name: v.name || '',
+    regNo: v.regNo || '',
+    odometer: currentOdo,
+    insuranceExpiry: v.insuranceExpiry || null,
+    pucExpiry: v.pucExpiry || null,
+    rcExpiry: v.rcExpiry || null,
+    serviceOverdue: svc ? svc.overdue : false,
+    serviceDueSoon: svc ? !svc.overdue : false,
+    serviceNextDueKm: svc ? svc.nextDueKm : null,
+    ownerUid: currentUser ? currentUser.uid : null,
+    updatedAt: Date.now()
+  };
+
+  db.ref('publicVehicleInfo/' + vid).set(publicInfo).then(()=>{
+    const shareUrl = 'https://garagebookpro.in/vehicle.html?v=' + vid;
+    const qrImg = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(shareUrl);
+    openModal(`
+      <div class="modal-title">🔧 Mechanic QR Share<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="text-align:center; padding:10px 0;">
+        <div style="color:#fff; font-size:13px; margin-bottom:14px;">Mechanic-க்கு இந்த QR-ஐ காட்டுங்க — ${escapeHtml(v.name)}-ஓட service history, expiry dates, odometer ஒரே பக்கத்துல தெரியும்.</div>
+        <img src="${qrImg}" style="width:200px; height:200px; border-radius:12px; background:#fff; padding:8px;" />
+        <div style="margin-top:16px; display:flex; gap:10px;">
+          <span onclick="window.open('https://wa.me/?text=' + encodeURIComponent('${escapeHtml(v.name)} vehicle details: ${shareUrl}'), '_blank')" style="flex:1; background:#25D366; color:#0A0A0A; padding:10px; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer;">📱 WhatsApp Share</span>
+          <span onclick="navigator.clipboard.writeText('${shareUrl}').then(()=>showToast('Link copy ஆயிடுச்சு!'))" style="flex:1; background:#222; color:#FFC800; padding:10px; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer;">🔗 Copy Link</span>
+        </div>
+      </div>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+  }).catch(err=> showToast('Failed: ' + err.message));
+}
 function openModal(innerHtml){
   const root = document.getElementById('modalRoot');
   root.innerHTML = `<div class="modal-overlay" id="modalOverlay">
