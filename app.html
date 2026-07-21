@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260721-0324">
+<meta name="app-build" content="20260721-0617">
 <style>
   :root{
     --yellow:#FFC800;
@@ -857,10 +857,26 @@ auth.onAuthStateChanged(function(user){
     } else {
       document.getElementById('pinLockScreen').classList.add('hidden');
     }
-    // Check if this account is linked (family shared) to another owner's data
+    // Check if this account is linked (family shared) to one or more owners' data
     db.ref('linkMap/'+user.uid).once('value').then(snap=>{
-      const linkedOwnerUid = snap.val();
-      ROOT = 'users/' + (linkedOwnerUid || user.uid);
+      let linkVal = snap.val();
+      // Backward compatibility: old format stored a single ownerUid string. Migrate to object format.
+      if(typeof linkVal === 'string'){
+        const oldOwner = linkVal;
+        db.ref('linkMap/'+user.uid).set({ [oldOwner]: { joinedAt: Date.now() } });
+        linkVal = { [oldOwner]: { joinedAt: Date.now() } };
+      }
+      const linkedOwners = linkVal && typeof linkVal === 'object' ? Object.keys(linkVal) : [];
+      let activeOwner = localStorage.getItem('gbp_active_owner_' + user.uid) || '';
+      if(activeOwner && activeOwner !== 'self' && !linkedOwners.includes(activeOwner)){
+        activeOwner = ''; // saved owner no longer linked, fall back
+      }
+      if(!activeOwner){
+        activeOwner = linkedOwners.length ? linkedOwners[0] : 'self';
+      }
+      STATE.linkedOwners = linkedOwners;
+      STATE.activeOwner = activeOwner;
+      ROOT = 'users/' + (activeOwner !== 'self' ? activeOwner : user.uid);
       ensureUserProfile();
       startSessionGuard(user.uid);
       initFirebase();
@@ -1678,7 +1694,7 @@ const ALL_FEATURES = [
   '📱 WhatsApp Reminder Share',
   '🔔 Push Notifications (device dependent)',
   '📎 Document Vault — Insurance/RC/PUC photo storage',
-  '👨‍👩‍👧 Family Sharing — invite code system',
+  '👨‍👩‍👧 Family Sharing — invite code system, switch between multiple linked accounts',
   '🔒 Single Active Session (security)',
   '💾 Full Data Export (JSON backup)',
   '🔄 Auto-update — always latest version',
@@ -1706,8 +1722,9 @@ function renderAllFeaturesList(){
 }
 
 // ============ V2.1: WHAT'S NEW ON HOME ============
-const WHATS_NEW_VERSION = '2026-07-21';
+const WHATS_NEW_VERSION = '2026-07-21b';
 const WHATS_NEW_ITEMS = [
+  '👨‍👩‍👧 Family Sharing — now switch between multiple linked family accounts',
   '🔧 Mechanic QR Share — vehicle service/expiry info via QR scan',
   '📈 Visits & Signups tracking (admin)',
   '🔄 Manual "Check for Update" button',
@@ -2962,40 +2979,81 @@ function genShareCode(){
 }
 function openFamilyShareModal(){
   db.ref('linkMap/'+currentUser.uid).once('value').then(snap=>{
-    const linkedOwnerUid = snap.val();
-    if(linkedOwnerUid){
-      openModal(`
-        <div class="modal-title">Family Sharing<span class="close-x" id="closeModalX">✕</span></div>
-        <div style="color:#fff; font-size:13.5px; margin-bottom:14px;">இந்த account family member account-ஆ இணைக்கப்பட்டிருக்கு. Owner-oda vehicle data-ஐ பாக்க முடியும்.</div>
-        <button class="btn-secondary" id="unlinkBtn">Unlink from Family Account</button>
-      `);
-      document.getElementById('closeModalX').addEventListener('click', closeModal);
-      document.getElementById('unlinkBtn').addEventListener('click', ()=>{
-        if(confirm('Family account-ல இருந்து unlink பண்ணணுமா? உங்க own separate data-க்கு switch ஆகும்.')){
-          db.ref('linkMap/'+currentUser.uid).remove().then(()=>{ showToast('Unlinked. Reloading...'); setTimeout(()=>location.reload(), 1000); });
-        }
+    let linkVal = snap.val();
+    if(typeof linkVal === 'string'){ linkVal = { [linkVal]: { joinedAt: Date.now() } }; }
+    const linkedOwners = linkVal && typeof linkVal === 'object' ? Object.keys(linkVal) : [];
+
+    let ownerRowsHtml = '';
+    if(linkedOwners.length){
+      ownerRowsHtml = '<div class="section-title" style="margin-top:0;">Linked Accounts</div>';
+      linkedOwners.forEach(ownerUid=>{
+        const isActive = STATE.activeOwner === ownerUid;
+        ownerRowsHtml += `
+          <div style="display:flex; align-items:center; justify-content:space-between; background:#161616; border:1px solid ${isActive?'#FFC800':'#262626'}; border-radius:10px; padding:12px 14px; margin-bottom:8px;">
+            <div>
+              <div style="color:#fff; font-size:13.5px; font-weight:700;">${isActive?'✅ ':''}Owner: ${ownerUid.slice(0,6)}...</div>
+              <div style="color:#888; font-size:11px;">${isActive?'இப்போ இந்த account data தான் காட்டுது':'Tap "Switch" to view this data'}</div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              ${!isActive ? `<span class="switch-owner-btn" data-owner="${ownerUid}" style="background:#FFC800; color:#0A0A0A; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;">Switch</span>` : ''}
+              <span class="unlink-owner-btn" data-owner="${ownerUid}" style="background:#3A0E0E; color:#FF6B6B; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;">Unlink</span>
+            </div>
+          </div>`;
       });
-      return;
+      const isOwnActive = STATE.activeOwner === 'self' || !STATE.activeOwner;
+      ownerRowsHtml += `
+        <div style="display:flex; align-items:center; justify-content:space-between; background:#161616; border:1px solid ${isOwnActive?'#FFC800':'#262626'}; border-radius:10px; padding:12px 14px; margin-bottom:16px;">
+          <div>
+            <div style="color:#fff; font-size:13.5px; font-weight:700;">${isOwnActive?'✅ ':''}My Own Data</div>
+            <div style="color:#888; font-size:11px;">${isOwnActive?'இப்போ உங்க own data தான் காட்டுது':'Tap "Switch" to view your own data'}</div>
+          </div>
+          ${!isOwnActive ? `<span class="switch-owner-btn" data-owner="self" style="background:#FFC800; color:#0A0A0A; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;">Switch</span>` : ''}
+        </div>`;
     }
+
     openModal(`
       <div class="modal-title">Family Sharing<span class="close-x" id="closeModalX">✕</span></div>
-      <div style="color:#fff; font-size:13.5px; margin-bottom:16px;">உங்க bike/car data-ஐ family member (spouse, driver) கூட share பண்ணலாம் — அவங்க separate login வெச்சு same data பாக்கலாம், add பண்ணலாம்.</div>
+      <div style="color:#fff; font-size:13.5px; margin-bottom:16px;">உங்க bike/car data-ஐ family member (spouse, driver) கூட share பண்ணலாம் — அவங்க separate login வெச்சு same data பாக்கலாம், add பண்ணலாம். ஒரே account, பல owners-ஓட data-வையும் switch பண்ணி பாக்கலாம்.</div>
+      ${ownerRowsHtml}
       <div class="section-title" style="margin-top:0;">Invite Code Generate பண்ணு</div>
       <button class="btn-primary" id="genCodeBtn">Generate Invite Code</button>
       <div id="genCodeResult" style="margin-top:12px;"></div>
       <div class="section-title">வேற ஒருவர் Code-ஐ Join பண்ணு</div>
-      <div style="color:#fff; font-size:12px; margin-bottom:8px;">⚠️ Join பண்ணா, உங்க இப்போதைய data hide ஆகி, code owner-oda data காட்டும்.</div>
+      <div style="color:#fff; font-size:12px; margin-bottom:8px;">Join பண்ணா, இந்த owner-ஓட data-வும் உங்க list-ல add ஆகும் — உங்க existing data/links பாதிக்காது.</div>
       <input type="text" id="joinCodeInput" placeholder="6-digit code" style="text-transform:uppercase;">
       <button class="btn-secondary" id="joinCodeBtn" style="margin-top:10px;">Join with Code</button>
     `);
     document.getElementById('closeModalX').addEventListener('click', closeModal);
+
+    document.querySelectorAll('.switch-owner-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const owner = btn.dataset.owner;
+        localStorage.setItem('gbp_active_owner_' + currentUser.uid, owner);
+        showToast('Switch ஆகுது...');
+        setTimeout(()=>location.reload(), 600);
+      });
+    });
+    document.querySelectorAll('.unlink-owner-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const owner = btn.dataset.owner;
+        if(!confirm('இந்த owner-ஓட link-ஐ remove பண்ணணுமா?')) return;
+        db.ref('linkMap/'+currentUser.uid+'/'+owner).remove().then(()=>{
+          if(STATE.activeOwner === owner){
+            localStorage.removeItem('gbp_active_owner_' + currentUser.uid);
+          }
+          showToast('Unlink ஆச்சு. Reloading...');
+          setTimeout(()=>location.reload(), 800);
+        });
+      });
+    });
+
     document.getElementById('genCodeBtn').addEventListener('click', ()=>{
       const code = genShareCode();
       db.ref('shareCodes/'+code).set({ ownerUid: currentUser.uid, createdAt: Date.now() }).then(()=>{
         document.getElementById('genCodeResult').innerHTML = `
           <div style="background:#1A1400; border:1px solid #3A2E00; border-radius:10px; padding:14px; text-align:center;">
             <div style="font-size:24px; font-weight:700; color:#FFC800; letter-spacing:2px;">${code}</div>
-            <div style="color:#fff; font-size:11.5px; margin-top:6px;">இந்த code-ஐ family member-க்கு share பண்ணுங்க</div>
+            <div style="color:#fff; font-size:11.5px; margin-top:6px;">இந்த code-ஐ family member-க்கு share பண்ணுங்க — பலரும் இந்த code use பண்ணலாம்</div>
           </div>`;
         showToast('Code generate ஆச்சு!');
       });
@@ -3007,7 +3065,8 @@ function openFamilyShareModal(){
         const data = cs.val();
         if(!data || !data.ownerUid){ showToast('Code தப்பா இருக்கு'); return; }
         if(data.ownerUid === currentUser.uid){ showToast('இது உங்க own code'); return; }
-        db.ref('linkMap/'+currentUser.uid).set(data.ownerUid).then(()=>{
+        db.ref('linkMap/'+currentUser.uid+'/'+data.ownerUid).set({ joinedAt: Date.now() }).then(()=>{
+          localStorage.setItem('gbp_active_owner_' + currentUser.uid, data.ownerUid);
           showToast('Join ஆச்சு! Reloading...');
           setTimeout(()=>location.reload(), 1000);
         });
