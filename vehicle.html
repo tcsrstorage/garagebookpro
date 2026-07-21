@@ -93,7 +93,21 @@ if(!vid){
           <div style="color:#fff; font-size:13.5px;">Vehicle expense & service tracking free-ஆ try பண்ணுங்க</div>
           <a href="https://garagebookpro.in/">Garage Book Pro App</a>
         </div>
+        <div style="display:flex; gap:10px; margin-top:14px;">
+          <span onclick="shareThisPage()" style="flex:1; background:#161616; border:1px solid #262626; color:#FFC800; padding:12px; border-radius:10px; font-weight:700; font-size:13.5px; text-align:center; cursor:pointer;">📤 Share / Save பண்ணுங்க</span>
+        </div>
+        <div style="text-align:center; color:#666; font-size:11.5px; margin-top:10px;">இந்த link-ஐ save/share பண்ணி வெச்சிருங்க — அடுத்த தடவை QR scan பண்ண வேண்டாம்</div>
       `;
+      window.shareThisPage = function(){
+        const shareUrl = window.location.href;
+        if(navigator.share){
+          navigator.share({title: (data.name||'Vehicle') + ' — Garage Book Pro', url: shareUrl}).catch(()=>{});
+        } else if(navigator.clipboard){
+          navigator.clipboard.writeText(shareUrl).then(()=> alert('Link copy ஆயிடுச்சு!'));
+        } else {
+          prompt('இந்த link-ஐ copy பண்ணுங்க:', shareUrl);
+        }
+      };
     })
     .catch(() => {
       content.innerHTML = '<div class="error">⚠️ Load பண்ண முடியல. Internet check பண்ணுங்க.</div>';
