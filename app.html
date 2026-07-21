@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260721-0936">
+<meta name="app-build" content="20260721-1209">
 <style>
   :root{
     --yellow:#FFC800;
@@ -1771,9 +1771,11 @@ function renderAllFeaturesList(){
 }
 
 // ============ V2.1: WHAT'S NEW ON HOME ============
-const WHATS_NEW_VERSION = '2026-07-21d';
+const WHATS_NEW_VERSION = '2026-07-21e';
 const WHATS_NEW_ITEMS = [
+  '📜 Resale Certificate — PDF with QR-verified live vehicle data, great for resale',
   '💬 Contact Us / Feedback — chat with developer directly in the app',
+  '📜 Resale Certificate — professional PDF with QR-verified vehicle history',
   '🔒 Family Sharing — restrict a driver to only their assigned vehicle',
   '💬 Contact Us / Feedback — in-app chat with developer, no phone number needed',
   '👨‍👩‍👧 Family Sharing — now switch between multiple linked family accounts',
@@ -3654,7 +3656,8 @@ function openVehicleReport(vehicleId){
     <div style="max-height:340px; overflow-y:auto;">${entriesHtml}</div>
 
     <button class="btn-primary" id="shareReportBtn" style="margin-top:16px;">📤 Share Report (WhatsApp)</button>
-    <button class="btn-secondary" id="pdfReportBtn" style="margin-top:10px;">📄 Download PDF</button>
+    <button class="btn-secondary" id="pdfReportBtn" style="margin-top:10px;">📄 Download Full Report PDF</button>
+    <button class="btn-secondary" id="resaleCertBtn" style="margin-top:10px; background:#0A0A0A !important; color:#2ECC71 !important; border:2px solid #2ECC71 !important;">📜 Resale Certificate (PDF)</button>
   `);
 
   document.getElementById('closeModalX').addEventListener('click', closeModal);
@@ -3690,6 +3693,9 @@ function openVehicleReport(vehicleId){
 
   document.getElementById('pdfReportBtn').addEventListener('click', ()=>{
     generateVehiclePdf(v, list, total, odoStats, sortedCats, fuelEff, rangeStr);
+  });
+  document.getElementById('resaleCertBtn').addEventListener('click', ()=>{
+    generateResaleCertificate(vehicleId, v, list, total, odoStats, fuelEff);
   });
 }
 
@@ -3782,6 +3788,161 @@ function generateVehiclePdf(v, list, total, odoStats, sortedCats, fuelEff, range
 
   doc.save(v.name.replace(/[^a-zA-Z0-9]/g,'_') + '_report.pdf');
   showToast('PDF download ஆயிடுச்சு!');
+}
+
+async function generateResaleCertificate(vehicleId, v, list, total, odoStats, fuelEff){
+  if(!window.jspdf){ showToast('PDF library load ஆகல, network check பண்ணி மறுபடி try பண்ணுங்க'); return; }
+  showToast('📜 Certificate தயார் பண்றோம்...');
+
+  // Publish latest public snapshot so the QR verification link is fresh
+  const svc = computeServiceDue(vehicleId);
+  const publicInfo = {
+    name: v.name || '', regNo: v.regNo || '',
+    odometer: odoStats.maxOdo != null ? odoStats.maxOdo : null,
+    insuranceExpiry: v.insuranceExpiry || null, pucExpiry: v.pucExpiry || null, rcExpiry: v.rcExpiry || null,
+    serviceOverdue: svc ? svc.overdue : false, serviceDueSoon: svc ? !svc.overdue : false,
+    serviceNextDueKm: svc ? svc.nextDueKm : null,
+    ownerUid: currentUser ? currentUser.uid : null, updatedAt: Date.now()
+  };
+  try{ await db.ref('publicVehicleInfo/'+vehicleId).set(publicInfo); }catch(e){}
+
+  const shareUrl = 'https://garagebookpro.in/vehicle.html?v=' + vehicleId;
+  const qrImgUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(shareUrl);
+  let qrDataUrl = null;
+  try{
+    const res = await fetch(qrImgUrl);
+    const blob = await res.blob();
+    qrDataUrl = await new Promise(resolve=>{
+      const reader = new FileReader();
+      reader.onloadend = ()=> resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
+  }catch(e){ /* QR optional, continue without it */ }
+
+  function expiryStatus(dateStr){
+    if(!dateStr) return {label:'Not set', color:[150,150,150]};
+    const days = Math.ceil((new Date(dateStr+'T00:00:00') - new Date())/86400000);
+    if(days < 0) return {label:'EXPIRED', color:[220,60,60]};
+    if(days <= 30) return {label: days+' days left', color:[230,160,0]};
+    return {label:'Valid', color:[46,204,113]};
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const marginX = 44;
+  let y = 0;
+
+  // Header band
+  doc.setFillColor(10,10,10);
+  doc.rect(0, 0, pageW, 90, 'F');
+  doc.setTextColor(255, 200, 0);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(22);
+  doc.text('VEHICLE HEALTH CERTIFICATE', marginX, 40);
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10.5);
+  doc.text('Issued by Garage Book Pro · garagebookpro.in', marginX, 60);
+  doc.setFontSize(9);
+  doc.setTextColor(200,200,200);
+  doc.text('Certificate generated: ' + new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}), marginX, 76);
+  y = 120;
+
+  // Vehicle name block
+  doc.setTextColor(10,10,10);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(19);
+  doc.text(v.name + (v.regNo ? '  (' + v.regNo + ')' : ''), marginX, y);
+  y += 30;
+
+  // Two-column key stats
+  const leftX = marginX, rightX = pageW/2 + 10;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  const leftStats = [
+    ['Vehicle Type', v.type || '-'],
+    ['Current Odometer', odoStats.maxOdo != null ? odoStats.maxOdo + ' km' : '-'],
+    ['Total KM Tracked', odoStats.totalKm != null ? odoStats.totalKm + ' km' : '-'],
+  ];
+  const rightStats = [
+    ['Total Service/Expense Records', String(list.length)],
+    ['Total Spend Tracked', fmtMoney(total).replace('₹','Rs.')],
+    ['Avg Fuel Efficiency', fuelEff.avgKmpl != null ? fuelEff.avgKmpl.toFixed(1) + ' km/l' : '-'],
+  ];
+  let ly = y, ry = y;
+  leftStats.forEach(([k,val])=>{
+    doc.setFont('helvetica','bold'); doc.text(k+':', leftX, ly);
+    doc.setFont('helvetica','normal'); doc.text(String(val), leftX, ly+15);
+    ly += 40;
+  });
+  rightStats.forEach(([k,val])=>{
+    doc.setFont('helvetica','bold'); doc.text(k+':', rightX, ry);
+    doc.setFont('helvetica','normal'); doc.text(String(val), rightX, ry+15);
+    ry += 40;
+  });
+  y = Math.max(ly, ry) + 10;
+
+  // Compliance section
+  doc.setDrawColor(220,220,220);
+  doc.line(marginX, y, pageW-marginX, y);
+  y += 26;
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(13);
+  doc.text('Document Compliance Status', marginX, y);
+  y += 22;
+
+  [['Insurance', v.insuranceExpiry], ['PUC', v.pucExpiry], ['RC', v.rcExpiry]].forEach(([label, dateStr])=>{
+    const st = expiryStatus(dateStr);
+    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(10,10,10);
+    doc.text(label, marginX, y);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(st.color[0], st.color[1], st.color[2]);
+    doc.text(st.label, marginX + 140, y);
+    doc.setTextColor(120,120,120); doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+    doc.text(dateStr ? ('Expiry: ' + new Date(dateStr+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})) : '', marginX + 260, y);
+    y += 22;
+  });
+
+  y += 10;
+  doc.setDrawColor(220,220,220);
+  doc.line(marginX, y, pageW-marginX, y);
+  y += 26;
+
+  // Service status
+  const svcLabel = svc ? (svc.overdue ? 'OVERDUE' : (svc.nextDueKm ? 'Next due at ' + svc.nextDueKm + ' km' : 'Up to date')) : 'Not tracked';
+  doc.setTextColor(10,10,10);
+  doc.setFont('helvetica','bold'); doc.setFontSize(13);
+  doc.text('Service Status: ', marginX, y);
+  doc.setFont('helvetica','normal');
+  doc.text(svcLabel, marginX + 130, y);
+  y += 34;
+
+  // QR verification box
+  if(qrDataUrl){
+    doc.setDrawColor(230,230,230);
+    doc.setFillColor(250,250,250);
+    doc.roundedRect(marginX, y, pageW - marginX*2, 130, 6, 6, 'FD');
+    doc.addImage(qrDataUrl, 'PNG', marginX + 16, y + 15, 100, 100);
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(10,10,10);
+    doc.text('Scan to Verify Live Vehicle Data', marginX + 130, y + 35);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(90,90,90);
+    doc.text('This QR links to a live, owner-verified page showing current', marginX + 130, y + 55);
+    doc.text('odometer, service status, and document expiry — updated', marginX + 130, y + 70);
+    doc.text('directly by the vehicle owner via Garage Book Pro.', marginX + 130, y + 85);
+    doc.setFontSize(8.5); doc.setTextColor(150,150,150);
+    doc.text(shareUrl, marginX + 130, y + 105);
+    y += 150;
+  }
+
+  doc.setFontSize(8.5);
+  doc.setTextColor(150,150,150);
+  doc.setFont('helvetica','normal');
+  doc.text('This certificate reflects data self-reported by the vehicle owner in Garage Book Pro and is provided for informational purposes.', marginX, 800);
+  doc.text('Generated by Garage Book Pro · garagebookpro.in', marginX, 813);
+
+  doc.save(v.name.replace(/[^a-zA-Z0-9]/g,'_') + '_Resale_Certificate.pdf');
+  showToast('📜 Certificate download ஆயிடுச்சு!');
 }
 
 // ============ INIT ============
