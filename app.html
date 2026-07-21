@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260721-0926">
+<meta name="app-build" content="20260721-0936">
 <style>
   :root{
     --yellow:#FFC800;
@@ -3270,14 +3270,25 @@ function openAdminThreadView(userUid){
     openModal(`
       <div class="modal-title">💬 ${userUid.slice(0,8)}...<span class="close-x" id="closeModalX">✕</span></div>
       <div id="supportThreadBody" style="max-height:340px; overflow-y:auto; padding:6px; background:#0A0A0A; border-radius:10px; margin-bottom:12px;">${renderSupportThread(msgs, true)}</div>
-      <div style="display:flex; gap:8px;">
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
         <input type="text" id="supportMsgInput" placeholder="Reply type பண்ணுங்க..." style="flex:1;">
         <button class="btn-primary" id="supportSendBtn" style="width:auto; padding:0 16px;">Send</button>
       </div>
+      ${Object.keys(msgs).length ? '<div id="deleteThreadBtn" style="text-align:center; color:#FF6B6B; font-size:12.5px; cursor:pointer; padding:6px;">🗑️ இந்த Chat முழுசா Delete பண்ணு</div>' : ''}
     `);
     document.getElementById('closeModalX').addEventListener('click', closeModal);
     db.ref('supportThreads/'+userUid+'/unreadForAdmin').set(false);
     checkAdminUnreadSupport();
+    const delBtn = document.getElementById('deleteThreadBtn');
+    if(delBtn) delBtn.addEventListener('click', ()=>{
+      if(!confirm('இந்த customer-ஓட chat முழுசா delete பண்ணணுமா? இது undo பண்ண முடியாது.')) return;
+      db.ref('supportMessages/'+userUid).remove().then(()=>{
+        db.ref('supportThreads/'+userUid).remove().then(()=>{
+          showToast('Chat delete ஆச்சு');
+          closeModal();
+        });
+      });
+    });
     const sendFn = ()=>{
       const input = document.getElementById('supportMsgInput');
       const text = input.value.trim();
