@@ -1545,6 +1545,12 @@ function openPayLinkConfigModal(){
   });
 }
 function loadFuelPriceWidget(){
+  // Display disabled per owner's decision (22 Jul 2026) — data in
+  // appConfig/fuelPrices stays intact, just not shown to users.
+  // To re-enable: remove this early return.
+  const widget = document.getElementById('fuelPriceWidget');
+  if(widget) widget.style.display = 'none';
+  return;
   db.ref('appConfig/fuelPrices').once('value').then(snap=>{
     const widget = document.getElementById('fuelPriceWidget');
     const cardsRow = document.getElementById('fuelPriceCardsRow');
