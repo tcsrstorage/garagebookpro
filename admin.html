@@ -1327,7 +1327,7 @@ function openLiveActivityModal(){
     items.reverse(); // newest first
     listEl.innerHTML = items.map(it => {
       const nameLine = it.name ? `<b>${escapeHtml(it.name)}</b> — ` : '';
-      const phoneLink = it.phone ? ` · <a href="tel:${escapeHtml(it.phone)}" style="color:#58A6FF;" onclick="event.stopPropagation()">📞 ${escapeHtml(it.phone)}</a> <a href="https://wa.me/${escapeHtml(it.phone.replace(/[^0-9]/g,''))}" target="_blank" style="color:#4CD964;" onclick="event.stopPropagation()">💬</a>` : '';
+      const phoneLink = it.phone ? ` · <a href="tel:${escapeHtml(it.phone)}" style="color:#58A6FF;" onclick="event.stopPropagation()">📞 ${escapeHtml(it.phone)}</a> <a href="https://wa.me/${waPhone(it.phone)}" target="_blank" style="color:#4CD964;" onclick="event.stopPropagation()">💬</a>` : '';
       return `
       <div style="display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid #222;">
         <span style="font-size:18px; flex-shrink:0;">${ACTIVITY_ICONS[it.type] || '•'}</span>
@@ -1433,6 +1433,12 @@ function filterCustomerActivityList(query){
     return name.includes(q) || email.includes(q);
   });
   renderCustomerActivityRows(filtered);
+}
+function waPhone(phone){
+  let d = (phone||'').replace(/[^0-9]/g,'');
+  if(d.length === 10) d = '91' + d;
+  else if(d.length === 11 && d.charAt(0) === '0') d = '91' + d.slice(1);
+  return d;
 }
 function loadCustomerActivityWidget(){
   const listEl = document.getElementById('adminCustomerActivityList');
@@ -1637,7 +1643,7 @@ function openAdminUserListModal(){
         statusHtml = '<span style="color:#fff; opacity:.6;">Free</span>';
       }
       const nameHtml = u.name ? `<div style="color:#fff; font-size:13px; font-weight:700;">${escapeHtml(u.name)}</div>` : '';
-      const phoneHtml = u.phone ? `<a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;" onclick="event.stopPropagation()">📞 ${escapeHtml(u.phone)}</a> <a href="https://wa.me/${escapeHtml((u.phone||'').replace(/[^0-9]/g,''))}" target="_blank" style="color:#4CD964; text-decoration:none;" onclick="event.stopPropagation()">💬</a>` : '';
+      const phoneHtml = u.phone ? `<a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;" onclick="event.stopPropagation()">📞 ${escapeHtml(u.phone)}</a> <a href="https://wa.me/${waPhone(u.phone)}" target="_blank" style="color:#4CD964; text-decoration:none;" onclick="event.stopPropagation()">💬</a>` : '';
       return `<div style="padding:10px 0; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center;">
         <div>
           ${nameHtml}
@@ -4229,7 +4235,7 @@ function openAdminThreadView(userUid, threadInfo, dirEntry, prefillText){
   const displayPhone = threadInfo.userPhone || dirEntry.phone || '';
   const headerLabel = displayName || displayEmail || (userUid.slice(0,8)+'...');
   const contactLinks = displayPhone
-    ? ` <a href="tel:${escapeHtml(displayPhone)}" style="color:#58A6FF; font-size:13px; text-decoration:none; margin-left:8px;">📞</a> <a href="https://wa.me/${escapeHtml(displayPhone.replace(/[^0-9]/g,''))}" target="_blank" style="color:#4CD964; font-size:13px; text-decoration:none;">💬</a>`
+    ? ` <a href="tel:${escapeHtml(displayPhone)}" style="color:#58A6FF; font-size:13px; text-decoration:none; margin-left:8px;">📞</a> <a href="https://wa.me/${waPhone(displayPhone)}" target="_blank" style="color:#4CD964; font-size:13px; text-decoration:none;">💬</a>`
     : '';
   db.ref('supportMessages/'+userUid).once('value').then(snap=>{
     const msgs = snap.val() || {};
