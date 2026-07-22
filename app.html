@@ -640,6 +640,10 @@
           <div class="settings-row-left"><span class="ic">👥</span><span class="txt">Users & Trial Status</span></div>
           <span class="arrow">›</span>
         </div>
+        <div class="settings-row" id="openPremiumSubsBtn" style="display:none;">
+          <div class="settings-row-left"><span class="ic">⭐</span><span class="txt">Premium Subscribers</span></div>
+          <span class="arrow">›</span>
+        </div>
         <div class="settings-row" id="openAnalyticsBtn" style="display:none;">
           <div class="settings-row-left"><span class="ic">📈</span><span class="txt">Visits & Signups</span></div>
           <span class="arrow">›</span>
@@ -995,6 +999,7 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('openFuelPriceConfigBtn').style.display = '';
         document.getElementById('openPayLinkConfigBtn').style.display = '';
         document.getElementById('openAdminUserListBtn').style.display = '';
+        document.getElementById('openPremiumSubsBtn').style.display = '';
         document.getElementById('openAnalyticsBtn').style.display = '';
         document.getElementById('openLiveActivityBtn').style.display = '';
         document.getElementById('openCustomerActivityBtn').style.display = '';
@@ -1393,6 +1398,63 @@ function openCustomerActivityModal(){
     document.getElementById('closeModalX').addEventListener('click', closeModal);
   });
 }
+function openPremiumSubscribersModal(){
+  db.ref('adminUserDirectory').once('value').then(snap=>{
+    const directory = snap.val() || {};
+    const now = Date.now();
+    const paidUsers = Object.entries(directory).filter(([_, u]) => u.tier === 'paid');
+    // Soonest-expiring first; users with no expiry date recorded go last.
+    paidUsers.sort((a,b) => {
+      const ea = a[1].premiumExpiresAt || Infinity;
+      const eb = b[1].premiumExpiresAt || Infinity;
+      return ea - eb;
+    });
+    const rows = paidUsers.map(([uid, u])=>{
+      const who = u.name || u.email || uid.slice(0,8);
+      const dayMs = 24*60*60*1000;
+      let statusHtml, daysLeftText = '';
+      if(!u.premiumExpiresAt){
+        statusHtml = `<span style="color:#888; font-size:11.5px;">Expiry date இல்ல (பழைய/comp code)</span>`;
+      } else {
+        const daysLeft = Math.ceil((u.premiumExpiresAt - now) / dayMs);
+        const expiredAlready = daysLeft < 0;
+        const color = expiredAlready ? '#FF6B6B' : (daysLeft <= 30 ? '#FFC800' : '#2ECC71');
+        daysLeftText = expiredAlready ? `${Math.abs(daysLeft)} நாள் MUDINJUDUCHU` : `${daysLeft} நாள் மீதி`;
+        statusHtml = `<span style="color:${color}; font-size:11.5px; font-weight:700;">${daysLeftText}</span> <span style="color:#666; font-size:11px;">— expiry: ${new Date(u.premiumExpiresAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</span>`;
+      }
+      const activatedText = u.premiumActivatedAt
+        ? `Activated: ${new Date(u.premiumActivatedAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}`
+        : 'Activation date இல்ல';
+      return `
+      <div style="padding:10px 0; border-bottom:1px solid #222;">
+        <div style="color:#fff; font-size:13px; font-weight:600;">${escapeHtml(who)}</div>
+        <div style="color:#666; font-size:11px;">${activatedText}</div>
+        <div style="margin-top:3px;">${statusHtml}</div>
+        <span class="sendReminderBtn" data-uid="${uid}" data-email="${escapeHtml(u.email||'')}" data-name="${escapeHtml(u.name||'')}" data-phone="${escapeHtml(u.phone||'')}" data-expiry="${u.premiumExpiresAt||''}" style="display:inline-block; margin-top:6px; color:#FFC800; font-size:11.5px; border:1px solid #FFC800; border-radius:8px; padding:4px 10px; cursor:pointer;">💬 Reminder அனுப்பு</span>
+      </div>`;
+    }).join('');
+    openModal(`
+      <div class="modal-title">⭐ Premium Subscribers<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#888; font-size:12px; margin-bottom:14px;">Paid users, expiry நாள் அருகில் இருக்கறவங்க முதல்ல. Red = already expired, Yellow = 30 நாளுக்குள், Green = safe.</div>
+      <div style="max-height:440px; overflow-y:auto;">
+        ${rows || '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Paid subscriber யாரும் இல்ல</div>'}
+      </div>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.querySelectorAll('.sendReminderBtn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const uid = btn.getAttribute('data-uid');
+        const name = btn.getAttribute('data-name');
+        const email = btn.getAttribute('data-email');
+        const phone = btn.getAttribute('data-phone');
+        const expiry = btn.getAttribute('data-expiry');
+        const expiryText = expiry ? new Date(Number(expiry)).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : 'soon';
+        const msg = `வணக்கம்${name ? ' ' + name : ''}! உங்க Garage Book Pro Premium subscription ${expiryText}-ல expire ஆகுது. Renew பண்ண ₹250 pay பண்ணி, "Payment Done" message அனுப்புங்க — புது Redeem Code அனுப்புறேன். 🙏`;
+        openAdminThreadView(uid, { userName: name, userEmail: email, userPhone: phone }, {}, msg);
+      });
+    });
+  });
+}
 function openAdminUserListModal(){
   db.ref('adminUserDirectory').once('value').then(snap=>{
     const val = snap.val() || {};
@@ -1705,7 +1767,7 @@ function ensureUserProfile(){
       });
     } else {
       const p = snap.val();
-      syncAdminDirectory(p.tier || 'free', p.trialEndsAt || null, p.name || '', p.phone || '');
+      syncAdminDirectory(p.tier || 'free', p.trialEndsAt || null, p.name || '', p.phone || '', p.premiumActivatedAt || null, p.premiumExpiresAt || null);
       if(!p.referralCode){
         // backfill for accounts created before referral feature existed
         const referralCode = genReferralCode();
@@ -1731,7 +1793,7 @@ function updateUserActivityStats(){
     entryCount: entryCount
   }).catch(()=>{ /* rules may not be updated yet — ignore silently */ });
 }
-function syncAdminDirectory(tier, trialEndsAt, name, phone){
+function syncAdminDirectory(tier, trialEndsAt, name, phone, premiumActivatedAt, premiumExpiresAt){
   // Lightweight self-written directory entry so admin can see who's on trial
   // without needing broad read access to every user's private data.
   db.ref('adminUserDirectory/' + currentUser.uid).set({
@@ -1740,6 +1802,8 @@ function syncAdminDirectory(tier, trialEndsAt, name, phone){
     phone: phone || '',
     tier: tier,
     trialEndsAt: trialEndsAt || null,
+    premiumActivatedAt: premiumActivatedAt || null,
+    premiumExpiresAt: premiumExpiresAt || null,
     updatedAt: Date.now()
   }).catch(()=>{ /* rules may not be updated yet — ignore silently */ });
 }
@@ -2672,6 +2736,7 @@ document.getElementById('openAdminTrialConfigBtn').addEventListener('click', ope
 document.getElementById('openFuelPriceConfigBtn').addEventListener('click', openFuelPriceConfigModal);
 document.getElementById('openPayLinkConfigBtn').addEventListener('click', openPayLinkConfigModal);
 document.getElementById('openAdminUserListBtn').addEventListener('click', openAdminUserListModal);
+document.getElementById('openPremiumSubsBtn').addEventListener('click', openPremiumSubscribersModal);
 document.getElementById('openAnalyticsBtn').addEventListener('click', openAnalyticsModal);
 document.getElementById('openLiveActivityBtn').addEventListener('click', openLiveActivityModal);
 document.getElementById('openCustomerActivityBtn').addEventListener('click', openCustomerActivityModal);
@@ -3403,7 +3468,9 @@ async function redeemPremiumCode(){
     try{
       await db.ref(ROOT+'/profile').update({
         tier: 'paid',
-        appliedCode: code
+        appliedCode: code,
+        premiumActivatedAt: Date.now(),
+        premiumExpiresAt: Date.now() + 365*24*60*60*1000
       });
     }catch(step2Err){
       // rollback step 1 so the code isn't burned without granting access
@@ -3925,7 +3992,7 @@ function openAdminSupportInbox(){
     });
   });
 }
-function openAdminThreadView(userUid, threadInfo, dirEntry){
+function openAdminThreadView(userUid, threadInfo, dirEntry, prefillText){
   threadInfo = threadInfo || {};
   dirEntry = dirEntry || {};
   const displayName = threadInfo.userName || dirEntry.name || '';
@@ -3942,7 +4009,7 @@ function openAdminThreadView(userUid, threadInfo, dirEntry){
       ${displayEmail && displayName ? `<div style="color:#888; font-size:11.5px; margin-top:-10px; margin-bottom:10px;">${escapeHtml(displayEmail)}</div>` : ''}
       <div id="supportThreadBody" style="max-height:340px; overflow-y:auto; padding:6px; background:#0A0A0A; border-radius:10px; margin-bottom:12px;">${renderSupportThread(msgs, true)}</div>
       <div style="display:flex; gap:8px; margin-bottom:10px;">
-        <input type="text" id="supportMsgInput" placeholder="Reply type பண்ணுங்க..." style="flex:1;">
+        <input type="text" id="supportMsgInput" placeholder="Reply type பண்ணுங்க..." value="${prefillText ? escapeHtml(prefillText) : ''}" style="flex:1;">
         <button class="btn-primary" id="supportSendBtn" style="width:auto; padding:0 16px;">Send</button>
       </div>
       ${Object.keys(msgs).length ? '<div id="deleteThreadBtn" style="text-align:center; color:#FF6B6B; font-size:12.5px; cursor:pointer; padding:6px;">🗑️ இந்த Chat முழுசா Delete பண்ணு</div>' : ''}
