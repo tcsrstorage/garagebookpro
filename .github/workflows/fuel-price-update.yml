@@ -1,10 +1,13 @@
 name: Daily Fuel Price Update
 
 on:
-  schedule:
-    # 7:00 AM IST = 1:30 AM UTC (fuel prices revise at 6 AM IST, so this gives an hour buffer)
-    - cron: '30 1 * * *'
-  workflow_dispatch: {}  # allows manual "Run workflow" trigger from the Actions tab
+  # Daily automatic schedule DISABLED per Ramesh's decision (peace of mind
+  # around scraping goodreturns.in — see conversation on 22 Jul 2026).
+  # Fuel prices are now entered manually via the app's admin panel.
+  # If you ever want to re-enable daily automation, uncomment below:
+  # schedule:
+  #   - cron: '30 1 * * *'  # 7:00 AM IST
+  workflow_dispatch: {}  # still allows a manual "Run workflow" trigger if wanted
 
 jobs:
   update-fuel-prices:
