@@ -43,7 +43,10 @@ def fetch_page(url):
         headers={
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                            "AppleWebKit/537.36 (KHTML, like Gecko) "
-                           "Chrome/124.0 Safari/537.36"
+                           "Chrome/124.0 Safari/537.36 "
+                           "GarageBookProFuelBot/1.0 (+https://garagebookpro.in; "
+                           "reads today's petrol/diesel rate once per city per day; "
+                           "contact: srrameshin@gmail.com)"
         },
     )
     with urllib.request.urlopen(req, timeout=20) as resp:
