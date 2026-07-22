@@ -3528,6 +3528,8 @@ function openContactUsModal(){
       updates['supportMessages/'+currentUser.uid+'/'+msgId] = { from:'user', text, timestamp };
       updates['supportThreads/'+currentUser.uid] = {
         userEmail: currentUser.email || '',
+        userName: STATE.profileName || '',
+        userPhone: STATE.profilePhone || '',
         lastMessage: text, lastTimestamp: timestamp, lastFrom: 'user',
         unreadForAdmin: true, unreadForUser: false
       };
@@ -3548,32 +3550,53 @@ document.getElementById('contactUsBtn').addEventListener('click', openContactUsM
 document.getElementById('fabChat').addEventListener('click', openContactUsModal);
 
 function openAdminSupportInbox(){
-  db.ref('supportThreads').once('value').then(snap=>{
+  Promise.all([
+    db.ref('supportThreads').once('value'),
+    db.ref('adminUserDirectory').once('value')
+  ]).then(([snap, dirSnap])=>{
     const threads = snap.val() || {};
+    const directory = dirSnap.val() || {};
     const list = Object.entries(threads).sort((a,b)=> (b[1].lastTimestamp||0)-(a[1].lastTimestamp||0));
-    const rows = list.map(([uidKey,t])=>`
+    const rows = list.map(([uidKey,t])=>{
+      const dirEntry = directory[uidKey] || {};
+      const displayName = t.userName || dirEntry.name || '';
+      const displayEmail = t.userEmail || dirEntry.email || '';
+      const idLabel = displayName || displayEmail || uidKey.slice(0,8);
+      const subLabel = displayName && displayEmail ? displayEmail : '';
+      return `
       <div class="settings-row admin-thread-row" data-uid="${uidKey}" style="cursor:pointer;">
         <div class="settings-row-left">
           <span class="ic">${t.unreadForAdmin?'🔴':'⚪'}</span>
-          <span class="txt">${escapeHtml(t.userEmail || uidKey.slice(0,8))}<br><span style="color:#888; font-size:11.5px;">${escapeHtml((t.lastFrom==='admin'?'You: ':'')+ (t.lastMessage||''))}</span></span>
+          <span class="txt">${escapeHtml(idLabel)}${subLabel ? `<br><span style="color:#666; font-size:10.5px;">${escapeHtml(subLabel)}</span>` : ''}<br><span style="color:#888; font-size:11.5px;">${escapeHtml((t.lastFrom==='admin'?'You: ':'')+ (t.lastMessage||''))}</span></span>
         </div>
         <span class="arrow">›</span>
-      </div>`).join('');
+      </div>`;
+    }).join('');
     openModal(`
       <div class="modal-title">📨 Support Messages<span class="close-x" id="closeModalX">✕</span></div>
       ${rows || '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Messages எதுவும் இல்ல</div>'}
     `);
     document.getElementById('closeModalX').addEventListener('click', closeModal);
     document.querySelectorAll('.admin-thread-row').forEach(row=>{
-      row.addEventListener('click', ()=> openAdminThreadView(row.dataset.uid));
+      row.addEventListener('click', ()=> openAdminThreadView(row.dataset.uid, threads[row.dataset.uid], directory[row.dataset.uid]));
     });
   });
 }
-function openAdminThreadView(userUid){
+function openAdminThreadView(userUid, threadInfo, dirEntry){
+  threadInfo = threadInfo || {};
+  dirEntry = dirEntry || {};
+  const displayName = threadInfo.userName || dirEntry.name || '';
+  const displayEmail = threadInfo.userEmail || dirEntry.email || '';
+  const displayPhone = threadInfo.userPhone || dirEntry.phone || '';
+  const headerLabel = displayName || displayEmail || (userUid.slice(0,8)+'...');
+  const contactLinks = displayPhone
+    ? ` <a href="tel:${escapeHtml(displayPhone)}" style="color:#58A6FF; font-size:13px; text-decoration:none; margin-left:8px;">📞</a> <a href="https://wa.me/${escapeHtml(displayPhone.replace(/[^0-9]/g,''))}" target="_blank" style="color:#4CD964; font-size:13px; text-decoration:none;">💬</a>`
+    : '';
   db.ref('supportMessages/'+userUid).once('value').then(snap=>{
     const msgs = snap.val() || {};
     openModal(`
-      <div class="modal-title">💬 ${userUid.slice(0,8)}...<span class="close-x" id="closeModalX">✕</span></div>
+      <div class="modal-title">💬 ${escapeHtml(headerLabel)}${contactLinks}<span class="close-x" id="closeModalX">✕</span></div>
+      ${displayEmail && displayName ? `<div style="color:#888; font-size:11.5px; margin-top:-10px; margin-bottom:10px;">${escapeHtml(displayEmail)}</div>` : ''}
       <div id="supportThreadBody" style="max-height:340px; overflow-y:auto; padding:6px; background:#0A0A0A; border-radius:10px; margin-bottom:12px;">${renderSupportThread(msgs, true)}</div>
       <div style="display:flex; gap:8px; margin-bottom:10px;">
         <input type="text" id="supportMsgInput" placeholder="Reply type பண்ணுங்க..." style="flex:1;">
