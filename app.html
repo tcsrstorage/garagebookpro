@@ -607,6 +607,10 @@
           <div class="settings-row-left"><span class="ic">🔄</span><span class="txt">Check for Update</span></div>
           <span class="arrow">›</span>
         </div>
+        <div class="settings-row" onclick="window.open('https://garagebookpro.in/user-guide.pdf', '_blank')">
+          <div class="settings-row-left"><span class="ic">📖</span><span class="txt">User Guide (English + தமிழ்)</span></div>
+          <span class="arrow">›</span>
+        </div>
         <div class="settings-row" id="contactUsBtn">
           <div class="settings-row-left"><span class="ic">💬</span><span class="txt">Contact Us / Feedback</span><span id="contactUnreadDot" style="display:none; width:8px; height:8px; border-radius:50%; background:#FF6B6B; margin-left:6px;"></span></div>
           <span class="arrow">›</span>
@@ -2273,7 +2277,8 @@ const ALL_FEATURES = [
   '💬 Contact Us / Feedback — in-app chat with developer, no phone number needed',
   '📜 Resale Certificate — professional PDF with QR-verified vehicle history',
   '⛽ Today\'s Fuel Price — Chennai & Coimbatore petrol/diesel rates on Home',
-  '⭐ Redeem Code / Upgrade to Premium — accessible anytime from Settings'
+  '⭐ Redeem Code / Upgrade to Premium — accessible anytime from Settings',
+  '📖 User Guide — full how-to-use manual (English + Tamil), downloadable PDF'
 ];
 function renderAllFeaturesList(){
   const list = document.getElementById('allFeaturesList');
@@ -2297,10 +2302,10 @@ function renderAllFeaturesList(){
 }
 
 // ============ V2.1: WHAT'S NEW ON HOME ============
-const WHATS_NEW_VERSION = '2026-07-22b';
+const WHATS_NEW_VERSION = '2026-07-22c';
 const WHATS_NEW_ITEMS = [
+  '📖 Settings → "User Guide" — download a full how-to-use manual (English + Tamil, PDF)',
   '⭐ Settings → "Redeem Code / Upgrade to Premium" — enter your code anytime, no need to wait for trial to end',
-  '⛽ Today\'s Fuel Price — Chennai & Coimbatore petrol/diesel rates shown on Home',
   '📜 Resale Certificate — PDF with QR-verified live vehicle data, great for resale',
   '💬 Contact Us / Feedback — chat with developer directly in the app',
   '🔒 Family Sharing — restrict a driver to only their assigned vehicle',
