@@ -638,6 +638,10 @@
           <div class="settings-row-left"><span class="ic">📡</span><span class="txt">Live Activity</span></div>
           <span class="arrow">›</span>
         </div>
+        <div class="settings-row" id="openCustomerActivityBtn" style="display:none;">
+          <div class="settings-row-left"><span class="ic">👥</span><span class="txt">Customer Activity</span></div>
+          <span class="arrow">›</span>
+        </div>
         <div class="settings-row" id="openRevenueBtn" style="display:none;">
           <div class="settings-row-left"><span class="ic">💰</span><span class="txt">Revenue Tracker</span></div>
           <span class="arrow">›</span>
@@ -983,6 +987,7 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('openAdminUserListBtn').style.display = '';
         document.getElementById('openAnalyticsBtn').style.display = '';
         document.getElementById('openLiveActivityBtn').style.display = '';
+        document.getElementById('openCustomerActivityBtn').style.display = '';
         document.getElementById('openRevenueBtn').style.display = '';
         document.getElementById('testTrialBtn').style.display = '';
         document.getElementById('adminStatsWidget').style.display = '';
@@ -1315,6 +1320,39 @@ function openRevenueModal(){
   });
 }
 
+function openCustomerActivityModal(){
+  db.ref('adminUserDirectory').once('value').then(snap=>{
+    const directory = snap.val() || {};
+    const list = Object.entries(directory)
+      .filter(([_, u]) => u.lastActiveAt) // only users who have opened the app since this feature was added
+      .sort((a,b) => (b[1].lastActiveAt||0) - (a[1].lastActiveAt||0));
+    const rows = list.map(([uid, u])=>{
+      const idLabel = u.name || u.email || uid.slice(0,8);
+      const subLabel = (u.name && u.email) ? u.email : '';
+      return `
+      <div style="padding:10px 0; border-bottom:1px solid #222;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="color:#fff; font-size:13px; font-weight:600;">${escapeHtml(idLabel)}</span>
+          <span style="color:#666; font-size:11px;">${timeAgo(u.lastActiveAt)}</span>
+        </div>
+        ${subLabel ? `<div style="color:#666; font-size:11px;">${escapeHtml(subLabel)}</div>` : ''}
+        <div style="display:flex; gap:14px; margin-top:4px;">
+          <span style="color:#58A6FF; font-size:12px;">🚗 ${u.vehicleCount != null ? u.vehicleCount : '-'} vehicles</span>
+          <span style="color:#FFC800; font-size:12px;">📝 ${u.entryCount != null ? u.entryCount : '-'} entries</span>
+          <span style="color:${u.tier==='paid' ? '#2ECC71' : '#888'}; font-size:12px;">${u.tier==='paid' ? '⭐ Premium' : 'Free/Trial'}</span>
+        </div>
+      </div>`;
+    }).join('');
+    openModal(`
+      <div class="modal-title">👥 Customer Activity<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#888; font-size:12px; margin-bottom:14px;">Users, last active time first. Vehicle/entry count காட்டும் — யாரு எவ்வளவு app-ஐ use பண்றாங்கனு தெரியும்.</div>
+      <div style="max-height:420px; overflow-y:auto;">
+        ${rows || '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Data இன்னும் இல்ல (இந்த feature add பண்ணின பிறகு app open பண்ணினா தெரியும்)</div>'}
+      </div>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+  });
+}
 function openAdminUserListModal(){
   db.ref('adminUserDirectory').once('value').then(snap=>{
     const val = snap.val() || {};
@@ -1643,6 +1681,16 @@ function genReferralCode(){
   for(let i=0;i<5;i++) code += chars[Math.floor(Math.random()*chars.length)];
   return code;
 }
+function updateUserActivityStats(){
+  if(!currentUser) return;
+  const vehicleCount = Object.keys(STATE.vehicles || {}).length;
+  const entryCount = Object.keys(STATE.expenses || {}).length;
+  db.ref('adminUserDirectory/' + currentUser.uid).update({
+    lastActiveAt: Date.now(),
+    vehicleCount: vehicleCount,
+    entryCount: entryCount
+  }).catch(()=>{ /* rules may not be updated yet — ignore silently */ });
+}
 function syncAdminDirectory(tier, trialEndsAt, name, phone){
   // Lightweight self-written directory entry so admin can see who's on trial
   // without needing broad read access to every user's private data.
@@ -1692,6 +1740,14 @@ function initFirebase(){
     STATE.expenses = val.expenses || {};
     STATE.dailyLogs = val.dailyLogs || {};
     STATE.recurring = val.recurring || {};
+
+    // Track last-active + engagement stats for admin visibility.
+    // Throttled to avoid a Firebase write on every single data change.
+    const nowTs = Date.now();
+    if(!STATE.lastActivitySync || (nowTs - STATE.lastActivitySync) > 5*60*1000){
+      STATE.lastActivitySync = nowTs;
+      updateUserActivityStats();
+    }
 
     if(!val.categories){ db.ref(ROOT+'/categories').set(DEFAULT_CATEGORIES); }
     if(!val.paymodes){ db.ref(ROOT+'/paymodes').set(DEFAULT_PAYMODES); }
@@ -2577,6 +2633,7 @@ document.getElementById('openPayLinkConfigBtn').addEventListener('click', openPa
 document.getElementById('openAdminUserListBtn').addEventListener('click', openAdminUserListModal);
 document.getElementById('openAnalyticsBtn').addEventListener('click', openAnalyticsModal);
 document.getElementById('openLiveActivityBtn').addEventListener('click', openLiveActivityModal);
+document.getElementById('openCustomerActivityBtn').addEventListener('click', openCustomerActivityModal);
 document.getElementById('openRevenueBtn').addEventListener('click', openRevenueModal);
 document.getElementById('testTrialBtn').addEventListener('click', testMyTrial);
 document.getElementById('homePremiumBanner').addEventListener('click', openUpgradeModal);
