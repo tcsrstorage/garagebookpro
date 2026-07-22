@@ -1429,13 +1429,15 @@ function loadPremiumSubsWidget(){
         const daysLeft = Math.ceil((u.premiumExpiresAt - now) / dayMs);
         const expiredAlready = daysLeft < 0;
         color = expiredAlready ? '#FF6B6B' : (daysLeft <= 30 ? '#FFC800' : '#2ECC71');
-        timeLabel = expiredAlready ? `${Math.abs(daysLeft)}நா MUDINJUCHU` : `${daysLeft}நா மீதி`;
+        timeLabel = expiredAlready
+          ? `<span style="font-size:15px; font-weight:800;">${Math.abs(daysLeft)}</span><span style="font-size:9px; font-weight:500; opacity:.8;"> days over</span>`
+          : `<span style="font-size:15px; font-weight:800;">${daysLeft}</span><span style="font-size:9px; font-weight:500; opacity:.8;"> days left</span>`;
       }
       return `
       <div style="display:flex; align-items:center; gap:8px;">
         <span style="font-size:14px;">⭐</span>
         <span style="color:#FFFFFF; font-size:12px; flex:1;">${escapeHtml(who)}</span>
-        <span style="color:${color}; font-size:11px; font-weight:700; white-space:nowrap;">${timeLabel}</span>
+        <span style="color:${color}; white-space:nowrap;">${timeLabel}</span>
       </div>
     `;
     }).join('') + `</div>`;
@@ -1462,8 +1464,10 @@ function openPremiumSubscribersModal(){
         const daysLeft = Math.ceil((u.premiumExpiresAt - now) / dayMs);
         const expiredAlready = daysLeft < 0;
         const color = expiredAlready ? '#FF6B6B' : (daysLeft <= 30 ? '#FFC800' : '#2ECC71');
-        daysLeftText = expiredAlready ? `${Math.abs(daysLeft)} நாள் MUDINJUDUCHU` : `${daysLeft} நாள் மீதி`;
-        statusHtml = `<span style="color:${color}; font-size:11.5px; font-weight:700;">${daysLeftText}</span> <span style="color:#666; font-size:11px;">— expiry: ${new Date(u.premiumExpiresAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</span>`;
+        daysLeftText = expiredAlready
+          ? `<span style="font-size:17px; font-weight:800;">${Math.abs(daysLeft)}</span><span style="font-size:10px; font-weight:500; opacity:.8;"> days over</span>`
+          : `<span style="font-size:17px; font-weight:800;">${daysLeft}</span><span style="font-size:10px; font-weight:500; opacity:.8;"> days left</span>`;
+        statusHtml = `<span style="color:${color};">${daysLeftText}</span> <span style="color:#666; font-size:11px;">— expiry: ${new Date(u.premiumExpiresAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</span>`;
       }
       const activatedText = u.premiumActivatedAt
         ? `Activated: ${new Date(u.premiumActivatedAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}`
