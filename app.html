@@ -428,6 +428,26 @@
           <div id="customerSupportBannerText" style="color:#fff; font-size:12.5px; margin-top:4px;"></div>
         </div>
         <div id="whatsNewCard" style="display:none; background:linear-gradient(135deg,#1A1400,#0A0A0A); border:1px solid #FFC800; border-radius:14px; padding:18px 16px; margin-bottom:14px;"></div>
+        <div id="fuelPriceWidget" style="display:none; background:#121212; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px;">
+          <div style="color:#888; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">⛽ TODAY'S FUEL PRICE</div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1; background:#1A1A1A; border-radius:10px; padding:10px; text-align:center;">
+              <div style="color:#FFFFFF; font-size:11.5px; font-weight:700; margin-bottom:4px;">Chennai</div>
+              <div id="fuelChennaiPetrol" style="color:#FFC800; font-size:15px; font-weight:700;">₹--</div>
+              <div style="color:#888; font-size:9.5px;">Petrol</div>
+              <div id="fuelChennaiDiesel" style="color:#58A6FF; font-size:15px; font-weight:700; margin-top:4px;">₹--</div>
+              <div style="color:#888; font-size:9.5px;">Diesel</div>
+            </div>
+            <div style="flex:1; background:#1A1A1A; border-radius:10px; padding:10px; text-align:center;">
+              <div style="color:#FFFFFF; font-size:11.5px; font-weight:700; margin-bottom:4px;">Coimbatore</div>
+              <div id="fuelCbePetrol" style="color:#FFC800; font-size:15px; font-weight:700;">₹--</div>
+              <div style="color:#888; font-size:9.5px;">Petrol</div>
+              <div id="fuelCbeDiesel" style="color:#58A6FF; font-size:15px; font-weight:700; margin-top:4px;">₹--</div>
+              <div style="color:#888; font-size:9.5px;">Diesel</div>
+            </div>
+          </div>
+          <div id="fuelPriceUpdatedAt" style="color:#666; font-size:10px; text-align:center; margin-top:8px;"></div>
+        </div>
         <div id="trialBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center;"></div>
         <div id="homePremiumBanner" class="home-premium-banner hidden">
           <span>⭐ Premium-க்கு switch பண்ணுங்க — <span class="price-highlight">₹21/month</span> மட்டும்</span>
@@ -596,6 +616,10 @@
         </div>
         <div class="settings-row" id="openAdminTrialConfigBtn" style="display:none;">
           <div class="settings-row-left"><span class="ic">🎁</span><span class="txt">Trial Duration Set பண்ணு</span></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="settings-row" id="openFuelPriceConfigBtn" style="display:none;">
+          <div class="settings-row-left"><span class="ic">⛽</span><span class="txt">Fuel Prices Update பண்ணு</span></div>
           <span class="arrow">›</span>
         </div>
         <div class="settings-row" id="openAdminUserListBtn" style="display:none;">
@@ -945,10 +969,12 @@ auth.onAuthStateChanged(function(user){
       ensureUserProfile();
       startSessionGuard(user.uid);
       initFirebase();
+      loadFuelPriceWidget();
       if(user.uid === ADMIN_UID){
         document.getElementById('adminSectionTitle').style.display = '';
         document.getElementById('openAdminGenCodeBtn').style.display = '';
         document.getElementById('openAdminTrialConfigBtn').style.display = '';
+        document.getElementById('openFuelPriceConfigBtn').style.display = '';
         document.getElementById('openAdminUserListBtn').style.display = '';
         document.getElementById('openAnalyticsBtn').style.display = '';
         document.getElementById('openLiveActivityBtn').style.display = '';
@@ -1382,6 +1408,58 @@ function openAdminTrialConfigModal(){
       }).catch(err=> showToast('Failed: ' + err.message));
     });
   });
+}
+function openFuelPriceConfigModal(){
+  db.ref('appConfig/fuelPrices').once('value').then(snap=>{
+    const p = snap.val() || {};
+    openModal(`
+      <div class="modal-title">⛽ Fuel Prices Update<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#fff; font-size:12.5px; margin-bottom:16px;">Official rate: <a href="https://iocl.com/petrol-diesel-price" target="_blank" style="color:#58A6FF;">iocl.com/petrol-diesel-price</a>-ல check பண்ணி இங்க போடுங்க. இது home screen-ல எல்லா users-க்கும் தெரியும்.</div>
+      <div class="field-label">Chennai — Petrol (₹/L)</div>
+      <input type="number" id="fpChennaiPetrol" inputmode="decimal" value="${p.chennaiPetrol || ''}" placeholder="e.g. 107.88">
+      <div class="field-label">Chennai — Diesel (₹/L)</div>
+      <input type="number" id="fpChennaiDiesel" inputmode="decimal" value="${p.chennaiDiesel || ''}" placeholder="e.g. 99.65">
+      <div class="field-label">Coimbatore — Petrol (₹/L)</div>
+      <input type="number" id="fpCbePetrol" inputmode="decimal" value="${p.cbePetrol || ''}" placeholder="e.g. 108.50">
+      <div class="field-label">Coimbatore — Diesel (₹/L)</div>
+      <input type="number" id="fpCbeDiesel" inputmode="decimal" value="${p.cbeDiesel || ''}" placeholder="e.g. 100.20">
+      <button class="btn-primary" id="saveFuelPricesBtn" style="margin-top:14px;">Save</button>
+      ${p.updatedAt ? `<div style="color:#666; font-size:11px; text-align:center; margin-top:10px;">கடைசியா update ஆனது: ${new Date(p.updatedAt).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>` : ''}
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.getElementById('saveFuelPricesBtn').addEventListener('click', ()=>{
+      const chennaiPetrol = Number(document.getElementById('fpChennaiPetrol').value);
+      const chennaiDiesel = Number(document.getElementById('fpChennaiDiesel').value);
+      const cbePetrol = Number(document.getElementById('fpCbePetrol').value);
+      const cbeDiesel = Number(document.getElementById('fpCbeDiesel').value);
+      if(!chennaiPetrol || !chennaiDiesel || !cbePetrol || !cbeDiesel){ showToast('எல்லா rates-உம் போடுங்க'); return; }
+      db.ref('appConfig/fuelPrices').set({
+        chennaiPetrol, chennaiDiesel, cbePetrol, cbeDiesel,
+        updatedAt: Date.now()
+      }).then(()=>{
+        showToast('Fuel prices update ஆச்சு!');
+        closeModal();
+        loadFuelPriceWidget();
+      }).catch(err=> showToast('Failed: ' + err.message));
+    });
+  });
+}
+function loadFuelPriceWidget(){
+  db.ref('appConfig/fuelPrices').once('value').then(snap=>{
+    const widget = document.getElementById('fuelPriceWidget');
+    if(!widget) return;
+    if(!snap.exists()){ widget.style.display = 'none'; return; }
+    const p = snap.val();
+    document.getElementById('fuelChennaiPetrol').textContent = '₹' + p.chennaiPetrol;
+    document.getElementById('fuelChennaiDiesel').textContent = '₹' + p.chennaiDiesel;
+    document.getElementById('fuelCbePetrol').textContent = '₹' + p.cbePetrol;
+    document.getElementById('fuelCbeDiesel').textContent = '₹' + p.cbeDiesel;
+    const updEl = document.getElementById('fuelPriceUpdatedAt');
+    if(updEl && p.updatedAt){
+      updEl.textContent = 'Updated: ' + new Date(p.updatedAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
+    }
+    widget.style.display = 'block';
+  }).catch(()=>{});
 }
 function renderTrialBanner(){
   const banner = document.getElementById('trialBanner');
@@ -1981,7 +2059,8 @@ const ALL_FEATURES = [
   '🔄 Auto-update — always latest version',
   '🔧 Mechanic QR Share — vehicle service/expiry info via QR scan',
   '💬 Contact Us / Feedback — in-app chat with developer, no phone number needed',
-  '📜 Resale Certificate — professional PDF with QR-verified vehicle history'
+  '📜 Resale Certificate — professional PDF with QR-verified vehicle history',
+  '⛽ Today\'s Fuel Price — Chennai & Coimbatore petrol/diesel rates on Home'
 ];
 function renderAllFeaturesList(){
   const list = document.getElementById('allFeaturesList');
@@ -2005,8 +2084,9 @@ function renderAllFeaturesList(){
 }
 
 // ============ V2.1: WHAT'S NEW ON HOME ============
-const WHATS_NEW_VERSION = '2026-07-21e';
+const WHATS_NEW_VERSION = '2026-07-22a';
 const WHATS_NEW_ITEMS = [
+  '⛽ Today\'s Fuel Price — Chennai & Coimbatore petrol/diesel rates shown on Home',
   '📜 Resale Certificate — PDF with QR-verified live vehicle data, great for resale',
   '💬 Contact Us / Feedback — chat with developer directly in the app',
   '🔒 Family Sharing — restrict a driver to only their assigned vehicle',
@@ -2352,6 +2432,7 @@ updateNotifToggleUI();
 document.getElementById('openAccountBtn').addEventListener('click', openAccountModal);
 document.getElementById('openAdminGenCodeBtn').addEventListener('click', openAdminGenCodeModal);
 document.getElementById('openAdminTrialConfigBtn').addEventListener('click', openAdminTrialConfigModal);
+document.getElementById('openFuelPriceConfigBtn').addEventListener('click', openFuelPriceConfigModal);
 document.getElementById('openAdminUserListBtn').addEventListener('click', openAdminUserListModal);
 document.getElementById('openAnalyticsBtn').addEventListener('click', openAnalyticsModal);
 document.getElementById('openLiveActivityBtn').addEventListener('click', openLiveActivityModal);
