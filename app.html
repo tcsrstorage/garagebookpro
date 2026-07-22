@@ -433,6 +433,12 @@
             <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
           </div>
         </div>
+        <div id="adminPremiumSubsWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openPremiumSubscribersModal()">
+          <div style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">⭐ ADMIN — PREMIUM SUBSCRIBERS</div>
+          <div id="adminPremiumSubsList" style="display:flex; flex-direction:column; gap:8px;">
+            <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
+          </div>
+        </div>
         <div id="customerSupportBanner" style="display:none; background:#0F2E1A; border:1px solid #2ECC71; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openContactUsModal()">
           <div style="color:#2ECC71; font-weight:700; font-size:14px;">💬 உங்க message-க்கு reply வந்திருக்கு!</div>
           <div id="customerSupportBannerText" style="color:#fff; font-size:12.5px; margin-top:4px;"></div>
@@ -1008,10 +1014,12 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('adminStatsWidget').style.display = '';
         document.getElementById('adminLiveActivityWidget').style.display = '';
         document.getElementById('adminCustomerActivityWidget').style.display = '';
+        document.getElementById('adminPremiumSubsWidget').style.display = '';
         document.getElementById('openAdminSupportBtn').style.display = '';
         loadAdminHomeStats();
         startAdminLiveActivityWidget();
         loadCustomerActivityWidget();
+        loadPremiumSubsWidget();
         checkAdminUnreadSupport();
       }
       checkMyUnreadSupport();
@@ -1397,6 +1405,41 @@ function openCustomerActivityModal(){
     `);
     document.getElementById('closeModalX').addEventListener('click', closeModal);
   });
+}
+function loadPremiumSubsWidget(){
+  const listEl = document.getElementById('adminPremiumSubsList');
+  if(!listEl) return;
+  db.ref('adminUserDirectory').once('value').then(snap=>{
+    const directory = snap.val() || {};
+    const now = Date.now();
+    const paidUsers = Object.entries(directory).filter(([_, u]) => u.tier === 'paid');
+    if(paidUsers.length === 0){
+      listEl.innerHTML = '<div style="color:#666; font-size:12px;">Paid subscriber யாரும் இல்ல</div>';
+      return;
+    }
+    paidUsers.sort((a,b) => (a[1].premiumExpiresAt || Infinity) - (b[1].premiumExpiresAt || Infinity));
+    const dayMs = 24*60*60*1000;
+    listEl.innerHTML = `<div style="max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">` + paidUsers.map(([uid, u])=>{
+      const who = u.name || u.email || uid.slice(0,8);
+      let timeLabel, color;
+      if(!u.premiumExpiresAt){
+        timeLabel = 'Date இல்ல';
+        color = '#888';
+      } else {
+        const daysLeft = Math.ceil((u.premiumExpiresAt - now) / dayMs);
+        const expiredAlready = daysLeft < 0;
+        color = expiredAlready ? '#FF6B6B' : (daysLeft <= 30 ? '#FFC800' : '#2ECC71');
+        timeLabel = expiredAlready ? `${Math.abs(daysLeft)}நா MUDINJUCHU` : `${daysLeft}நா மீதி`;
+      }
+      return `
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:14px;">⭐</span>
+        <span style="color:#FFFFFF; font-size:12px; flex:1;">${escapeHtml(who)}</span>
+        <span style="color:${color}; font-size:11px; font-weight:700; white-space:nowrap;">${timeLabel}</span>
+      </div>
+    `;
+    }).join('') + `</div>`;
+  }).catch(()=>{});
 }
 function openPremiumSubscribersModal(){
   db.ref('adminUserDirectory').once('value').then(snap=>{
