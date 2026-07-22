@@ -1198,13 +1198,15 @@ const ACTIVITY_ICONS = {
   signup: '🆕',
   redeem: '💳',
   referral: '🎁',
-  family_link: '👨‍👩‍👧'
+  family_link: '👨‍👩‍👧',
+  fuel_update: '⛽'
 };
 const ACTIVITY_LABELS = {
   signup: 'New Signup',
   redeem: 'Premium Redeemed',
   referral: 'Referral Applied',
-  family_link: 'Family Link Joined'
+  family_link: 'Family Link Joined',
+  fuel_update: 'Fuel Prices Updated'
 };
 function openLiveActivityModal(){
   openModal(`
@@ -1435,9 +1437,10 @@ function openFuelPriceConfigModal(){
       if(!chennaiPetrol || !chennaiDiesel || !cbePetrol || !cbeDiesel){ showToast('எல்லா rates-உம் போடுங்க'); return; }
       db.ref('appConfig/fuelPrices').set({
         chennaiPetrol, chennaiDiesel, cbePetrol, cbeDiesel,
-        updatedAt: Date.now()
+        updatedAt: Date.now(), source: 'manual'
       }).then(()=>{
         showToast('Fuel prices update ஆச்சு!');
+        logActivity('fuel_update', `Manual: Chennai ₹${chennaiPetrol}/₹${chennaiDiesel}, Coimbatore ₹${cbePetrol}/₹${cbeDiesel}`);
         closeModal();
         loadFuelPriceWidget();
       }).catch(err=> showToast('Failed: ' + err.message));
