@@ -1,0 +1,25 @@
+name: Daily Fuel Price Update
+
+on:
+  schedule:
+    # 7:00 AM IST = 1:30 AM UTC (fuel prices revise at 6 AM IST, so this gives an hour buffer)
+    - cron: '30 1 * * *'
+  workflow_dispatch: {}  # allows manual "Run workflow" trigger from the Actions tab
+
+jobs:
+  update-fuel-prices:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run fuel price update script
+        env:
+          FUELBOT_EMAIL: ${{ secrets.FUELBOT_EMAIL }}
+          FUELBOT_PASSWORD: ${{ secrets.FUELBOT_PASSWORD }}
+        run: python3 scripts/update_fuel_prices.py
