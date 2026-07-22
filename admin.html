@@ -421,6 +421,7 @@
             <span style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px;">📆 TODAY'S SUMMARY</span>
             <span id="adminRefreshBtn" style="color:#58A6FF; font-size:11px; font-weight:700; cursor:pointer; padding:3px 8px; border:1px solid #58A6FF; border-radius:8px;">🔄 Refresh</span>
           </div>
+          <div id="adminLastUpdated" style="color:#666; font-size:9.5px; text-align:right; margin-top:-6px; margin-bottom:8px;"></div>
           <div style="display:flex; gap:8px;">
             <div style="flex:1; text-align:center;">
               <div id="todaySignups" style="color:#FFC800; font-size:20px; font-weight:700;">0</div>
@@ -1072,13 +1073,8 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('adminCustomerActivityWidget').style.display = '';
         document.getElementById('adminPremiumSubsWidget').style.display = '';
         document.getElementById('openAdminSupportBtn').style.display = '';
-        loadAdminHomeStats();
         startAdminLiveActivityWidget();
-        loadCustomerActivityWidget();
-        loadPremiumSubsWidget();
-        checkAdminUnreadSupport();
-        updateAdminQuickStatus();
-        loadTodaySummary();
+        refreshAllAdminWidgets(true);
       }
       checkMyUnreadSupport();
     });
@@ -2646,6 +2642,14 @@ function refreshAllAdminWidgets(silent){
   checkAdminUnreadSupport();
   updateAdminQuickStatus();
   loadTodaySummary();
+  const lu = document.getElementById('adminLastUpdated');
+  if(lu){
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2,'0');
+    const mm = String(now.getMinutes()).padStart(2,'0');
+    const ss = String(now.getSeconds()).padStart(2,'0');
+    lu.textContent = 'Last updated: ' + hh + ':' + mm + ':' + ss;
+  }
   if(!silent){
     setTimeout(()=>{ if(btn) btn.textContent = '✅ Refreshed'; }, 600);
     setTimeout(()=>{ if(btn) btn.textContent = '🔄 Refresh'; }, 2000);
