@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
 """
 Daily fuel price fetcher for GarageBookPro.
-Scrapes goodreturns.in for Chennai & Coimbatore petrol/diesel rates,
-sanity-checks against the previous saved value, and writes to Firebase
-RTDB (appConfig/fuelPrices) using a scoped "fuelbot" service account.
 
-If scraping fails or a price looks implausible (jumped by more than
-₹5 from the last saved value), the script SKIPS the update rather than
-writing bad data — the admin's manual "Save" button in the app remains
-the fallback.
+Reads the current city list from Firebase (appConfig/fuelPrices/cities —
+each city has a display name, a "slug" used to build the goodreturns.in
+URL, and last-known petrol/diesel prices), re-scrapes petrol & diesel for
+every city in that list, sanity-checks each new price against the
+previous saved value, and writes the merged result back.
+
+Admin can add/remove cities entirely from the app (Fuel Prices Update
+screen) — this script picks up whatever list is currently in Firebase,
+no code changes needed for a new city.
+
+If scraping fails or a price looks implausible (jumped by more than ₹5
+from the last saved value), that one city is SKIPPED rather than writing
+bad data — the admin's manual "Save" button in the app remains the
+fallback for any city that can't be auto-updated.
 """
 import os
 import re
@@ -22,13 +29,6 @@ FIREBASE_API_KEY = "AIzaSyBDwIc6PLljPA4p6nwBAvoAYBVR6o1ryoA"
 DATABASE_URL = "https://garagebookpro-default-rtdb.asia-southeast1.firebasedatabase.app"
 FUELBOT_EMAIL = os.environ["FUELBOT_EMAIL"]
 FUELBOT_PASSWORD = os.environ["FUELBOT_PASSWORD"]
-
-PAGES = {
-    "chennaiPetrol": ("petrol", "Chennai", "https://www.goodreturns.in/petrol-price-in-chennai.html"),
-    "chennaiDiesel": ("diesel", "Chennai", "https://www.goodreturns.in/diesel-price-in-chennai.html"),
-    "cbePetrol": ("petrol", "Coimbatore", "https://www.goodreturns.in/petrol-price-in-coimbatore.html"),
-    "cbeDiesel": ("diesel", "Coimbatore", "https://www.goodreturns.in/diesel-price-in-coimbatore.html"),
-}
 
 # Matches: "the price of 1 litre of petrol in Chennai is ₹107.76 per litre"
 PRICE_PATTERN = r"price of 1 litre of {fuel} in {city} is ₹\s*([\d]+\.[\d]+)\s*per litre"
@@ -50,8 +50,8 @@ def fetch_page(url):
         return resp.read().decode("utf-8", errors="ignore")
 
 
-def extract_price(html, fuel, city):
-    pattern = PRICE_PATTERN.format(fuel=re.escape(fuel), city=re.escape(city))
+def extract_price(html, fuel, city_name):
+    pattern = PRICE_PATTERN.format(fuel=re.escape(fuel), city=re.escape(city_name))
     m = re.search(pattern, html, re.IGNORECASE)
     if not m:
         return None
@@ -100,72 +100,110 @@ def firebase_push(path, id_token, data):
         return json.loads(resp.read().decode("utf-8"))
 
 
+def get_cities(fuel_prices):
+    """Return the cities dict, migrating the old flat schema if needed."""
+    if not fuel_prices:
+        return {}
+    if "cities" in fuel_prices and fuel_prices["cities"]:
+        return fuel_prices["cities"]
+    # Legacy flat format fallback (chennaiPetrol/chennaiDiesel/cbePetrol/cbeDiesel)
+    legacy = {}
+    if fuel_prices.get("chennaiPetrol") is not None:
+        legacy["chennai"] = {
+            "name": "Chennai", "slug": "chennai",
+            "petrol": fuel_prices["chennaiPetrol"], "diesel": fuel_prices.get("chennaiDiesel"),
+        }
+    if fuel_prices.get("cbePetrol") is not None:
+        legacy["coimbatore"] = {
+            "name": "Coimbatore", "slug": "coimbatore",
+            "petrol": fuel_prices["cbePetrol"], "diesel": fuel_prices.get("cbeDiesel"),
+        }
+    return legacy
+
+
 def main():
     print("=== GarageBookPro Fuel Price Bot ===")
     id_token, bot_uid = firebase_sign_in()
     print("Signed in to Firebase as fuelbot.")
 
-    previous = firebase_get("appConfig/fuelPrices", id_token) or {}
-    print("Previous saved prices:", previous)
+    fuel_prices = firebase_get("appConfig/fuelPrices", id_token) or {}
+    cities = get_cities(fuel_prices)
 
-    results = {}
+    if not cities:
+        print("No cities configured in appConfig/fuelPrices/cities — nothing to do.")
+        sys.exit(0)
+
+    print(f"Cities configured: {[c.get('name') for c in cities.values()]}")
+
+    updated_cities = dict(cities)  # start from existing data, overwrite per-city on success
     problems = []
+    changed_summary = []
 
-    for key, (fuel, city, url) in PAGES.items():
-        try:
-            html = fetch_page(url)
-        except Exception as e:
-            problems.append(f"{key}: fetch failed ({e})")
-            continue
+    for key, city in cities.items():
+        name = city.get("name", key)
+        slug = city.get("slug") or name.lower().replace(" ", "-")
+        prev_petrol = city.get("petrol")
+        prev_diesel = city.get("diesel")
 
-        price = extract_price(html, fuel, city)
-        if price is None:
-            problems.append(f"{key}: could not find price pattern on page")
-            continue
+        city_result = dict(city)  # copy; only overwrite fields that succeed
 
-        prev_price = previous.get(key)
-        if prev_price is not None and abs(price - prev_price) > MAX_JUMP:
-            problems.append(
-                f"{key}: scraped ₹{price} looks suspicious "
-                f"(previous ₹{prev_price}, jump > ₹{MAX_JUMP}) — skipping"
-            )
-            continue
+        for fuel, prev_value, field in (("petrol", prev_petrol, "petrol"), ("diesel", prev_diesel, "diesel")):
+            url = f"https://www.goodreturns.in/{fuel}-price-in-{slug}.html"
+            try:
+                html = fetch_page(url)
+            except Exception as e:
+                problems.append(f"{name} {fuel}: fetch failed ({e})")
+                continue
 
-        results[key] = price
-        print(f"{key}: ₹{price}  (prev: {prev_price})")
-        time.sleep(1)  # be polite between requests
+            price = extract_price(html, fuel, name)
+            if price is None:
+                problems.append(f"{name} {fuel}: could not find price pattern on page ({url})")
+                continue
+
+            if prev_value is not None and abs(price - prev_value) > MAX_JUMP:
+                problems.append(
+                    f"{name} {fuel}: scraped ₹{price} looks suspicious "
+                    f"(previous ₹{prev_value}, jump > ₹{MAX_JUMP}) — skipping"
+                )
+                continue
+
+            city_result[field] = price
+            print(f"{name} {fuel}: ₹{price}  (prev: {prev_value})")
+            time.sleep(1)  # be polite between requests
+
+        if city_result.get("petrol") != city.get("petrol") or city_result.get("diesel") != city.get("diesel"):
+            changed_summary.append(f"{name} ₹{city_result.get('petrol')}/₹{city_result.get('diesel')}")
+
+        updated_cities[key] = city_result
 
     if problems:
         print("\n--- Issues encountered ---")
         for p in problems:
             print(" -", p)
 
-    if len(results) < 4:
-        print(f"\nOnly {len(results)}/4 prices scraped successfully.")
-        if len(results) == 0:
-            print("Nothing usable — exiting without writing anything.")
-            sys.exit(1)
-        print("Writing only the successfully-scraped fields, leaving the rest untouched.")
+    if not changed_summary:
+        print("\nNo prices changed (or all scrapes failed) — nothing new to write.")
+        sys.exit(0 if not problems else 1)
 
-    # Merge with previous so a partial scrape doesn't wipe good existing data
-    merged = dict(previous)
-    merged.update(results)
+    merged = dict(fuel_prices)
+    merged["cities"] = updated_cities
     merged["updatedAt"] = int(time.time() * 1000)
     merged["source"] = "auto"
+    # Drop legacy flat fields once migrated to the cities structure
+    for legacy_field in ("chennaiPetrol", "chennaiDiesel", "cbePetrol", "cbeDiesel"):
+        merged.pop(legacy_field, None)
 
     firebase_put("appConfig/fuelPrices", id_token, merged)
     print("\nFirebase updated:", merged)
 
-    if results:
-        summary = ", ".join(f"{k}=₹{v}" for k, v in results.items())
-        firebase_push("activityLog", id_token, {
-            "type": "fuel_update",
-            "uid": bot_uid,
-            "email": "fuelbot (auto)",
-            "detail": f"Auto: {summary}",
-            "at": {".sv": "timestamp"},
-        })
-        print("Activity logged.")
+    firebase_push("activityLog", id_token, {
+        "type": "fuel_update",
+        "uid": bot_uid,
+        "email": "fuelbot (auto)",
+        "detail": f"Auto: {', '.join(changed_summary)}",
+        "at": {".sv": "timestamp"},
+    })
+    print("Activity logged.")
 
 
 if __name__ == "__main__":
