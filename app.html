@@ -317,6 +317,10 @@
 
       <!-- Email/Password form -->
       <div id="emailAuthForm">
+        <div class="auth-field-label" id="authNameLabel" style="display:none;">பெயர்</div>
+        <input type="text" class="auth-input" id="authName" placeholder="உங்க பெயர்" autocomplete="name" style="display:none;">
+        <div class="auth-field-label" id="authPhoneLabel" style="display:none;">Mobile Number</div>
+        <input type="tel" class="auth-input" id="authSignupPhone" placeholder="+91 9876543210" autocomplete="tel" style="display:none;">
         <div class="auth-field-label">Email</div>
         <input type="email" class="auth-input" id="authEmail" placeholder="you@email.com" autocomplete="email">
         <div class="auth-field-label">Password</div>
@@ -740,6 +744,10 @@ document.getElementById('tabLogin').addEventListener('click', ()=>{
   document.getElementById('tabSignup').classList.remove('active');
   document.getElementById('authSubmitBtn').textContent = 'Login';
   document.getElementById('forgotPwLink').style.display = 'block';
+  document.getElementById('authNameLabel').style.display = 'none';
+  document.getElementById('authName').style.display = 'none';
+  document.getElementById('authPhoneLabel').style.display = 'none';
+  document.getElementById('authSignupPhone').style.display = 'none';
   setAuthError('');
 });
 document.getElementById('tabSignup').addEventListener('click', ()=>{
@@ -748,15 +756,29 @@ document.getElementById('tabSignup').addEventListener('click', ()=>{
   document.getElementById('tabLogin').classList.remove('active');
   document.getElementById('authSubmitBtn').textContent = 'Create Account';
   document.getElementById('forgotPwLink').style.display = 'none';
+  document.getElementById('authNameLabel').style.display = 'block';
+  document.getElementById('authName').style.display = 'block';
+  document.getElementById('authPhoneLabel').style.display = 'block';
+  document.getElementById('authSignupPhone').style.display = 'block';
   setAuthError('');
 });
 
+let pendingSignupName = null;
+let pendingSignupPhone = null;
 document.getElementById('authSubmitBtn').addEventListener('click', async ()=>{
   const email = document.getElementById('authEmail').value.trim();
   const password = document.getElementById('authPassword').value;
   setAuthError('');
   if(!email || !email.includes('@')){ setAuthError('சரியான Email போடுங்க'); return; }
   if(!password || password.length < 6){ setAuthError('Password குறைந்தது 6 characters இருக்கணும்'); return; }
+  if(authMode === 'signup'){
+    const nameVal = document.getElementById('authName').value.trim();
+    const phoneVal = document.getElementById('authSignupPhone').value.trim();
+    if(!nameVal){ setAuthError('பெயர் போடுங்க'); return; }
+    if(!phoneVal){ setAuthError('Mobile Number போடுங்க'); return; }
+    pendingSignupName = nameVal;
+    pendingSignupPhone = phoneVal;
+  }
   const btn = document.getElementById('authSubmitBtn');
   btn.disabled = true;
   try{
@@ -1180,16 +1202,20 @@ function openLiveActivityModal(){
     const items = [];
     snap.forEach(child => items.push(child.val()));
     items.reverse(); // newest first
-    listEl.innerHTML = items.map(it => `
+    listEl.innerHTML = items.map(it => {
+      const nameLine = it.name ? `<b>${escapeHtml(it.name)}</b> — ` : '';
+      const phoneLink = it.phone ? ` · <a href="tel:${escapeHtml(it.phone)}" style="color:#58A6FF;" onclick="event.stopPropagation()">📞 ${escapeHtml(it.phone)}</a> <a href="https://wa.me/${escapeHtml(it.phone.replace(/[^0-9]/g,''))}" target="_blank" style="color:#4CD964;" onclick="event.stopPropagation()">💬</a>` : '';
+      return `
       <div style="display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid #222;">
         <span style="font-size:18px; flex-shrink:0;">${ACTIVITY_ICONS[it.type] || '•'}</span>
         <div style="flex:1;">
           <div style="color:#fff; font-size:13px; font-weight:600;">${ACTIVITY_LABELS[it.type] || it.type}</div>
-          <div style="color:#B8B8B8; font-size:12px;">${escapeHtml(it.email || '-')} ${it.detail ? '— ' + escapeHtml(it.detail) : ''}</div>
+          <div style="color:#B8B8B8; font-size:12px;">${nameLine}${escapeHtml(it.email || '-')}${phoneLink} ${it.detail ? '— ' + escapeHtml(it.detail) : ''}</div>
         </div>
         <span style="color:#666; font-size:11px; flex-shrink:0; white-space:nowrap;">${timeAgo(it.at)}</span>
       </div>
-    `).join('');
+    `;
+    }).join('');
   });
 }
 
@@ -1272,9 +1298,13 @@ function openAdminUserListModal(){
       } else {
         statusHtml = '<span style="color:#fff; opacity:.6;">Free</span>';
       }
+      const nameHtml = u.name ? `<div style="color:#fff; font-size:13px; font-weight:700;">${escapeHtml(u.name)}</div>` : '';
+      const phoneHtml = u.phone ? `<a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;" onclick="event.stopPropagation()">📞 ${escapeHtml(u.phone)}</a> <a href="https://wa.me/${escapeHtml((u.phone||'').replace(/[^0-9]/g,''))}" target="_blank" style="color:#4CD964; text-decoration:none;" onclick="event.stopPropagation()">💬</a>` : '';
       return `<div style="padding:10px 0; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center;">
         <div>
-          <div style="color:#fff; font-size:13px;">${escapeHtml(u.email||'-')}</div>
+          ${nameHtml}
+          <div style="color:#B8B8B8; font-size:12px;">${escapeHtml(u.email||'-')}</div>
+          ${phoneHtml ? `<div style="margin-top:2px;">${phoneHtml}</div>` : ''}
           <div style="font-size:12px; margin-top:2px;">${statusHtml}</div>
         </div>
         <span class="editUserTrialBtn" data-uid="${u.uid}" data-days="${u.trialEndsAt ? Math.max(0, Math.ceil((u.trialEndsAt - now) / 86400000)) : 0}" style="color:#FFC800; font-size:18px; padding:6px 10px; cursor:pointer;">✏️</span>
@@ -1375,24 +1405,29 @@ function ensureUserProfile(){
         const trialDays = cfgSnap.exists() ? Number(cfgSnap.val()) : 30;
         const trialEndsAt = Date.now() + trialDays*24*60*60*1000;
         const referralCode = genReferralCode();
+        const signupName = pendingSignupName || '';
+        const signupPhone = pendingSignupPhone || currentUser.phoneNumber || '';
         db.ref(ROOT + '/profile').set({
           email: currentUser.email || null,
-          phone: currentUser.phoneNumber || null,
+          phone: signupPhone || null,
+          name: signupName || null,
           tier: 'free',
           trialEndsAt: trialEndsAt,
           referralCode: referralCode,
           createdAt: Date.now()
         });
         db.ref('referralCodes/'+referralCode).set({ ownerUid: currentUser.uid, ownerEmail: currentUser.email || '-' });
-        syncAdminDirectory('free', trialEndsAt);
-        logActivity('signup', 'புது account create ஆச்சு');
+        syncAdminDirectory('free', trialEndsAt, signupName, signupPhone);
+        logActivity('signup', 'புது account create ஆச்சு', signupName, signupPhone);
+        pendingSignupName = null;
+        pendingSignupPhone = null;
         const today = todayStr();
         db.ref('siteStats/signups/total').transaction(v => (v||0)+1);
         db.ref('siteStats/signups/byDate/'+today).transaction(v => (v||0)+1);
       });
     } else {
       const p = snap.val();
-      syncAdminDirectory(p.tier || 'free', p.trialEndsAt || null);
+      syncAdminDirectory(p.tier || 'free', p.trialEndsAt || null, p.name || '', p.phone || '');
       if(!p.referralCode){
         // backfill for accounts created before referral feature existed
         const referralCode = genReferralCode();
@@ -1408,17 +1443,19 @@ function genReferralCode(){
   for(let i=0;i<5;i++) code += chars[Math.floor(Math.random()*chars.length)];
   return code;
 }
-function syncAdminDirectory(tier, trialEndsAt){
+function syncAdminDirectory(tier, trialEndsAt, name, phone){
   // Lightweight self-written directory entry so admin can see who's on trial
   // without needing broad read access to every user's private data.
   db.ref('adminUserDirectory/' + currentUser.uid).set({
     email: currentUser.email || currentUser.phoneNumber || '-',
+    name: name || '',
+    phone: phone || '',
     tier: tier,
     trialEndsAt: trialEndsAt || null,
     updatedAt: Date.now()
   }).catch(()=>{ /* rules may not be updated yet — ignore silently */ });
 }
-function logActivity(type, detail){
+function logActivity(type, detail, nameOverride, phoneOverride){
   // Admin-visible activity feed. Each authenticated user can push a log
   // entry about their own action; only admin can read the feed.
   if(!currentUser) return;
@@ -1426,6 +1463,8 @@ function logActivity(type, detail){
     type: type,
     uid: currentUser.uid,
     email: currentUser.email || currentUser.phoneNumber || '-',
+    name: nameOverride != null ? nameOverride : (STATE.profileName || ''),
+    phone: phoneOverride != null ? phoneOverride : (STATE.profilePhone || ''),
     detail: detail || '',
     at: firebase.database.ServerValue.TIMESTAMP
   }).catch(()=>{ /* rules may not be updated yet — ignore silently */ });
@@ -1438,6 +1477,8 @@ function initFirebase(){
     const val = snap.val() || {};
     STATE.tier = (val.profile && val.profile.tier) || "free";
     STATE.trialEndsAt = (val.profile && val.profile.trialEndsAt) || null;
+    STATE.profileName = (val.profile && val.profile.name) || '';
+    STATE.profilePhone = (val.profile && val.profile.phone) || '';
     STATE.trialActive = STATE.tier !== 'paid' && STATE.trialEndsAt && Date.now() < STATE.trialEndsAt;
     STATE.isPremiumActive = STATE.tier === 'paid' || STATE.trialActive;
     const bannerEl = document.getElementById('homePremiumBanner');
@@ -2035,13 +2076,16 @@ function startAdminLiveActivityWidget(){
     const items = [];
     snap.forEach(child => items.push(child.val()));
     items.reverse();
-    listEl.innerHTML = `<div style="max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">` + items.map(it => `
+    listEl.innerHTML = `<div style="max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">` + items.map(it => {
+      const who = it.name ? escapeHtml(it.name) : escapeHtml(it.email || '-');
+      return `
       <div style="display:flex; align-items:center; gap:8px;">
         <span style="font-size:14px;">${ACTIVITY_ICONS[it.type] || '•'}</span>
-        <span style="color:#FFFFFF; font-size:12px; flex:1;">${ACTIVITY_LABELS[it.type] || it.type} — ${escapeHtml(it.email || '-')}</span>
+        <span style="color:#FFFFFF; font-size:12px; flex:1;">${ACTIVITY_LABELS[it.type] || it.type} — ${who}</span>
         <span style="color:#FFFFFF; font-size:10.5px; white-space:nowrap;">${timeAgo(it.at)}</span>
       </div>
-    `).join('') + `</div>`;
+    `;
+    }).join('') + `</div>`;
   });
 }
 
