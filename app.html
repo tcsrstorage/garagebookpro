@@ -3218,9 +3218,9 @@ function openUpgradeModal(){
         </div>
 
         <div style="background:#161616; border-radius:14px; padding:18px; margin-bottom:20px;">
-          <div style="color:#FFC800; font-weight:700; font-size:14px; margin-bottom:8px;">📱 Step 2: Screenshot அனுப்புங்க</div>
-          <div style="color:#fff; font-size:12.5px; line-height:1.6; margin-bottom:12px;">Payment success screenshot-ஐ WhatsApp-ல அனுப்புங்க, உடனே Premium Code கிடைக்கும்.</div>
-          <a href="https://wa.me/919994869502?text=${encodeURIComponent('GarageBookPro Premium payment done, screenshot attached')}" target="_blank" rel="noopener" style="display:inline-block; background:#25D366; color:#0A0A0A; padding:10px 22px; border-radius:10px; font-weight:700; font-size:13.5px; text-decoration:none;">📱 WhatsApp அனுப்புங்க</a>
+          <div style="color:#FFC800; font-weight:700; font-size:14px; margin-bottom:8px;">📱 Step 2: Payment Done-ஆ சொல்லுங்க</div>
+          <div style="color:#fff; font-size:12.5px; line-height:1.6; margin-bottom:12px;">"Payment Done" button click பண்ணுங்க, App-லேயே Admin-க்கு message போகும். Verify ஆனதும் உடனே Premium Code கிடைக்கும்.</div>
+          <button id="notifyPaymentDoneBtn" style="display:inline-block; background:#25D366; color:#0A0A0A; padding:10px 22px; border-radius:10px; font-weight:700; font-size:13.5px; border:none; cursor:pointer;">💬 Payment Done</button>
         </div>
 
         <div style="text-align:left;">
@@ -3233,6 +3233,9 @@ function openUpgradeModal(){
     `);
     document.getElementById('closeModalX').addEventListener('click', closeModal);
     document.getElementById('redeemCodeBtn').addEventListener('click', redeemPremiumCode);
+    document.getElementById('notifyPaymentDoneBtn').addEventListener('click', ()=>{
+      openContactUsModal('GarageBookPro Premium payment (₹250) செய்துவிட்டேன், Redeem code அனுப்புங்க 🙏');
+    });
   });
 }
 
@@ -3703,7 +3706,7 @@ function renderSupportThread(msgs, isAdminView){
     </div>`;
   }).join('');
 }
-function openContactUsModal(){
+function openContactUsModal(prefillText){
   db.ref('supportMessages/'+currentUser.uid).once('value').then(snap=>{
     const msgs = snap.val() || {};
     openModal(`
@@ -3711,7 +3714,7 @@ function openContactUsModal(){
       <div style="color:#fff; font-size:12.5px; margin-bottom:12px;">Doubt/feedback இருந்தா இங்க message பண்ணுங்க — நேரடியா developer-க்கு போகும், reply இங்கயே வரும்.</div>
       <div id="supportThreadBody" style="max-height:340px; overflow-y:auto; padding:6px; background:#0A0A0A; border-radius:10px; margin-bottom:12px;">${renderSupportThread(msgs, false)}</div>
       <div style="display:flex; gap:8px;">
-        <input type="text" id="supportMsgInput" placeholder="Message type பண்ணுங்க..." style="flex:1;">
+        <input type="text" id="supportMsgInput" placeholder="Message type பண்ணுங்க..." value="${prefillText ? escapeHtml(prefillText) : ''}" style="flex:1;">
         <button class="btn-primary" id="supportSendBtn" style="width:auto; padding:0 16px;">Send</button>
       </div>
     `);
