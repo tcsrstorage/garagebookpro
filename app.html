@@ -574,6 +574,10 @@
           <div class="settings-row-left"><span class="ic">🎁</span><span class="txt">Refer & Earn Free Days</span></div>
           <span class="arrow">›</span>
         </div>
+        <div class="settings-row" id="openRedeemBtn">
+          <div class="settings-row-left"><span class="ic">⭐</span><span class="txt">Redeem Code / Upgrade to Premium</span></div>
+          <span class="arrow">›</span>
+        </div>
         <div class="settings-row" id="pinToggleBtn">
           <div class="settings-row-left"><span class="ic">🔢</span><span class="txt" id="pinToggleTxt">Set Quick PIN Unlock</span></div>
           <span class="arrow">›</span>
@@ -2161,7 +2165,8 @@ const ALL_FEATURES = [
   '🔧 Mechanic QR Share — vehicle service/expiry info via QR scan',
   '💬 Contact Us / Feedback — in-app chat with developer, no phone number needed',
   '📜 Resale Certificate — professional PDF with QR-verified vehicle history',
-  '⛽ Today\'s Fuel Price — Chennai & Coimbatore petrol/diesel rates on Home'
+  '⛽ Today\'s Fuel Price — Chennai & Coimbatore petrol/diesel rates on Home',
+  '⭐ Redeem Code / Upgrade to Premium — accessible anytime from Settings'
 ];
 function renderAllFeaturesList(){
   const list = document.getElementById('allFeaturesList');
@@ -2185,8 +2190,9 @@ function renderAllFeaturesList(){
 }
 
 // ============ V2.1: WHAT'S NEW ON HOME ============
-const WHATS_NEW_VERSION = '2026-07-22a';
+const WHATS_NEW_VERSION = '2026-07-22b';
 const WHATS_NEW_ITEMS = [
+  '⭐ Settings → "Redeem Code / Upgrade to Premium" — enter your code anytime, no need to wait for trial to end',
   '⛽ Today\'s Fuel Price — Chennai & Coimbatore petrol/diesel rates shown on Home',
   '📜 Resale Certificate — PDF with QR-verified live vehicle data, great for resale',
   '💬 Contact Us / Feedback — chat with developer directly in the app',
@@ -2525,6 +2531,7 @@ document.getElementById('notifToggleBtn').addEventListener('click', requestNotif
 document.getElementById('openFamilyShareBtn').addEventListener('click', openFamilyShareModal);
 document.getElementById('openYearlyWrapBtn').addEventListener('click', openYearlyWrapModal);
 document.getElementById('openReferralBtn').addEventListener('click', openReferralModal);
+document.getElementById('openRedeemBtn').addEventListener('click', openUpgradeModal);
 document.getElementById('pinToggleBtn').addEventListener('click', ()=>{
   const has = currentUser && !!localStorage.getItem('gbp_pin_' + currentUser.uid);
   if(has) removeQuickPin(); else setupQuickPin();
