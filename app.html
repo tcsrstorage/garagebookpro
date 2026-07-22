@@ -1430,14 +1430,14 @@ function loadPremiumSubsWidget(){
         const expiredAlready = daysLeft < 0;
         color = expiredAlready ? '#FF6B6B' : (daysLeft <= 30 ? '#FFC800' : '#2ECC71');
         timeLabel = expiredAlready
-          ? `${Math.abs(daysLeft)} days over`
-          : `${daysLeft} days left`;
+          ? `<div style="line-height:1.1; text-align:right;"><div style="font-size:17px; font-weight:800;">${Math.abs(daysLeft)}</div><div style="font-size:9px; font-weight:500; opacity:.8; margin-top:1px;">days over</div></div>`
+          : `<div style="line-height:1.1; text-align:right;"><div style="font-size:17px; font-weight:800;">${daysLeft}</div><div style="font-size:9px; font-weight:500; opacity:.8; margin-top:1px;">days left</div></div>`;
       }
       return `
       <div style="display:flex; align-items:center; gap:8px;">
         <span style="font-size:14px;">⭐</span>
         <span style="color:#FFFFFF; font-size:12px; flex:1;">${escapeHtml(who)}</span>
-        <span style="color:${color}; font-size:11px; font-weight:700; white-space:nowrap;">${timeLabel}</span>
+        <span style="color:${color}; white-space:nowrap;">${timeLabel}</span>
       </div>
     `;
     }).join('') + `</div>`;
