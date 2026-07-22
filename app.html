@@ -430,22 +430,7 @@
         <div id="whatsNewCard" style="display:none; background:linear-gradient(135deg,#1A1400,#0A0A0A); border:1px solid #FFC800; border-radius:14px; padding:18px 16px; margin-bottom:14px;"></div>
         <div id="fuelPriceWidget" style="display:none; background:#121212; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px;">
           <div style="color:#888; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">⛽ TODAY'S FUEL PRICE</div>
-          <div style="display:flex; gap:10px;">
-            <div style="flex:1; background:#1A1A1A; border-radius:10px; padding:10px; text-align:center;">
-              <div style="color:#FFFFFF; font-size:11.5px; font-weight:700; margin-bottom:4px;">Chennai</div>
-              <div id="fuelChennaiPetrol" style="color:#FFC800; font-size:15px; font-weight:700;">₹--</div>
-              <div style="color:#888; font-size:9.5px;">Petrol</div>
-              <div id="fuelChennaiDiesel" style="color:#58A6FF; font-size:15px; font-weight:700; margin-top:4px;">₹--</div>
-              <div style="color:#888; font-size:9.5px;">Diesel</div>
-            </div>
-            <div style="flex:1; background:#1A1A1A; border-radius:10px; padding:10px; text-align:center;">
-              <div style="color:#FFFFFF; font-size:11.5px; font-weight:700; margin-bottom:4px;">Coimbatore</div>
-              <div id="fuelCbePetrol" style="color:#FFC800; font-size:15px; font-weight:700;">₹--</div>
-              <div style="color:#888; font-size:9.5px;">Petrol</div>
-              <div id="fuelCbeDiesel" style="color:#58A6FF; font-size:15px; font-weight:700; margin-top:4px;">₹--</div>
-              <div style="color:#888; font-size:9.5px;">Diesel</div>
-            </div>
-          </div>
+          <div id="fuelPriceCardsRow" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
           <div id="fuelPriceUpdatedAt" style="color:#666; font-size:10px; text-align:center; margin-top:8px;"></div>
         </div>
         <div id="trialBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center;"></div>
@@ -1418,36 +1403,89 @@ function openAdminTrialConfigModal(){
     });
   });
 }
+function fuelSlugify(name){
+  return name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
+}
+function getCitiesFromFuelData(data){
+  if(data.cities) return data.cities;
+  // Backward-compat: migrate old flat chennaiPetrol/cbePetrol format into cities object
+  const legacy = {};
+  if(data.chennaiPetrol != null){
+    legacy.chennai = { name: 'Chennai', slug: 'chennai', petrol: data.chennaiPetrol, diesel: data.chennaiDiesel };
+  }
+  if(data.cbePetrol != null){
+    legacy.coimbatore = { name: 'Coimbatore', slug: 'coimbatore', petrol: data.cbePetrol, diesel: data.cbeDiesel };
+  }
+  return legacy;
+}
+function fuelCityRowHtml(key, c){
+  return `
+    <div class="fuelCityRow" data-key="${key}" style="background:#161616; border-radius:12px; padding:14px; margin-bottom:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <input type="text" class="fcCityName" value="${escapeHtml(c.name || '')}" placeholder="City பெயர் (e.g. Salem)" style="flex:1; margin:0;">
+        <span class="fcRemoveBtn" style="color:#FF6B6B; font-size:18px; padding:4px 10px; cursor:pointer;">🗑️</span>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <input type="number" class="fcPetrol" inputmode="decimal" value="${c.petrol || ''}" placeholder="Petrol ₹/L" style="margin:0;">
+        <input type="number" class="fcDiesel" inputmode="decimal" value="${c.diesel || ''}" placeholder="Diesel ₹/L" style="margin:0;">
+      </div>
+    </div>
+  `;
+}
 function openFuelPriceConfigModal(){
   db.ref('appConfig/fuelPrices').once('value').then(snap=>{
     const p = snap.val() || {};
+    const cities = getCitiesFromFuelData(p);
+    const rowsHtml = Object.keys(cities).map(key => fuelCityRowHtml(key, cities[key])).join('');
     openModal(`
       <div class="modal-title">⛽ Fuel Prices Update<span class="close-x" id="closeModalX">✕</span></div>
       <div style="color:#fff; font-size:12.5px; margin-bottom:16px;">Official rate: <a href="https://iocl.com/petrol-diesel-price" target="_blank" style="color:#58A6FF;">iocl.com/petrol-diesel-price</a>-ல check பண்ணி இங்க போடுங்க. இது home screen-ல எல்லா users-க்கும் தெரியும்.</div>
-      <div class="field-label">Chennai — Petrol (₹/L)</div>
-      <input type="number" id="fpChennaiPetrol" inputmode="decimal" value="${p.chennaiPetrol || ''}" placeholder="e.g. 107.88">
-      <div class="field-label">Chennai — Diesel (₹/L)</div>
-      <input type="number" id="fpChennaiDiesel" inputmode="decimal" value="${p.chennaiDiesel || ''}" placeholder="e.g. 99.65">
-      <div class="field-label">Coimbatore — Petrol (₹/L)</div>
-      <input type="number" id="fpCbePetrol" inputmode="decimal" value="${p.cbePetrol || ''}" placeholder="e.g. 108.50">
-      <div class="field-label">Coimbatore — Diesel (₹/L)</div>
-      <input type="number" id="fpCbeDiesel" inputmode="decimal" value="${p.cbeDiesel || ''}" placeholder="e.g. 100.20">
-      <button class="btn-primary" id="saveFuelPricesBtn" style="margin-top:14px;">Save</button>
+      <div id="fuelCityRowsContainer">${rowsHtml}</div>
+      <button id="fuelAddCityBtn" style="width:100%; background:transparent; border:1px dashed #444; color:#FFC800; border-radius:12px; padding:12px; font-weight:700; font-size:13.5px; margin-bottom:14px;">➕ Puthu City Add பண்ணு</button>
+      <button class="btn-primary" id="saveFuelPricesBtn">Save</button>
       ${p.updatedAt ? `<div style="color:#666; font-size:11px; text-align:center; margin-top:10px;">கடைசியா update ஆனது: ${new Date(p.updatedAt).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>` : ''}
     `);
     document.getElementById('closeModalX').addEventListener('click', closeModal);
+    const container = document.getElementById('fuelCityRowsContainer');
+
+    function attachRemoveHandler(row){
+      row.querySelector('.fcRemoveBtn').addEventListener('click', ()=> row.remove());
+    }
+    container.querySelectorAll('.fuelCityRow').forEach(attachRemoveHandler);
+
+    document.getElementById('fuelAddCityBtn').addEventListener('click', ()=>{
+      const div = document.createElement('div');
+      div.innerHTML = fuelCityRowHtml('new_' + Date.now(), { name:'', petrol:'', diesel:'' });
+      const row = div.firstElementChild;
+      container.appendChild(row);
+      attachRemoveHandler(row);
+      row.querySelector('.fcCityName').focus();
+    });
+
     document.getElementById('saveFuelPricesBtn').addEventListener('click', ()=>{
-      const chennaiPetrol = Number(document.getElementById('fpChennaiPetrol').value);
-      const chennaiDiesel = Number(document.getElementById('fpChennaiDiesel').value);
-      const cbePetrol = Number(document.getElementById('fpCbePetrol').value);
-      const cbeDiesel = Number(document.getElementById('fpCbeDiesel').value);
-      if(!chennaiPetrol || !chennaiDiesel || !cbePetrol || !cbeDiesel){ showToast('எல்லா rates-உம் போடுங்க'); return; }
+      const rows = container.querySelectorAll('.fuelCityRow');
+      const newCities = {};
+      let hasError = false;
+      const summaryParts = [];
+      rows.forEach(row=>{
+        const name = row.querySelector('.fcCityName').value.trim();
+        const petrol = Number(row.querySelector('.fcPetrol').value);
+        const diesel = Number(row.querySelector('.fcDiesel').value);
+        if(!name || !petrol || !diesel){ hasError = true; return; }
+        const key = fuelSlugify(name) || ('city' + Math.random().toString(36).slice(2,7));
+        newCities[key] = { name, slug: fuelSlugify(name), petrol, diesel };
+        summaryParts.push(`${name} ₹${petrol}/₹${diesel}`);
+      });
+      if(hasError || Object.keys(newCities).length === 0){
+        showToast('ஒவ்வொரு city-க்கும் பெயர், petrol, diesel எல்லாம் போடுங்க');
+        return;
+      }
       db.ref('appConfig/fuelPrices').set({
-        chennaiPetrol, chennaiDiesel, cbePetrol, cbeDiesel,
+        cities: newCities,
         updatedAt: Date.now(), source: 'manual'
       }).then(()=>{
         showToast('Fuel prices update ஆச்சு!');
-        logActivity('fuel_update', `Manual: Chennai ₹${chennaiPetrol}/₹${chennaiDiesel}, Coimbatore ₹${cbePetrol}/₹${cbeDiesel}`);
+        logActivity('fuel_update', `Manual: ${summaryParts.join(', ')}`);
         closeModal();
         loadFuelPriceWidget();
       }).catch(err=> showToast('Failed: ' + err.message));
@@ -1479,16 +1517,28 @@ function openPayLinkConfigModal(){
 function loadFuelPriceWidget(){
   db.ref('appConfig/fuelPrices').once('value').then(snap=>{
     const widget = document.getElementById('fuelPriceWidget');
-    if(!widget) return;
+    const cardsRow = document.getElementById('fuelPriceCardsRow');
+    if(!widget || !cardsRow) return;
     if(!snap.exists()){ widget.style.display = 'none'; return; }
-    const p = snap.val();
-    document.getElementById('fuelChennaiPetrol').textContent = '₹' + p.chennaiPetrol;
-    document.getElementById('fuelChennaiDiesel').textContent = '₹' + p.chennaiDiesel;
-    document.getElementById('fuelCbePetrol').textContent = '₹' + p.cbePetrol;
-    document.getElementById('fuelCbeDiesel').textContent = '₹' + p.cbeDiesel;
+    const data = snap.val();
+    const cities = getCitiesFromFuelData(data);
+    const cityKeys = Object.keys(cities);
+    if(cityKeys.length === 0){ widget.style.display = 'none'; return; }
+    cardsRow.innerHTML = cityKeys.map(key=>{
+      const c = cities[key];
+      return `
+        <div style="flex:1; min-width:110px; background:#1A1A1A; border-radius:10px; padding:10px; text-align:center;">
+          <div style="color:#FFFFFF; font-size:11.5px; font-weight:700; margin-bottom:4px;">${escapeHtml(c.name)}</div>
+          <div style="color:#FFC800; font-size:15px; font-weight:700;">₹${c.petrol}</div>
+          <div style="color:#888; font-size:9.5px;">Petrol</div>
+          <div style="color:#58A6FF; font-size:15px; font-weight:700; margin-top:4px;">₹${c.diesel}</div>
+          <div style="color:#888; font-size:9.5px;">Diesel</div>
+        </div>
+      `;
+    }).join('');
     const updEl = document.getElementById('fuelPriceUpdatedAt');
-    if(updEl && p.updatedAt){
-      updEl.textContent = 'Updated: ' + new Date(p.updatedAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
+    if(updEl && data.updatedAt){
+      updEl.textContent = 'Updated: ' + new Date(data.updatedAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
     }
     widget.style.display = 'block';
   }).catch(()=>{});
