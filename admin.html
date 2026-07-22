@@ -436,6 +436,20 @@
             </div>
           </div>
         </div>
+        <div id="adminQuickActionsRow" style="display:flex; gap:8px; margin-bottom:14px;">
+          <div onclick="openAdminGenCodeModal()" style="flex:1; background:#000000; border:1px solid #2a2a2a; border-radius:12px; padding:10px 6px; text-align:center; cursor:pointer;">
+            <div style="font-size:18px;">🔑</div>
+            <div style="color:#FFFFFF; font-size:10px; margin-top:3px;">Generate Code</div>
+          </div>
+          <div onclick="openAdminSupportInbox()" style="flex:1; background:#000000; border:1px solid #2a2a2a; border-radius:12px; padding:10px 6px; text-align:center; cursor:pointer;">
+            <div style="font-size:18px;">💬</div>
+            <div style="color:#FFFFFF; font-size:10px; margin-top:3px;">Support</div>
+          </div>
+          <div onclick="openAdminUserListModal()" style="flex:1; background:#000000; border:1px solid #2a2a2a; border-radius:12px; padding:10px 6px; text-align:center; cursor:pointer;">
+            <div style="font-size:18px;">👥</div>
+            <div style="color:#FFFFFF; font-size:10px; margin-top:3px;">Users</div>
+          </div>
+        </div>
         <div id="adminSupportBanner" style="display:none; background:#3A0E0E; border:1px solid #FF6B6B; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openAdminSupportInbox()">
           <div style="color:#FF6B6B; font-weight:700; font-size:14px;">🔴 புது Support Message வந்திருக்கு!</div>
           <div id="adminSupportBannerText" style="color:#fff; font-size:12.5px; margin-top:4px;"></div>
@@ -467,8 +481,9 @@
             <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
           </div>
         </div>
-        <div id="adminCustomerActivityWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openCustomerActivityModal()">
-          <div style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">👥 ADMIN — CUSTOMER ACTIVITY</div>
+        <div id="adminCustomerActivityWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px;">
+          <div style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px; cursor:pointer;" onclick="openCustomerActivityModal()">👥 ADMIN — CUSTOMER ACTIVITY</div>
+          <input type="text" id="custActivitySearch" placeholder="🔍 Search email / name..." oninput="filterCustomerActivityList(this.value)" style="width:100%; background:#111; border:1px solid #333; border-radius:8px; padding:8px 10px; color:#fff; font-size:12px; margin-bottom:10px; box-sizing:border-box;">
           <div id="adminCustomerActivityList" style="display:flex; flex-direction:column; gap:8px;">
             <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
           </div>
@@ -1388,6 +1403,37 @@ function openRevenueModal(){
   });
 }
 
+let _custActivityCache = [];
+function renderCustomerActivityRows(list){
+  const listEl = document.getElementById('adminCustomerActivityList');
+  if(!listEl) return;
+  if(list.length === 0){
+    listEl.innerHTML = '<div style="color:#666; font-size:12px;">Match இல்ல</div>';
+    return;
+  }
+  listEl.innerHTML = `<div style="max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">` + list.map(([uid, u])=>{
+    const who = u.name || u.email || uid.slice(0,8);
+    const statsPart = u.lastActiveAt ? `🚗${u.vehicleCount||0} 📝${u.entryCount||0}` : 'Not tracked yet';
+    const timePart = u.lastActiveAt ? timeAgo(u.lastActiveAt) : '-';
+    return `
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-size:14px;">👤</span>
+      <span style="color:#FFFFFF; font-size:12px; flex:1;">${escapeHtml(who)} — ${statsPart}</span>
+      <span style="color:#FFFFFF; font-size:10.5px; white-space:nowrap;">${timePart}</span>
+    </div>
+  `;
+  }).join('') + `</div>`;
+}
+function filterCustomerActivityList(query){
+  const q = (query||'').trim().toLowerCase();
+  if(!q){ renderCustomerActivityRows(_custActivityCache); return; }
+  const filtered = _custActivityCache.filter(([uid, u]) => {
+    const name = (u.name||'').toLowerCase();
+    const email = (u.email||'').toLowerCase();
+    return name.includes(q) || email.includes(q);
+  });
+  renderCustomerActivityRows(filtered);
+}
 function loadCustomerActivityWidget(){
   const listEl = document.getElementById('adminCustomerActivityList');
   if(!listEl) return;
@@ -1395,22 +1441,13 @@ function loadCustomerActivityWidget(){
     const directory = snap.val() || {};
     const list = Object.entries(directory)
       .sort((a,b) => (b[1].lastActiveAt||0) - (a[1].lastActiveAt||0));
-    if(list.length === 0){
-      listEl.innerHTML = '<div style="color:#666; font-size:12px;">Data இன்னும் இல்ல</div>';
-      return;
+    _custActivityCache = list;
+    const searchBox = document.getElementById('custActivitySearch');
+    if(searchBox && searchBox.value.trim()){
+      filterCustomerActivityList(searchBox.value);
+    } else {
+      renderCustomerActivityRows(list);
     }
-    listEl.innerHTML = `<div style="max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">` + list.map(([uid, u])=>{
-      const who = u.name || u.email || uid.slice(0,8);
-      const statsPart = u.lastActiveAt ? `🚗${u.vehicleCount||0} 📝${u.entryCount||0}` : 'Not tracked yet';
-      const timePart = u.lastActiveAt ? timeAgo(u.lastActiveAt) : '-';
-      return `
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span style="font-size:14px;">👤</span>
-        <span style="color:#FFFFFF; font-size:12px; flex:1;">${escapeHtml(who)} — ${statsPart}</span>
-        <span style="color:#FFFFFF; font-size:10.5px; white-space:nowrap;">${timePart}</span>
-      </div>
-    `;
-    }).join('') + `</div>`;
   }).catch(()=>{});
 }
 function openCustomerActivityModal(){
