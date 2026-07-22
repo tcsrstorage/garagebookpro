@@ -68,7 +68,7 @@ def firebase_sign_in():
     req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=20) as resp:
         data = json.loads(resp.read().decode("utf-8"))
-        return data["idToken"]
+        return data["idToken"], data["localId"]
 
 
 def firebase_get(path, id_token):
@@ -91,9 +91,18 @@ def firebase_put(path, id_token, data):
         return json.loads(resp.read().decode("utf-8"))
 
 
+def firebase_push(path, id_token, data):
+    url = f"{DATABASE_URL}/{path}.json?auth={id_token}"
+    payload = json.dumps(data).encode("utf-8")
+    req = urllib.request.Request(url, data=payload, method="POST",
+                                  headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
 def main():
     print("=== GarageBookPro Fuel Price Bot ===")
-    id_token = firebase_sign_in()
+    id_token, bot_uid = firebase_sign_in()
     print("Signed in to Firebase as fuelbot.")
 
     previous = firebase_get("appConfig/fuelPrices", id_token) or {}
@@ -146,6 +155,17 @@ def main():
 
     firebase_put("appConfig/fuelPrices", id_token, merged)
     print("\nFirebase updated:", merged)
+
+    if results:
+        summary = ", ".join(f"{k}=₹{v}" for k, v in results.items())
+        firebase_push("activityLog", id_token, {
+            "type": "fuel_update",
+            "uid": bot_uid,
+            "email": "fuelbot (auto)",
+            "detail": f"Auto: {summary}",
+            "at": {".sv": "timestamp"},
+        })
+        print("Activity logged.")
 
 
 if __name__ == "__main__":
