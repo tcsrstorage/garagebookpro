@@ -449,7 +449,46 @@
             <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
           </div>
         </div>
+        <div id="adminToolsSection" style="background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:6px 16px; margin-bottom:14px;">
+          <div style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px; padding:10px 0 4px;">🛠️ ADMIN TOOLS</div>
+          <div class="settings-row" id="openAdminSupportBtn">
+            <div class="settings-row-left"><span class="ic">📨</span><span class="txt">Support Messages</span><span id="adminSupportUnreadDot" style="display:none; width:8px; height:8px; border-radius:50%; background:#FF6B6B; margin-left:6px;"></span></div>
+            <span class="arrow">›</span>
+          </div>
+          <div class="settings-row" id="openAdminGenCodeBtn">
+            <div class="settings-row-left"><span class="ic">🔑</span><span class="txt">Generate Redeem Code</span></div>
+            <span class="arrow">›</span>
+          </div>
+          <div class="settings-row" id="openAdminTrialConfigBtn">
+            <div class="settings-row-left"><span class="ic">🎁</span><span class="txt">Trial Duration Set பண்ணு</span></div>
+            <span class="arrow">›</span>
+          </div>
+          <div class="settings-row" id="openFuelPriceConfigBtn">
+            <div class="settings-row-left"><span class="ic">⛽</span><span class="txt">Fuel Prices Update பண்ணு</span></div>
+            <span class="arrow">›</span>
+          </div>
+          <div class="settings-row" id="openPayLinkConfigBtn">
+            <div class="settings-row-left"><span class="ic">💳</span><span class="txt">Payment Link Update பண்ணு</span></div>
+            <span class="arrow">›</span>
+          </div>
+          <div class="settings-row" id="openAdminUserListBtn">
+            <div class="settings-row-left"><span class="ic">👥</span><span class="txt">Users & Trial Status</span></div>
+            <span class="arrow">›</span>
+          </div>
+          <div class="settings-row" id="openRevenueBtn">
+            <div class="settings-row-left"><span class="ic">💰</span><span class="txt">Revenue Tracker</span></div>
+            <span class="arrow">›</span>
+          </div>
+          <div class="settings-row" id="testTrialBtn">
+            <div class="settings-row-left"><span class="ic">🧪</span><span class="txt">Test Trial (என் account-க்கு)</span></div>
+            <span class="arrow">›</span>
+          </div>
+        </div>
         <div id="customerOnlySection">
+        <div id="openPremiumSubsBtn" style="display:none;"></div>
+        <div id="openAnalyticsBtn" style="display:none;"></div>
+        <div id="openLiveActivityBtn" style="display:none;"></div>
+        <div id="openCustomerActivityBtn" style="display:none;"></div>
         <div id="customerSupportBanner" style="display:none; background:#0F2E1A; border:1px solid #2ECC71; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openContactUsModal()">
           <div style="color:#2ECC71; font-weight:700; font-size:14px;">💬 உங்க message-க்கு reply வந்திருக்கு!</div>
           <div id="customerSupportBannerText" style="color:#fff; font-size:12.5px; margin-top:4px;"></div>
@@ -634,54 +673,6 @@
           <span class="arrow">›</span>
         </div>
         <div class="section-title" id="adminSectionTitle" style="display:none;">Admin</div>
-        <div class="settings-row" id="openAdminSupportBtn" style="display:none;">
-          <div class="settings-row-left"><span class="ic">📨</span><span class="txt">Support Messages</span><span id="adminSupportUnreadDot" style="display:none; width:8px; height:8px; border-radius:50%; background:#FF6B6B; margin-left:6px;"></span></div>
-          <span class="arrow">›</span>
-        </div>
-        <div class="settings-row" id="openAdminGenCodeBtn" style="display:none;">
-          <div class="settings-row-left"><span class="ic">🔑</span><span class="txt">Generate Redeem Code</span></div>
-          <span class="arrow">›</span>
-        </div>
-        <div class="settings-row" id="openAdminTrialConfigBtn" style="display:none;">
-          <div class="settings-row-left"><span class="ic">🎁</span><span class="txt">Trial Duration Set பண்ணு</span></div>
-          <span class="arrow">›</span>
-        </div>
-        <div class="settings-row" id="openFuelPriceConfigBtn" style="display:none;">
-          <div class="settings-row-left"><span class="ic">⛽</span><span class="txt">Fuel Prices Update பண்ணு</span></div>
-          <span class="arrow">›</span>
-        </div>
-        <div class="settings-row" id="openPayLinkConfigBtn" style="display:none;">
-          <div class="settings-row-left"><span class="ic">💳</span><span class="txt">Payment Link Update பண்ணு</span></div>
-          <span class="arrow">›</span>
-        </div>
-        <div class="settings-row" id="openAdminUserListBtn" style="display:none;">
-          <div class="settings-row-left"><span class="ic">👥</span><span class="txt">Users & Trial Status</span></div>
-          <span class="arrow">›</span>
-        </div>
-        <div class="settings-row" id="openPremiumSubsBtn" style="display:none;">
-          <div class="settings-row-left"><span class="ic">⭐</span><span class="txt">Premium Subscribers</span></div>
-          <span class="arrow">›</span>
-        </div>
-        <div class="settings-row" id="openAnalyticsBtn" style="display:none;">
-          <div class="settings-row-left"><span class="ic">📈</span><span class="txt">Visits & Signups</span></div>
-          <span class="arrow">›</span>
-        </div>
-        <div class="settings-row" id="openLiveActivityBtn" style="display:none;">
-          <div class="settings-row-left"><span class="ic">📡</span><span class="txt">Live Activity</span></div>
-          <span class="arrow">›</span>
-        </div>
-        <div class="settings-row" id="openCustomerActivityBtn" style="display:none;">
-          <div class="settings-row-left"><span class="ic">👥</span><span class="txt">Customer Activity</span></div>
-          <span class="arrow">›</span>
-        </div>
-        <div class="settings-row" id="openRevenueBtn" style="display:none;">
-          <div class="settings-row-left"><span class="ic">💰</span><span class="txt">Revenue Tracker</span></div>
-          <span class="arrow">›</span>
-        </div>
-        <div class="settings-row" id="testTrialBtn" style="display:none;">
-          <div class="settings-row-left"><span class="ic">🧪</span><span class="txt">Test Trial (என் account-க்கு)</span></div>
-          <span class="arrow">›</span>
-        </div>
         <div class="section-title">Data</div>
         <div class="settings-row" id="exportBtn">
           <div class="settings-row-left"><span class="ic">📤</span><span class="txt">Export All Data (JSON)</span></div>
