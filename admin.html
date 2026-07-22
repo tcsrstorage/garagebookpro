@@ -2637,19 +2637,21 @@ function loadTodaySummary(){
     if(el) el.textContent = count;
   }).catch(()=>{});
 }
-function refreshAllAdminWidgets(){
+function refreshAllAdminWidgets(silent){
   const btn = document.getElementById('adminRefreshBtn');
-  if(btn) btn.textContent = '⏳ Refreshing...';
+  if(!silent && btn) btn.textContent = '⏳ Refreshing...';
   loadAdminHomeStats();
   loadCustomerActivityWidget();
   loadPremiumSubsWidget();
   checkAdminUnreadSupport();
   updateAdminQuickStatus();
   loadTodaySummary();
-  setTimeout(()=>{ if(btn) btn.textContent = '✅ Refreshed'; }, 600);
-  setTimeout(()=>{ if(btn) btn.textContent = '🔄 Refresh'; }, 2000);
+  if(!silent){
+    setTimeout(()=>{ if(btn) btn.textContent = '✅ Refreshed'; }, 600);
+    setTimeout(()=>{ if(btn) btn.textContent = '🔄 Refresh'; }, 2000);
+  }
 }
-document.getElementById('adminRefreshBtn').addEventListener('click', refreshAllAdminWidgets);
+document.getElementById('adminRefreshBtn').addEventListener('click', ()=>refreshAllAdminWidgets(false));
 function loadAdminHomeStats(){
   db.ref('siteStats/visits/total').once('value').then(vSnap=>{
     db.ref('siteStats/signups/total').once('value').then(sSnap=>{
@@ -4970,6 +4972,7 @@ async function checkForAppUpdate(){
 window.addEventListener('load', ()=> setTimeout(checkForAppUpdate, 3000));
 setInterval(checkForAppUpdate, 60*1000);
 setInterval(()=>{ if(currentUser && currentUser.uid === ADMIN_UID) checkAdminUnreadSupport(); }, 60*1000);
+setInterval(()=>{ if(currentUser && currentUser.uid === ADMIN_UID) refreshAllAdminWidgets(true); }, 60*1000);
 setInterval(()=>{ if(currentUser) checkMyUnreadSupport(); }, 60*1000);
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible') checkForAppUpdate();
