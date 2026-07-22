@@ -406,6 +406,36 @@
 
       <!-- HOME TAB -->
       <div id="tab-home">
+        <div id="adminQuickStatusRow" style="display:flex; gap:10px; margin-bottom:14px;">
+          <div id="qsSupportRow" onclick="openAdminSupportInbox()" style="display:none; flex:1; background:#3A0E0E; border:1px solid #FF6B6B; border-radius:12px; padding:10px 12px; cursor:pointer; text-align:center;">
+            <div style="color:#FF6B6B; font-size:19px; font-weight:800;" id="qsSupportCount">0</div>
+            <div style="color:#fff; font-size:10px; margin-top:2px;">📨 Unread Support</div>
+          </div>
+          <div id="qsTrialRow" onclick="openAdminUserListModal()" style="display:none; flex:1; background:#2A1D00; border:1px solid #FFC800; border-radius:12px; padding:10px 12px; cursor:pointer; text-align:center;">
+            <div style="color:#FFC800; font-size:19px; font-weight:800;" id="qsTrialCount">0</div>
+            <div style="color:#fff; font-size:10px; margin-top:2px;">⏳ Trial Ending Soon</div>
+          </div>
+        </div>
+        <div id="adminTodaySummary" style="background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+            <span style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px;">📆 TODAY'S SUMMARY</span>
+            <span id="adminRefreshBtn" style="color:#58A6FF; font-size:11px; font-weight:700; cursor:pointer; padding:3px 8px; border:1px solid #58A6FF; border-radius:8px;">🔄 Refresh</span>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <div style="flex:1; text-align:center;">
+              <div id="todaySignups" style="color:#FFC800; font-size:20px; font-weight:700;">0</div>
+              <div style="color:#FFFFFF; font-size:9.5px;">New Signups</div>
+            </div>
+            <div style="flex:1; text-align:center;">
+              <div id="todayRedemptions" style="color:#FF9F45; font-size:20px; font-weight:700;">0</div>
+              <div style="color:#FFFFFF; font-size:9.5px;">Redemptions</div>
+            </div>
+            <div style="flex:1; text-align:center;">
+              <div id="todaySupport" style="color:#2ECC71; font-size:20px; font-weight:700;">0</div>
+              <div style="color:#FFFFFF; font-size:9.5px;">Support Msgs</div>
+            </div>
+          </div>
+        </div>
         <div id="adminSupportBanner" style="display:none; background:#3A0E0E; border:1px solid #FF6B6B; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openAdminSupportInbox()">
           <div style="color:#FF6B6B; font-weight:700; font-size:14px;">🔴 புது Support Message வந்திருக்கு!</div>
           <div id="adminSupportBannerText" style="color:#fff; font-size:12.5px; margin-top:4px;"></div>
@@ -1032,6 +1062,8 @@ auth.onAuthStateChanged(function(user){
         loadCustomerActivityWidget();
         loadPremiumSubsWidget();
         checkAdminUnreadSupport();
+        updateAdminQuickStatus();
+        loadTodaySummary();
       }
       checkMyUnreadSupport();
     });
@@ -2509,6 +2541,72 @@ function renderWhatsNewCard(){
 }
 
 // ============ HOME TAB ============
+function updateAdminQuickStatus(){
+  db.ref('supportThreads').orderByChild('unreadForAdmin').equalTo(true).once('value').then(snap=>{
+    const n = snap.exists() ? snap.numChildren() : 0;
+    const row = document.getElementById('qsSupportRow');
+    const cnt = document.getElementById('qsSupportCount');
+    if(cnt) cnt.textContent = n;
+    if(row) row.style.display = n > 0 ? 'block' : 'none';
+  }).catch(()=>{});
+  db.ref('adminUserDirectory').once('value').then(snap=>{
+    const dir = snap.val() || {};
+    const now = Date.now(), dayMs = 24*60*60*1000;
+    let count = 0;
+    Object.values(dir).forEach(u=>{
+      if(u.tier !== 'paid' && u.trialEndsAt){
+        const daysLeft = Math.ceil((u.trialEndsAt - now) / dayMs);
+        if(daysLeft <= 7) count++;
+      }
+    });
+    const row = document.getElementById('qsTrialRow');
+    const cnt = document.getElementById('qsTrialCount');
+    if(cnt) cnt.textContent = count;
+    if(row) row.style.display = count > 0 ? 'block' : 'none';
+  }).catch(()=>{});
+}
+function loadTodaySummary(){
+  const today = todayStr(); // YYYY-MM-DD
+  db.ref('siteStats/signups/byDate/'+today).once('value').then(snap=>{
+    const el = document.getElementById('todaySignups');
+    if(el) el.textContent = snap.val() || 0;
+  }).catch(()=>{});
+  db.ref('redeemCodes').once('value').then(snap=>{
+    let count = 0;
+    if(snap.exists()){
+      snap.forEach(child=>{
+        const r = child.val();
+        if(r.used && r.usedAt && new Date(r.usedAt).toISOString().slice(0,10) === today) count++;
+      });
+    }
+    const el = document.getElementById('todayRedemptions');
+    if(el) el.textContent = count;
+  }).catch(()=>{});
+  db.ref('supportThreads').once('value').then(snap=>{
+    let count = 0;
+    if(snap.exists()){
+      snap.forEach(child=>{
+        const t = child.val();
+        if(t.lastFrom === 'user' && t.lastTimestamp && new Date(t.lastTimestamp).toISOString().slice(0,10) === today) count++;
+      });
+    }
+    const el = document.getElementById('todaySupport');
+    if(el) el.textContent = count;
+  }).catch(()=>{});
+}
+function refreshAllAdminWidgets(){
+  const btn = document.getElementById('adminRefreshBtn');
+  if(btn) btn.textContent = '⏳ Refreshing...';
+  loadAdminHomeStats();
+  loadCustomerActivityWidget();
+  loadPremiumSubsWidget();
+  checkAdminUnreadSupport();
+  updateAdminQuickStatus();
+  loadTodaySummary();
+  setTimeout(()=>{ if(btn) btn.textContent = '✅ Refreshed'; }, 600);
+  setTimeout(()=>{ if(btn) btn.textContent = '🔄 Refresh'; }, 2000);
+}
+document.getElementById('adminRefreshBtn').addEventListener('click', refreshAllAdminWidgets);
 function loadAdminHomeStats(){
   db.ref('siteStats/visits/total').once('value').then(vSnap=>{
     db.ref('siteStats/signups/total').once('value').then(sSnap=>{
