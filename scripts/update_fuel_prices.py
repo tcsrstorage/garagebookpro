@@ -172,7 +172,7 @@ def main():
             time.sleep(1)  # be polite between requests
 
         if city_result.get("petrol") != city.get("petrol") or city_result.get("diesel") != city.get("diesel"):
-            changed_summary.append(f"{name} ₹{city_result.get('petrol')}/₹{city_result.get('diesel')}")
+            changed_summary.append(f"{name} ₹{city_result.get('petrol'):.2f}/₹{city_result.get('diesel'):.2f}")
 
         updated_cities[key] = city_result
 
