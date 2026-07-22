@@ -622,6 +622,10 @@
           <div class="settings-row-left"><span class="ic">⛽</span><span class="txt">Fuel Prices Update பண்ணு</span></div>
           <span class="arrow">›</span>
         </div>
+        <div class="settings-row" id="openPayLinkConfigBtn" style="display:none;">
+          <div class="settings-row-left"><span class="ic">💳</span><span class="txt">Payment Link Update பண்ணு</span></div>
+          <span class="arrow">›</span>
+        </div>
         <div class="settings-row" id="openAdminUserListBtn" style="display:none;">
           <div class="settings-row-left"><span class="ic">👥</span><span class="txt">Users & Trial Status</span></div>
           <span class="arrow">›</span>
@@ -975,6 +979,7 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('openAdminGenCodeBtn').style.display = '';
         document.getElementById('openAdminTrialConfigBtn').style.display = '';
         document.getElementById('openFuelPriceConfigBtn').style.display = '';
+        document.getElementById('openPayLinkConfigBtn').style.display = '';
         document.getElementById('openAdminUserListBtn').style.display = '';
         document.getElementById('openAnalyticsBtn').style.display = '';
         document.getElementById('openLiveActivityBtn').style.display = '';
@@ -1199,14 +1204,16 @@ const ACTIVITY_ICONS = {
   redeem: '💳',
   referral: '🎁',
   family_link: '👨‍👩‍👧',
-  fuel_update: '⛽'
+  fuel_update: '⛽',
+  paylink_update: '🔗'
 };
 const ACTIVITY_LABELS = {
   signup: 'New Signup',
   redeem: 'Premium Redeemed',
   referral: 'Referral Applied',
   family_link: 'Family Link Joined',
-  fuel_update: 'Fuel Prices Updated'
+  fuel_update: 'Fuel Prices Updated',
+  paylink_update: 'Payment Link Updated'
 };
 function openLiveActivityModal(){
   openModal(`
@@ -1443,6 +1450,28 @@ function openFuelPriceConfigModal(){
         logActivity('fuel_update', `Manual: Chennai ₹${chennaiPetrol}/₹${chennaiDiesel}, Coimbatore ₹${cbePetrol}/₹${cbeDiesel}`);
         closeModal();
         loadFuelPriceWidget();
+      }).catch(err=> showToast('Failed: ' + err.message));
+    });
+  });
+}
+function openPayLinkConfigModal(){
+  db.ref('appConfig/payLinkUrl').once('value').then(snap=>{
+    const current = snap.exists() && snap.val() ? snap.val() : 'https://paylink.sramesh.in/p/?id=-OxJreZ79F9VcQg0TaG-';
+    openModal(`
+      <div class="modal-title">💳 Payment Link Update<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#fff; font-size:12.5px; margin-bottom:16px;">paylink.sramesh.in-ல புது payment request create பண்ணி, அந்த link-ஐ இங்க paste பண்ணுங்க. "Upgrade to Premium" screen-ல QR code-உம் Pay button-உம் automatic-ஆ இந்த புது link-ஐ காட்டும்.</div>
+      <div class="field-label">Payment Link URL</div>
+      <input type="text" id="payLinkUrlInput" value="${escapeHtml(current)}" placeholder="https://paylink.sramesh.in/p/?id=...">
+      <button class="btn-primary" id="savePayLinkBtn" style="margin-top:14px;">Save</button>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.getElementById('savePayLinkBtn').addEventListener('click', ()=>{
+      const url = document.getElementById('payLinkUrlInput').value.trim();
+      if(!url || !url.startsWith('https://')){ showToast('சரியான https:// link போடுங்க'); return; }
+      db.ref('appConfig/payLinkUrl').set(url).then(()=>{
+        showToast('Payment link update ஆச்சு!');
+        logActivity('paylink_update', 'New payment link set');
+        closeModal();
       }).catch(err=> showToast('Failed: ' + err.message));
     });
   });
@@ -2436,6 +2465,7 @@ document.getElementById('openAccountBtn').addEventListener('click', openAccountM
 document.getElementById('openAdminGenCodeBtn').addEventListener('click', openAdminGenCodeModal);
 document.getElementById('openAdminTrialConfigBtn').addEventListener('click', openAdminTrialConfigModal);
 document.getElementById('openFuelPriceConfigBtn').addEventListener('click', openFuelPriceConfigModal);
+document.getElementById('openPayLinkConfigBtn').addEventListener('click', openPayLinkConfigModal);
 document.getElementById('openAdminUserListBtn').addEventListener('click', openAdminUserListModal);
 document.getElementById('openAnalyticsBtn').addEventListener('click', openAnalyticsModal);
 document.getElementById('openLiveActivityBtn').addEventListener('click', openLiveActivityModal);
@@ -3084,40 +3114,42 @@ function renderEntryForm(existing){
 
 // ---- Add Vehicle ----
 function openUpgradeModal(){
-  const payLinkUrl = 'https://paylink.sramesh.in/p/?id=-OxJreZ79F9VcQg0TaG-';
-  const qrImg = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(payLinkUrl);
-  openModal(`
-    <div class="modal-title">⭐ Upgrade to Premium<span class="close-x" id="closeModalX">✕</span></div>
-    <div style="text-align:center; padding:10px 0 20px;">
-      <div style="font-size:48px; margin-bottom:10px;">🚗🏍️🚙</div>
-      <div style="font-weight:400; font-size:17px; margin-bottom:8px;">Free tier-ல 1 vehicle மட்டும்</div>
-      <div style="color:#fff; font-size:14px; margin-bottom:20px;">Unlimited vehicles + Full Reports + Compare + Cloud Backup வேணும்னா Premium-க்கு upgrade பண்ணுங்க — ₹250/year <span class="price-highlight">₹21/month</span></div>
+  db.ref('appConfig/payLinkUrl').once('value').then(snap=>{
+    const payLinkUrl = snap.exists() && snap.val() ? snap.val() : 'https://paylink.sramesh.in/p/?id=-OxJreZ79F9VcQg0TaG-';
+    const qrImg = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(payLinkUrl);
+    openModal(`
+      <div class="modal-title">⭐ Upgrade to Premium<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="text-align:center; padding:10px 0 20px;">
+        <div style="font-size:48px; margin-bottom:10px;">🚗🏍️🚙</div>
+        <div style="font-weight:400; font-size:17px; margin-bottom:8px;">Free tier-ல 1 vehicle மட்டும்</div>
+        <div style="color:#fff; font-size:14px; margin-bottom:20px;">Unlimited vehicles + Full Reports + Compare + Cloud Backup வேணும்னா Premium-க்கு upgrade பண்ணுங்க — ₹250/year <span class="price-highlight">₹21/month</span></div>
 
-      <div style="background:#161616; border-radius:14px; padding:18px; margin-bottom:20px;">
-        <div style="color:#FFC800; font-weight:700; font-size:14px; margin-bottom:12px;">💳 Step 1: Pay பண்ணுங்க</div>
-        <img src="${qrImg}" alt="Payment QR" style="width:180px; height:180px; border-radius:10px; background:#fff; padding:8px;">
-        <div style="margin-top:12px;">
-          <a href="${payLinkUrl}" target="_blank" rel="noopener" style="display:inline-block; background:var(--yellow); color:#0A0A0A; padding:12px 28px; border-radius:12px; font-weight:700; font-size:15px; text-decoration:none;">₹250 Pay பண்ணுங்க</a>
+        <div style="background:#161616; border-radius:14px; padding:18px; margin-bottom:20px;">
+          <div style="color:#FFC800; font-weight:700; font-size:14px; margin-bottom:12px;">💳 Step 1: Pay பண்ணுங்க</div>
+          <img src="${qrImg}" alt="Payment QR" style="width:180px; height:180px; border-radius:10px; background:#fff; padding:8px;">
+          <div style="margin-top:12px;">
+            <a href="${payLinkUrl}" target="_blank" rel="noopener" style="display:inline-block; background:var(--yellow); color:#0A0A0A; padding:12px 28px; border-radius:12px; font-weight:700; font-size:15px; text-decoration:none;">₹250 Pay பண்ணுங்க</a>
+          </div>
+          <div style="color:#fff; font-size:12px; margin-top:12px; line-height:1.6;">QR scan பண்ணி, illa button tap பண்ணி UPI-ல pay பண்ணுங்க</div>
         </div>
-        <div style="color:#fff; font-size:12px; margin-top:12px; line-height:1.6;">QR scan பண்ணி, illa button tap பண்ணி UPI-ல pay பண்ணுங்க</div>
-      </div>
 
-      <div style="background:#161616; border-radius:14px; padding:18px; margin-bottom:20px;">
-        <div style="color:#FFC800; font-weight:700; font-size:14px; margin-bottom:8px;">📱 Step 2: Screenshot அனுப்புங்க</div>
-        <div style="color:#fff; font-size:12.5px; line-height:1.6; margin-bottom:12px;">Payment success screenshot-ஐ WhatsApp-ல அனுப்புங்க, உடனே Premium Code கிடைக்கும்.</div>
-        <a href="https://wa.me/919994869502?text=${encodeURIComponent('GarageBookPro Premium payment done, screenshot attached')}" target="_blank" rel="noopener" style="display:inline-block; background:#25D366; color:#0A0A0A; padding:10px 22px; border-radius:10px; font-weight:700; font-size:13.5px; text-decoration:none;">📱 WhatsApp அனுப்புங்க</a>
-      </div>
+        <div style="background:#161616; border-radius:14px; padding:18px; margin-bottom:20px;">
+          <div style="color:#FFC800; font-weight:700; font-size:14px; margin-bottom:8px;">📱 Step 2: Screenshot அனுப்புங்க</div>
+          <div style="color:#fff; font-size:12.5px; line-height:1.6; margin-bottom:12px;">Payment success screenshot-ஐ WhatsApp-ல அனுப்புங்க, உடனே Premium Code கிடைக்கும்.</div>
+          <a href="https://wa.me/919994869502?text=${encodeURIComponent('GarageBookPro Premium payment done, screenshot attached')}" target="_blank" rel="noopener" style="display:inline-block; background:#25D366; color:#0A0A0A; padding:10px 22px; border-radius:10px; font-weight:700; font-size:13.5px; text-decoration:none;">📱 WhatsApp அனுப்புங்க</a>
+        </div>
 
-      <div style="text-align:left;">
-        <div class="field-label">Step 3: Premium Code கிடைச்சதும் இங்க போடுங்க</div>
-        <input type="text" id="redeemCodeInput" placeholder="e.g. GBP-XXXXXX" style="text-transform:uppercase;">
-        <button class="btn-primary" id="redeemCodeBtn" style="margin-top:12px;">Redeem பண்ணுங்க</button>
-        <div id="redeemError" style="color:#FF4D4D; font-size:12.5px; margin-top:8px; min-height:16px;"></div>
+        <div style="text-align:left;">
+          <div class="field-label">Step 3: Premium Code கிடைச்சதும் இங்க போடுங்க</div>
+          <input type="text" id="redeemCodeInput" placeholder="e.g. GBP-XXXXXX" style="text-transform:uppercase;">
+          <button class="btn-primary" id="redeemCodeBtn" style="margin-top:12px;">Redeem பண்ணுங்க</button>
+          <div id="redeemError" style="color:#FF4D4D; font-size:12.5px; margin-top:8px; min-height:16px;"></div>
+        </div>
       </div>
-    </div>
-  `);
-  document.getElementById('closeModalX').addEventListener('click', closeModal);
-  document.getElementById('redeemCodeBtn').addEventListener('click', redeemPremiumCode);
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.getElementById('redeemCodeBtn').addEventListener('click', redeemPremiumCode);
+  });
 }
 
 async function redeemPremiumCode(){
