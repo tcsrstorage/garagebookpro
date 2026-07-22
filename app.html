@@ -1338,7 +1338,6 @@ function loadCustomerActivityWidget(){
   db.ref('adminUserDirectory').once('value').then(snap=>{
     const directory = snap.val() || {};
     const list = Object.entries(directory)
-      .filter(([_, u]) => u.lastActiveAt)
       .sort((a,b) => (b[1].lastActiveAt||0) - (a[1].lastActiveAt||0));
     if(list.length === 0){
       listEl.innerHTML = '<div style="color:#666; font-size:12px;">Data இன்னும் இல்ல</div>';
@@ -1346,11 +1345,13 @@ function loadCustomerActivityWidget(){
     }
     listEl.innerHTML = `<div style="max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">` + list.map(([uid, u])=>{
       const who = u.name || u.email || uid.slice(0,8);
+      const statsPart = u.lastActiveAt ? `🚗${u.vehicleCount||0} 📝${u.entryCount||0}` : 'Not tracked yet';
+      const timePart = u.lastActiveAt ? timeAgo(u.lastActiveAt) : '-';
       return `
       <div style="display:flex; align-items:center; gap:8px;">
         <span style="font-size:14px;">👤</span>
-        <span style="color:#FFFFFF; font-size:12px; flex:1;">${escapeHtml(who)} — 🚗${u.vehicleCount||0} 📝${u.entryCount||0}</span>
-        <span style="color:#FFFFFF; font-size:10.5px; white-space:nowrap;">${timeAgo(u.lastActiveAt)}</span>
+        <span style="color:#FFFFFF; font-size:12px; flex:1;">${escapeHtml(who)} — ${statsPart}</span>
+        <span style="color:#FFFFFF; font-size:10.5px; white-space:nowrap;">${timePart}</span>
       </div>
     `;
     }).join('') + `</div>`;
@@ -1360,28 +1361,31 @@ function openCustomerActivityModal(){
   db.ref('adminUserDirectory').once('value').then(snap=>{
     const directory = snap.val() || {};
     const list = Object.entries(directory)
-      .filter(([_, u]) => u.lastActiveAt) // only users who have opened the app since this feature was added
       .sort((a,b) => (b[1].lastActiveAt||0) - (a[1].lastActiveAt||0));
     const rows = list.map(([uid, u])=>{
       const idLabel = u.name || u.email || uid.slice(0,8);
       const subLabel = (u.name && u.email) ? u.email : '';
+      const timeLabel = u.lastActiveAt ? timeAgo(u.lastActiveAt) : 'Not tracked yet';
+      const countsLabel = u.lastActiveAt
+        ? `<span style="color:#58A6FF; font-size:12px;">🚗 ${u.vehicleCount != null ? u.vehicleCount : '-'} vehicles</span>
+           <span style="color:#FFC800; font-size:12px;">📝 ${u.entryCount != null ? u.entryCount : '-'} entries</span>`
+        : `<span style="color:#666; font-size:11.5px;">App திறந்ததும் தானா தெரியும்</span>`;
       return `
       <div style="padding:10px 0; border-bottom:1px solid #222;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <span style="color:#fff; font-size:13px; font-weight:600;">${escapeHtml(idLabel)}</span>
-          <span style="color:#666; font-size:11px;">${timeAgo(u.lastActiveAt)}</span>
+          <span style="color:#666; font-size:11px;">${timeLabel}</span>
         </div>
         ${subLabel ? `<div style="color:#666; font-size:11px;">${escapeHtml(subLabel)}</div>` : ''}
         <div style="display:flex; gap:14px; margin-top:4px;">
-          <span style="color:#58A6FF; font-size:12px;">🚗 ${u.vehicleCount != null ? u.vehicleCount : '-'} vehicles</span>
-          <span style="color:#FFC800; font-size:12px;">📝 ${u.entryCount != null ? u.entryCount : '-'} entries</span>
+          ${countsLabel}
           <span style="color:${u.tier==='paid' ? '#2ECC71' : '#888'}; font-size:12px;">${u.tier==='paid' ? '⭐ Premium' : 'Free/Trial'}</span>
         </div>
       </div>`;
     }).join('');
     openModal(`
       <div class="modal-title">👥 Customer Activity<span class="close-x" id="closeModalX">✕</span></div>
-      <div style="color:#888; font-size:12px; margin-bottom:14px;">Users, last active time first. Vehicle/entry count காட்டும் — யாரு எவ்வளவு app-ஐ use பண்றாங்கனு தெரியும்.</div>
+      <div style="color:#888; font-size:12px; margin-bottom:14px;">Users, last active time first. Vehicle/entry count காட்டும் — யாரு எவ்வளவு app-ஐ use பண்றாங்கனு தெரியும். "Not tracked yet" = அந்த user இந்த feature வந்த பிறகு app இன்னும் open பண்ணல.</div>
       <div style="max-height:420px; overflow-y:auto;">
         ${rows || '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Data இன்னும் இல்ல (இந்த feature add பண்ணின பிறகு app open பண்ணினா தெரியும்)</div>'}
       </div>
