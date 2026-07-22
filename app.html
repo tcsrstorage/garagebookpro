@@ -1430,7 +1430,10 @@ function openPremiumSubscribersModal(){
         <div style="color:#fff; font-size:13px; font-weight:600;">${escapeHtml(who)}</div>
         <div style="color:#666; font-size:11px;">${activatedText}</div>
         <div style="margin-top:3px;">${statusHtml}</div>
-        <span class="sendReminderBtn" data-uid="${uid}" data-email="${escapeHtml(u.email||'')}" data-name="${escapeHtml(u.name||'')}" data-phone="${escapeHtml(u.phone||'')}" data-expiry="${u.premiumExpiresAt||''}" style="display:inline-block; margin-top:6px; color:#FFC800; font-size:11.5px; border:1px solid #FFC800; border-radius:8px; padding:4px 10px; cursor:pointer;">💬 Reminder அனுப்பு</span>
+        <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">
+          <span class="sendReminderBtn" data-uid="${uid}" data-email="${escapeHtml(u.email||'')}" data-name="${escapeHtml(u.name||'')}" data-phone="${escapeHtml(u.phone||'')}" data-expiry="${u.premiumExpiresAt||''}" style="display:inline-block; color:#FFC800; font-size:11.5px; border:1px solid #FFC800; border-radius:8px; padding:4px 10px; cursor:pointer;">💬 Reminder அனுப்பு</span>
+          <span class="setDateBtn" data-uid="${uid}" data-activated="${u.premiumActivatedAt||''}" data-expiry="${u.premiumExpiresAt||''}" style="display:inline-block; color:#58A6FF; font-size:11.5px; border:1px solid #58A6FF; border-radius:8px; padding:4px 10px; cursor:pointer;">📅 தேதி Set பண்ணு</span>
+        </div>
       </div>`;
     }).join('');
     openModal(`
@@ -1451,6 +1454,39 @@ function openPremiumSubscribersModal(){
         const expiryText = expiry ? new Date(Number(expiry)).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : 'soon';
         const msg = `வணக்கம்${name ? ' ' + name : ''}! உங்க Garage Book Pro Premium subscription ${expiryText}-ல expire ஆகுது. Renew பண்ண ₹250 pay பண்ணி, "Payment Done" message அனுப்புங்க — புது Redeem Code அனுப்புறேன். 🙏`;
         openAdminThreadView(uid, { userName: name, userEmail: email, userPhone: phone }, {}, msg);
+      });
+    });
+    document.querySelectorAll('.setDateBtn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const uid = btn.getAttribute('data-uid');
+        const currentActivated = btn.getAttribute('data-activated');
+        const activatedDateStr = currentActivated ? new Date(Number(currentActivated)).toISOString().slice(0,10) : new Date().toISOString().slice(0,10);
+        openModal(`
+          <div class="modal-title">📅 Activation Date Set பண்ணு<span class="close-x" id="closeModalX2">✕</span></div>
+          <div style="color:#fff; font-size:12.5px; margin-bottom:14px;">Activation date போடுங்க — Expiry date (+1 வருஷம்) automatic-ஆ calculate ஆகும்.</div>
+          <div class="field-label">Activation Date</div>
+          <input type="date" id="manualActivationDate" value="${activatedDateStr}">
+          <button class="btn-primary" id="saveManualDateBtn" style="margin-top:14px;">Save</button>
+        `);
+        document.getElementById('closeModalX2').addEventListener('click', ()=> openPremiumSubscribersModal());
+        document.getElementById('saveManualDateBtn').addEventListener('click', ()=>{
+          const dateVal = document.getElementById('manualActivationDate').value;
+          if(!dateVal){ showToast('Date தேர்ந்தெடுங்க'); return; }
+          const activatedAt = new Date(dateVal + 'T00:00:00').getTime();
+          const expiresAt = activatedAt + 365*24*60*60*1000;
+          db.ref('adminUserDirectory/'+uid).update({
+            premiumActivatedAt: activatedAt,
+            premiumExpiresAt: expiresAt
+          }).then(()=>{
+            // Also try updating the user's own profile record if admin has access
+            db.ref('users/'+uid+'/profile').update({
+              premiumActivatedAt: activatedAt,
+              premiumExpiresAt: expiresAt
+            }).catch(()=>{});
+            showToast('Date update ஆச்சு!');
+            openPremiumSubscribersModal();
+          }).catch(err=> showToast('Failed: ' + err.message));
+        });
       });
     });
   });
