@@ -1434,9 +1434,9 @@ function loadPremiumSubsWidget(){
           : `<div style="line-height:1.1; text-align:right;"><div style="font-size:17px; font-weight:800;">${daysLeft}</div><div style="font-size:9px; font-weight:500; opacity:.8; margin-top:1px;">days left</div></div>`;
       }
       return `
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span style="font-size:14px;">⭐</span>
-        <span style="color:#FFFFFF; font-size:12px; flex:1;">${escapeHtml(who)}</span>
+      <div style="display:flex; align-items:flex-start; gap:8px;">
+        <span style="font-size:14px; margin-top:1px;">⭐</span>
+        <span style="color:#FFFFFF; font-size:12px; flex:1;">${escapeHtml(who)}${u.phone ? `<br><a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:10.5px; text-decoration:none;">📞 ${escapeHtml(u.phone)}</a>` : ''}</span>
         <span style="color:${color}; white-space:nowrap;">${timeLabel}</span>
       </div>
     `;
