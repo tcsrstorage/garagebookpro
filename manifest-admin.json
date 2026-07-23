@@ -3,6 +3,7 @@
   "short_name": "GBP Admin",
   "description": "Garage Book Pro admin panel — manage users, codes and analytics.",
   "start_url": "./admin.html",
+  "id": "./admin.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
