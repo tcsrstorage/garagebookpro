@@ -591,6 +591,7 @@
           <div style="color:#555; font-size:9px; text-align:center; margin-top:4px;">Rates via <a href="https://www.goodreturns.in" target="_blank" style="color:#666; text-decoration:none;">goodreturns.in</a></div>
         </div>
         <div id="trialBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center;"></div>
+        <div id="premiumStatusBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center;"></div>
         <div id="homePremiumBanner" class="home-premium-banner hidden">
           <span>⭐ Premium-க்கு switch பண்ணுங்க — <span class="price-highlight">₹21/month</span> மட்டும்</span>
           <div style="margin-top:8px; font-size:12.5px; font-weight:700; text-decoration:underline;">👉 Payment பண்ண இங்க Click பண்ணுங்க</div>
@@ -2445,7 +2446,33 @@ function renderTrialBanner(){
   banner.onclick = openUpgradeModal;
   banner.style.display = 'block';
 }
-
+function renderPremiumStatusBanner(){
+  const banner = document.getElementById('premiumStatusBanner');
+  if(!banner) return;
+  if(STATE.tier !== 'paid' || !STATE.premiumExpiresAt){ banner.style.display = 'none'; return; }
+  const daysLeft = Math.ceil((STATE.premiumExpiresAt - Date.now()) / 86400000);
+  const expiredAlready = daysLeft < 0;
+  const renewalSoon = !expiredAlready && daysLeft <= 30;
+  if(expiredAlready){
+    banner.style.background = 'rgba(255,77,77,0.15)';
+    banner.style.color = '#FF4D4D';
+    banner.style.border = '1px solid rgba(255,77,77,0.4)';
+    banner.innerHTML = `⚠️ Premium subscription ${Math.abs(daysLeft)} நாள் முன்னாடி முடிஞ்சுது. Renew பண்ண <u>இங்க Click பண்ணுங்க</u>`;
+  } else if(renewalSoon){
+    banner.style.background = 'rgba(255,200,0,0.14)';
+    banner.style.color = '#FFC800';
+    banner.style.border = '1px solid rgba(255,200,0,0.4)';
+    banner.innerHTML = `⭐ Premium subscription — ${daysLeft} நாள் மிச்சம் இருக்கு. Renew பண்ண <u>இங்க Click பண்ணுங்க</u>`;
+  } else {
+    banner.style.background = 'rgba(46,204,113,0.12)';
+    banner.style.color = '#2ECC71';
+    banner.style.border = '1px solid rgba(46,204,113,0.35)';
+    banner.innerHTML = `⭐ Premium Active — Renewal-க்கு ${daysLeft} நாள் மிச்சம் இருக்கு`;
+  }
+  banner.style.cursor = 'pointer';
+  banner.onclick = openUpgradeModal;
+  banner.style.display = 'block';
+}
 function ensureUserProfile(){
   db.ref(ROOT + '/profile').once('value').then(snap=>{
     if(!snap.exists()){
@@ -2553,6 +2580,7 @@ function initFirebase(){
     const val = snap.val() || {};
     STATE.tier = (val.profile && val.profile.tier) || "free";
     STATE.trialEndsAt = (val.profile && val.profile.trialEndsAt) || null;
+    STATE.premiumExpiresAt = (val.profile && val.profile.premiumExpiresAt) || null;
     STATE.profileName = (val.profile && val.profile.name) || '';
     STATE.profilePhone = (val.profile && val.profile.phone) || '';
     STATE.profilePlace = (val.profile && val.profile.place) || '';
@@ -2564,6 +2592,7 @@ function initFirebase(){
     const redeemRow = document.getElementById('redeemCodeQuickRow');
     if(redeemRow) redeemRow.style.display = (STATE.tier !== 'paid' && STATE.trialActive) ? 'block' : 'none';
     renderTrialBanner();
+    renderPremiumStatusBanner();
     STATE.vehicles = val.vehicles || {};
     STATE.categories = val.categories || DEFAULT_CATEGORIES;
     STATE.paymodes = val.paymodes || DEFAULT_PAYMODES;
