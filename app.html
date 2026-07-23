@@ -1081,12 +1081,14 @@ async function setupQuickPin(){
   localStorage.setItem('gbp_pin_' + currentUser.uid, hash);
   showToast('Quick PIN set ஆச்சு!');
   updatePinToggleUI();
+  updateUserActivityStats();
 }
 function removeQuickPin(){
   if(confirm('Quick PIN remove பண்ணணுமா? அடுத்த முறை Email/Password மட்டும் வேணும்.')){
     localStorage.removeItem('gbp_pin_' + currentUser.uid);
     showToast('PIN removed');
     updatePinToggleUI();
+    updateUserActivityStats();
   }
 }
 function updatePinToggleUI(){
@@ -1935,6 +1937,8 @@ function updateUserActivityStats(){
   const recurringCount = Object.keys(STATE.recurring || {}).length;
   const budgetSetCount = Object.values(STATE.vehicles || {}).filter(v => v.budgetMonthly).length;
   const familyLinked = (STATE.linkedOwners || []).length > 0;
+  const referralUsed = !!STATE.appliedReferral;
+  const pinEnabled = !!localStorage.getItem('gbp_pin_' + currentUser.uid);
   db.ref('adminUserDirectory/' + currentUser.uid).update({
     lastActiveAt: Date.now(),
     vehicleCount: vehicleCount,
@@ -1942,7 +1946,9 @@ function updateUserActivityStats(){
     docVaultCount: docVaultCount,
     recurringCount: recurringCount,
     budgetSetCount: budgetSetCount,
-    familyLinked: familyLinked
+    familyLinked: familyLinked,
+    referralUsed: referralUsed,
+    pinEnabled: pinEnabled
   }).catch(()=>{ /* rules may not be updated yet — ignore silently */ });
 }
 function syncAdminDirectory(tier, trialEndsAt, name, phone, premiumActivatedAt, premiumExpiresAt){
@@ -1983,6 +1989,7 @@ function initFirebase(){
     STATE.trialEndsAt = (val.profile && val.profile.trialEndsAt) || null;
     STATE.profileName = (val.profile && val.profile.name) || '';
     STATE.profilePhone = (val.profile && val.profile.phone) || '';
+    STATE.appliedReferral = (val.profile && val.profile.appliedReferral) || null;
     STATE.trialActive = STATE.tier !== 'paid' && STATE.trialEndsAt && Date.now() < STATE.trialEndsAt;
     STATE.isPremiumActive = STATE.tier === 'paid' || STATE.trialActive;
     const bannerEl = document.getElementById('homePremiumBanner');
