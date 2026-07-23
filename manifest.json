@@ -3,6 +3,8 @@
   "short_name": "Garage Book Pro",
   "description": "Track petrol, service, repair and all vehicle expenses. Unlimited vehicles with Premium.",
   "start_url": "./app.html",
+  "id": "./app.html",
+  "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0A0A0A",
