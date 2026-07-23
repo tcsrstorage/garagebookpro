@@ -1052,7 +1052,8 @@ auth.onAuthStateChanged(function(user){
       STATE.restrictedVehicleId = (activeOwner !== 'self' && linkVal && linkVal[activeOwner]) ? (linkVal[activeOwner].restrictedVehicleId || null) : null;
       ROOT = 'users/' + (activeOwner !== 'self' ? activeOwner : user.uid);
       ensureUserProfile();
-      startSessionGuard(user.uid);
+      // Admin page is restricted to ADMIN_UID only (see check above), so single-session
+      // enforcement is not needed here — skipping it keeps Admin and App logins independent.
       initFirebase();
       loadFuelPriceWidget();
       if(user.uid === ADMIN_UID){
