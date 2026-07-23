@@ -2108,7 +2108,10 @@ function openAdminUserListModal(){
           ${placeHtml}
           <div style="font-size:12px; margin-top:2px;">${statusHtml}</div>
         </div>
-        <span class="editUserTrialBtn" data-uid="${u.uid}" data-days="${u.trialEndsAt ? Math.max(0, Math.ceil((u.trialEndsAt - now) / 86400000)) : 0}" style="color:#FFC800; font-size:18px; padding:6px 10px; cursor:pointer;">✏️</span>
+        <span style="display:flex; flex-direction:column; gap:4px; align-items:center;">
+          <span class="editUserTrialBtn" data-uid="${u.uid}" data-days="${u.trialEndsAt ? Math.max(0, Math.ceil((u.trialEndsAt - now) / 86400000)) : 0}" style="color:#FFC800; font-size:18px; padding:4px 8px; cursor:pointer;">✏️</span>
+          <span class="editUserPlaceBtn" data-uid="${u.uid}" data-place="${escapeHtml(u.place||'')}" style="color:#58A6FF; font-size:16px; padding:4px 8px; cursor:pointer;">📍</span>
+        </span>
       </div>`;
     }).join('') || '<div style="color:#fff; font-size:13px; padding:10px 0;">இன்னும் users இல்ல</div>';
     const trialCount = entries.filter(u=> u.tier!=='paid' && u.trialEndsAt && now < u.trialEndsAt).length;
@@ -2135,9 +2138,23 @@ function openAdminUserListModal(){
     document.querySelectorAll('.editUserTrialBtn').forEach(btn=>{
       btn.addEventListener('click', ()=> editUserTrial(btn.dataset.uid, Number(btn.dataset.days)));
     });
+    document.querySelectorAll('.editUserPlaceBtn').forEach(btn=>{
+      btn.addEventListener('click', ()=> editUserPlace(btn.dataset.uid, btn.dataset.place));
+    });
   }).catch(err=>{
     showToast('Load failed: ' + err.message);
   });
+}
+function editUserPlace(uid, currentPlace){
+  const input = prompt('இந்த customer-ஓட ஊர்/Place-ஐ போடுங்க:', currentPlace || '');
+  if(input === null) return;
+  const newPlace = input.trim();
+  db.ref('users/'+uid+'/profile/place').set(newPlace || null).then(()=>{
+    db.ref('adminUserDirectory/'+uid+'/place').set(newPlace).then(()=>{
+      showToast('Place update ஆச்சு!');
+      openAdminUserListModal(); // refresh
+    });
+  }).catch(err=> showToast('Failed: ' + err.message));
 }
 function editUserTrial(uid, currentDays){
   const input = prompt('இந்த user-க்கு எத்தனை நாள் trial மிச்சம் இருக்கணும்? (0 போட்டா trial உடனே முடியும்)', currentDays);
