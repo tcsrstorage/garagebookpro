@@ -454,6 +454,7 @@
         </div>
         <div id="trialBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center;"></div>
         <div id="premiumStatusBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center;"></div>
+        <div id="docVaultReminderBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center; background:rgba(88,166,255,0.12); color:#58A6FF; border:1px solid rgba(88,166,255,0.35); cursor:pointer;">📎 உங்க Insurance/RC/PUC Documents இன்னும் upload பண்ணல — ஒரு நிமிடத்துல செய்யுங்க, எப்போ வேணும்னாலும் easy-ஆ access பண்ணலாம். <u>Upload பண்ண இங்க Click பண்ணுங்க</u></div>
         <div id="homePremiumBanner" class="home-premium-banner hidden">
           <span>⭐ Premium-க்கு switch பண்ணுங்க — <span class="price-highlight">₹21/month</span> மட்டும்</span>
           <div style="margin-top:8px; font-size:12.5px; font-weight:700; text-decoration:underline;">👉 Payment பண்ண இங்க Click பண்ணுங்க</div>
@@ -1974,6 +1975,16 @@ function renderPremiumStatusBanner(){
   banner.onclick = openUpgradeModal;
   banner.style.display = 'block';
 }
+function renderDocVaultReminder(){
+  const banner = document.getElementById('docVaultReminderBanner');
+  if(!banner) return;
+  const vehicles = Object.entries(STATE.vehicles || {});
+  if(vehicles.length === 0){ banner.style.display = 'none'; return; }
+  const anyDocUploaded = vehicles.some(([_, v]) => v.docInsurance || v.docRC || v.docPUC);
+  if(anyDocUploaded){ banner.style.display = 'none'; return; }
+  banner.onclick = ()=> openVehicleDocuments(vehicles[0][0]);
+  banner.style.display = 'block';
+}
 
 function ensureUserProfile(){
   db.ref(ROOT + '/profile').once('value').then(snap=>{
@@ -2098,6 +2109,7 @@ function initFirebase(){
     renderTrialBanner();
     renderPremiumStatusBanner();
     STATE.vehicles = val.vehicles || {};
+    renderDocVaultReminder();
     STATE.categories = val.categories || DEFAULT_CATEGORIES;
     STATE.paymodes = val.paymodes || DEFAULT_PAYMODES;
     STATE.expenses = val.expenses || {};
