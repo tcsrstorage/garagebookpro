@@ -567,6 +567,7 @@
 
       <!-- SETTINGS TAB -->
       <div id="tab-settings" class="hidden">
+        <div id="cloudSyncStatus" style="display:none; background:#0F2E1A; border:1px solid #2ECC71; border-radius:12px; padding:10px 14px; margin-bottom:14px; font-size:12.5px; color:#2ECC71; text-align:center;"></div>
         <div class="section-title" style="margin-top:0;">Manage</div>
         <div class="settings-row" id="openVehiclesBtn">
           <div class="settings-row-left"><span class="ic">🚗</span><span class="txt">Vehicles</span></div>
@@ -789,6 +790,14 @@ function setLive(ok){
     label.style.color = ok ? 'var(--green)' : 'var(--red)';
   }
 }
+function updateCloudSyncStatus(){
+  const el = document.getElementById('cloudSyncStatus');
+  if(!el) return;
+  if(!STATE.lastSyncedAt){ el.style.display = 'none'; return; }
+  el.innerHTML = `☁️ உங்க Data Cloud-ல் Safe-ஆ Sync ஆயிருக்கு — Last synced: ${timeAgo(STATE.lastSyncedAt)}`;
+  el.style.display = 'block';
+}
+setInterval(updateCloudSyncStatus, 60*1000);
 
 // ============ AUTH (Email/Password + Phone OTP) ============
 let authMode = "login"; // "login" | "signup"
@@ -1121,7 +1130,7 @@ let onboardingIndex = 0;
 function checkAndShowOnboarding(){
   if(!currentUser) return;
   const seen = localStorage.getItem('gbp_onboarding_seen_' + currentUser.uid);
-  if(seen) return;
+  if(seen){ maybeSuggestPinSetup(); return; }
   onboardingIndex = 0;
   renderOnboardingSlide();
   document.getElementById('onboardingScreen').classList.remove('hidden');
@@ -1143,6 +1152,31 @@ function renderOnboardingSlide(){
 function finishOnboarding(){
   localStorage.setItem('gbp_onboarding_seen_' + currentUser.uid, '1');
   document.getElementById('onboardingScreen').classList.add('hidden');
+  maybeSuggestPinSetup();
+}
+function maybeSuggestPinSetup(){
+  if(!currentUser) return;
+  const alreadyHasPin = !!localStorage.getItem('gbp_pin_' + currentUser.uid);
+  const alreadySuggested = localStorage.getItem('gbp_pin_suggested_' + currentUser.uid);
+  if(alreadyHasPin || alreadySuggested) return;
+  localStorage.setItem('gbp_pin_suggested_' + currentUser.uid, '1');
+  setTimeout(()=>{
+    openModal(`
+      <div class="modal-title">🔢 Quick PIN Unlock<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="text-align:center; padding:10px 0 6px;">
+        <div style="font-size:44px; margin-bottom:12px;">🔒</div>
+        <div style="color:#fff; font-size:14.5px; line-height:1.6; margin-bottom:20px;">அடுத்த முறை App திறக்கும்போது, Email/Password type பண்ணாம 4-digit PIN மட்டும் போட்டு உள்ள போகலாம். இப்போவே Set பண்ணிக்கலாமா?</div>
+        <button class="btn-primary" id="setupPinNowBtn">🔢 PIN Set பண்ணு</button>
+        <div id="skipPinBtn" style="color:#888; font-size:12.5px; margin-top:14px; cursor:pointer;">பின்னால் பார்க்கலாம்</div>
+      </div>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.getElementById('skipPinBtn').addEventListener('click', closeModal);
+    document.getElementById('setupPinNowBtn').addEventListener('click', ()=>{
+      closeModal();
+      setupQuickPin();
+    });
+  }, 500);
 }
 document.getElementById('onboardingNextBtn').addEventListener('click', ()=>{
   if(onboardingIndex === ONBOARDING_SLIDES.length-1){ finishOnboarding(); return; }
@@ -2045,6 +2079,8 @@ function logActivity(type, detail, nameOverride, phoneOverride){
 function initFirebase(){
   db.ref(ROOT).on('value', snap=>{
     setLive(true);
+    STATE.lastSyncedAt = Date.now();
+    updateCloudSyncStatus();
     const val = snap.val() || {};
     STATE.tier = (val.profile && val.profile.tier) || "free";
     STATE.trialEndsAt = (val.profile && val.profile.trialEndsAt) || null;
@@ -3720,9 +3756,22 @@ async function redeemPremiumCode(){
   }
 }
 
+function openFreeLimitModal(){
+  openModal(`
+    <div class="modal-title">🚗 Vehicle Limit<span class="close-x" id="closeModalX">✕</span></div>
+    <div style="text-align:center; padding:10px 0 6px;">
+      <div style="font-size:44px; margin-bottom:12px;">🔒</div>
+      <div style="color:#fff; font-size:15px; font-weight:600; margin-bottom:10px;">Free Tier-ல் 1 Vehicle மட்டும் Add பண்ண முடியும்</div>
+      <div style="color:#B8B8B8; font-size:13px; line-height:1.6; margin-bottom:20px;">2வது Vehicle-ஐயும் Add பண்ண, Unlimited vehicles-க்கு Premium-க்கு Upgrade பண்ணுங்க — ஒரே ₹250/year (₹21/month மட்டும்).</div>
+      <button class="btn-primary" id="goToUpgradeBtn">⭐ Premium-க்கு Upgrade பண்ணு</button>
+    </div>
+  `);
+  document.getElementById('closeModalX').addEventListener('click', closeModal);
+  document.getElementById('goToUpgradeBtn').addEventListener('click', openUpgradeModal);
+}
 function openAddVehicleModal(){
   if(!STATE.isPremiumActive && Object.keys(STATE.vehicles).length >= FREE_TIER_VEHICLE_LIMIT){
-    openUpgradeModal();
+    openFreeLimitModal();
     return;
   }
   openModal(`
