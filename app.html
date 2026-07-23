@@ -321,6 +321,8 @@
         <input type="text" class="auth-input" id="authName" placeholder="உங்க பெயர்" autocomplete="name" style="display:none;">
         <div class="auth-field-label" id="authPhoneLabel" style="display:none;">Mobile Number</div>
         <input type="tel" class="auth-input" id="authSignupPhone" placeholder="+91 9876543210" autocomplete="tel" style="display:none;">
+        <div class="auth-field-label" id="authPlaceLabel" style="display:none;">ஊர் / Place</div>
+        <input type="text" class="auth-input" id="authSignupPlace" placeholder="e.g. Coimbatore" autocomplete="address-level2" style="display:none;">
         <div class="auth-field-label">Email</div>
         <input type="email" class="auth-input" id="authEmail" placeholder="you@email.com" autocomplete="email">
         <div class="auth-field-label">Password</div>
@@ -808,6 +810,8 @@ document.getElementById('tabLogin').addEventListener('click', ()=>{
   document.getElementById('authName').style.display = 'none';
   document.getElementById('authPhoneLabel').style.display = 'none';
   document.getElementById('authSignupPhone').style.display = 'none';
+  document.getElementById('authPlaceLabel').style.display = 'none';
+  document.getElementById('authSignupPlace').style.display = 'none';
   setAuthError('');
 });
 document.getElementById('tabSignup').addEventListener('click', ()=>{
@@ -820,11 +824,14 @@ document.getElementById('tabSignup').addEventListener('click', ()=>{
   document.getElementById('authName').style.display = 'block';
   document.getElementById('authPhoneLabel').style.display = 'block';
   document.getElementById('authSignupPhone').style.display = 'block';
+  document.getElementById('authPlaceLabel').style.display = 'block';
+  document.getElementById('authSignupPlace').style.display = 'block';
   setAuthError('');
 });
 
 let pendingSignupName = null;
 let pendingSignupPhone = null;
+let pendingSignupPlace = null;
 document.getElementById('authSubmitBtn').addEventListener('click', async ()=>{
   const email = document.getElementById('authEmail').value.trim();
   const password = document.getElementById('authPassword').value;
@@ -834,10 +841,13 @@ document.getElementById('authSubmitBtn').addEventListener('click', async ()=>{
   if(authMode === 'signup'){
     const nameVal = document.getElementById('authName').value.trim();
     const phoneVal = document.getElementById('authSignupPhone').value.trim();
+    const placeVal = document.getElementById('authSignupPlace').value.trim();
     if(!nameVal){ setAuthError('பெயர் போடுங்க'); return; }
     if(!phoneVal){ setAuthError('Mobile Number போடுங்க'); return; }
+    if(!placeVal){ setAuthError('ஊர் போடுங்க'); return; }
     pendingSignupName = nameVal;
     pendingSignupPhone = phoneVal;
+    pendingSignupPlace = placeVal;
   }
   const btn = document.getElementById('authSubmitBtn');
   btn.disabled = true;
@@ -1579,11 +1589,13 @@ function openAdminUserListModal(){
       }
       const nameHtml = u.name ? `<div style="color:#fff; font-size:13px; font-weight:700;">${escapeHtml(u.name)}</div>` : '';
       const phoneHtml = u.phone ? `<a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;" onclick="event.stopPropagation()">📞 ${escapeHtml(u.phone)}</a> <a href="https://wa.me/${waPhone(u.phone)}" target="_blank" style="color:#4CD964; text-decoration:none;" onclick="event.stopPropagation()">💬</a>` : '';
+      const placeHtml = u.place ? `<div style="color:#888; font-size:11.5px; margin-top:2px;">📍 ${escapeHtml(u.place)}</div>` : '';
       return `<div style="padding:10px 0; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center;">
         <div>
           ${nameHtml}
           <div style="color:#B8B8B8; font-size:12px;">${escapeHtml(u.email||'-')}</div>
           ${phoneHtml ? `<div style="margin-top:2px;">${phoneHtml}</div>` : ''}
+          ${placeHtml}
           <div style="font-size:12px; margin-top:2px;">${statusHtml}</div>
         </div>
         <span class="editUserTrialBtn" data-uid="${u.uid}" data-days="${u.trialEndsAt ? Math.max(0, Math.ceil((u.trialEndsAt - now) / 86400000)) : 0}" style="color:#FFC800; font-size:18px; padding:6px 10px; cursor:pointer;">✏️</span>
@@ -1635,7 +1647,7 @@ function testMyTrial(){
     if(!confirm('Unga own account-ல ' + trialDays + '-day trial start பண்ணணுமா? (testing purpose)')) return;
     const trialEndsAt = Date.now() + trialDays*24*60*60*1000;
     db.ref(ROOT+'/profile').update({ trialEndsAt: trialEndsAt }).then(()=>{
-      syncAdminDirectory(STATE.tier, trialEndsAt);
+      syncAdminDirectory(STATE.tier, trialEndsAt, STATE.profileName, STATE.profilePhone, null, null, STATE.profilePlace);
       showToast('🎁 Trial start ஆச்சு (' + trialDays + ' நாள்)! Home tab-ல பாருங்க');
     }).catch(err=> showToast('Failed: ' + err.message));
   });
@@ -1893,27 +1905,30 @@ function ensureUserProfile(){
         const referralCode = genReferralCode();
         const signupName = pendingSignupName || '';
         const signupPhone = pendingSignupPhone || currentUser.phoneNumber || '';
+        const signupPlace = pendingSignupPlace || '';
         db.ref(ROOT + '/profile').set({
           email: currentUser.email || null,
           phone: signupPhone || null,
           name: signupName || null,
+          place: signupPlace || null,
           tier: 'free',
           trialEndsAt: trialEndsAt,
           referralCode: referralCode,
           createdAt: Date.now()
         });
         db.ref('referralCodes/'+referralCode).set({ ownerUid: currentUser.uid, ownerEmail: currentUser.email || '-' });
-        syncAdminDirectory('free', trialEndsAt, signupName, signupPhone);
+        syncAdminDirectory('free', trialEndsAt, signupName, signupPhone, null, null, signupPlace);
         logActivity('signup', 'புது account create ஆச்சு', signupName, signupPhone);
         pendingSignupName = null;
         pendingSignupPhone = null;
+        pendingSignupPlace = null;
         const today = todayStr();
         db.ref('siteStats/signups/total').transaction(v => (v||0)+1);
         db.ref('siteStats/signups/byDate/'+today).transaction(v => (v||0)+1);
       });
     } else {
       const p = snap.val();
-      syncAdminDirectory(p.tier || 'free', p.trialEndsAt || null, p.name || '', p.phone || '', p.premiumActivatedAt || null, p.premiumExpiresAt || null);
+      syncAdminDirectory(p.tier || 'free', p.trialEndsAt || null, p.name || '', p.phone || '', p.premiumActivatedAt || null, p.premiumExpiresAt || null, p.place || '');
       if(!p.referralCode){
         // backfill for accounts created before referral feature existed
         const referralCode = genReferralCode();
@@ -1951,13 +1966,14 @@ function updateUserActivityStats(){
     pinEnabled: pinEnabled
   }).catch(()=>{ /* rules may not be updated yet — ignore silently */ });
 }
-function syncAdminDirectory(tier, trialEndsAt, name, phone, premiumActivatedAt, premiumExpiresAt){
+function syncAdminDirectory(tier, trialEndsAt, name, phone, premiumActivatedAt, premiumExpiresAt, place){
   // Lightweight self-written directory entry so admin can see who's on trial
   // without needing broad read access to every user's private data.
   db.ref('adminUserDirectory/' + currentUser.uid).set({
     email: currentUser.email || currentUser.phoneNumber || '-',
     name: name || '',
     phone: phone || '',
+    place: place || '',
     tier: tier,
     trialEndsAt: trialEndsAt || null,
     premiumActivatedAt: premiumActivatedAt || null,
@@ -1989,6 +2005,7 @@ function initFirebase(){
     STATE.trialEndsAt = (val.profile && val.profile.trialEndsAt) || null;
     STATE.profileName = (val.profile && val.profile.name) || '';
     STATE.profilePhone = (val.profile && val.profile.phone) || '';
+    STATE.profilePlace = (val.profile && val.profile.place) || '';
     STATE.appliedReferral = (val.profile && val.profile.appliedReferral) || null;
     STATE.trialActive = STATE.tier !== 'paid' && STATE.trialEndsAt && Date.now() < STATE.trialEndsAt;
     STATE.isPremiumActive = STATE.tier === 'paid' || STATE.trialActive;
