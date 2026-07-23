@@ -539,6 +539,14 @@
             <div class="settings-row-left"><span class="ic">💳</span><span class="txt">Payment Link Update பண்ணு</span></div>
             <span class="arrow">›</span>
           </div>
+          <div class="settings-row" id="openPremiumPriceConfigBtn">
+            <div class="settings-row-left"><span class="ic">💵</span><span class="txt">Premium Price Set பண்ணு</span></div>
+            <span class="arrow">›</span>
+          </div>
+          <div class="settings-row" id="openReferralBonusConfigBtn">
+            <div class="settings-row-left"><span class="ic">🎁</span><span class="txt">Referral Bonus Days Set பண்ணு</span></div>
+            <span class="arrow">›</span>
+          </div>
           <div class="settings-row" id="openAdminUserListBtn">
             <div class="settings-row-left"><span class="ic">👥</span><span class="txt">Users & Trial Status</span></div>
             <span class="arrow">›</span>
@@ -1097,6 +1105,8 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('openTrialAlertConfigBtn').style.display = '';
         document.getElementById('openFuelPriceConfigBtn').style.display = '';
         document.getElementById('openPayLinkConfigBtn').style.display = '';
+        document.getElementById('openPremiumPriceConfigBtn').style.display = '';
+        document.getElementById('openReferralBonusConfigBtn').style.display = '';
         document.getElementById('openAdminUserListBtn').style.display = '';
         document.getElementById('openPremiumSubsBtn').style.display = '';
         document.getElementById('openAnalyticsBtn').style.display = '';
@@ -1568,7 +1578,10 @@ function loadPremiumSubsWidget(){
   }).catch(()=>{});
 }
 function openPremiumSubscribersModal(){
-  db.ref('adminUserDirectory').once('value').then(snap=>{
+  Promise.all([
+    db.ref('adminUserDirectory').once('value'),
+    getAppConfigNumber('premiumPrice', 250)
+  ]).then(([snap, price])=>{
     const directory = snap.val() || {};
     const now = Date.now();
     const paidUsers = Object.entries(directory).filter(([_, u]) => u.tier === 'paid');
@@ -1623,7 +1636,7 @@ function openPremiumSubscribersModal(){
         const phone = btn.getAttribute('data-phone');
         const expiry = btn.getAttribute('data-expiry');
         const expiryText = expiry ? new Date(Number(expiry)).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : 'soon';
-        const msg = `வணக்கம்${name ? ' ' + name : ''}! உங்க Garage Book Pro Premium subscription ${expiryText}-ல expire ஆகுது. Renew பண்ண ₹250 pay பண்ணி, "Payment Done" message அனுப்புங்க — புது Redeem Code அனுப்புறேன். 🙏`;
+        const msg = `வணக்கம்${name ? ' ' + name : ''}! உங்க Garage Book Pro Premium subscription ${expiryText}-ல expire ஆகுது. Renew பண்ண ₹${price} pay பண்ணி, "Payment Done" message அனுப்புங்க — புது Redeem Code அனுப்புறேன். 🙏`;
         openAdminThreadView(uid, { userName: name, userEmail: email, userPhone: phone }, {}, msg);
       });
     });
@@ -1791,8 +1804,9 @@ function loadTrialExpiryWidget(){
 function openTrialExpiryModal(){
   Promise.all([
     db.ref('adminUserDirectory').once('value'),
-    db.ref('appConfig/trialExpiryAlertDays').once('value')
-  ]).then(([snap, cfgSnap])=>{
+    db.ref('appConfig/trialExpiryAlertDays').once('value'),
+    getAppConfigNumber('premiumPrice', 250)
+  ]).then(([snap, cfgSnap, price])=>{
     const directory = snap.val() || {};
     const alertDays = cfgSnap.exists() ? Number(cfgSnap.val()) : 3;
     const now = Date.now();
@@ -1828,7 +1842,7 @@ function openTrialExpiryModal(){
         const name = btn.getAttribute('data-name');
         const email = btn.getAttribute('data-email');
         const phone = btn.getAttribute('data-phone');
-        const msg = `வணக்கம்${name ? ' ' + name : ''}! உங்க Garage Book Pro trial period முடியப்போகுது (அல்லது முடிஞ்சிருச்சு). Premium-க்கு continue பண்ண ₹250 pay பண்ணி, "Payment Done" message அனுப்புங்க — உடனே Redeem Code அனுப்புறேன். 🙏`;
+        const msg = `வணக்கம்${name ? ' ' + name : ''}! உங்க Garage Book Pro trial period முடியப்போகுது (அல்லது முடிஞ்சிருச்சு). Premium-க்கு continue பண்ண ₹${price} pay பண்ணி, "Payment Done" message அனுப்புங்க — உடனே Redeem Code அனுப்புறேன். 🙏`;
         openAdminThreadView(uidKey, { userName: name, userEmail: email, userPhone: phone }, {}, msg);
       });
     });
@@ -1875,8 +1889,9 @@ function openRenewalDueModal(){
   // Reuses the existing Premium Subscribers detail view/reminder flow — just pre-filtered to the due window.
   Promise.all([
     db.ref('adminUserDirectory').once('value'),
-    db.ref('appConfig/renewalAlertDays').once('value')
-  ]).then(([snap, cfgSnap])=>{
+    db.ref('appConfig/renewalAlertDays').once('value'),
+    getAppConfigNumber('premiumPrice', 250)
+  ]).then(([snap, cfgSnap, price])=>{
     const directory = snap.val() || {};
     const alertDays = cfgSnap.exists() ? Number(cfgSnap.val()) : 7;
     const now = Date.now();
@@ -1914,7 +1929,7 @@ function openRenewalDueModal(){
         const phone = btn.getAttribute('data-phone');
         const expiry = btn.getAttribute('data-expiry');
         const expiryText = expiry ? new Date(Number(expiry)).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : 'soon';
-        const msg = `வணக்கம்${name ? ' ' + name : ''}! உங்க Garage Book Pro Premium subscription ${expiryText}-ல expire ஆகுது. Renew பண்ண ₹250 pay பண்ணி, "Payment Done" message அனுப்புங்க — புது Redeem Code அனுப்புறேன். 🙏`;
+        const msg = `வணக்கம்${name ? ' ' + name : ''}! உங்க Garage Book Pro Premium subscription ${expiryText}-ல expire ஆகுது. Renew பண்ண ₹${price} pay பண்ணி, "Payment Done" message அனுப்புங்க — புது Redeem Code அனுப்புறேன். 🙏`;
         openAdminThreadView(uidKey, { userName: name, userEmail: email, userPhone: phone }, {}, msg);
       });
     });
@@ -2264,6 +2279,48 @@ function openPayLinkConfigModal(){
     });
   });
 }
+function openPremiumPriceConfigModal(){
+  getAppConfigNumber('premiumPrice', 250).then(current=>{
+    openModal(`
+      <div class="modal-title">💵 Premium Price<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#fff; font-size:12.5px; margin-bottom:16px;">Premium subscription-க்கு per year எவ்வளவு charge பண்ணணும் நு இங்க set பண்ணுங்க. இது Upgrade screen, Payment Done message, புது Redeem Codes, Reminder messages எல்லாத்துலயும் automatic-ஆ update ஆகும். Existing customers-ஓட ஏற்கனவே இருக்கற subscription price மாறாது.</div>
+      <div class="field-label">Price per Year (₹)</div>
+      <input type="number" id="premiumPriceInput" inputmode="numeric" value="${current}">
+      <button class="btn-primary" id="savePremiumPriceBtn" style="margin-top:14px;">Save</button>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.getElementById('savePremiumPriceBtn').addEventListener('click', ()=>{
+      const price = Number(document.getElementById('premiumPriceInput').value);
+      if(!price || price < 0){ showToast('Correct number போடுங்க'); return; }
+      db.ref('appConfig/premiumPrice').set(price).then(()=>{
+        showToast('Premium Price ₹' + price + '-ஆ set ஆச்சு!');
+        closeModal();
+      }).catch(err=> showToast('Failed: ' + err.message));
+    });
+  });
+}
+document.getElementById('openPremiumPriceConfigBtn').addEventListener('click', openPremiumPriceConfigModal);
+function openReferralBonusConfigModal(){
+  getAppConfigNumber('referralBonusDays', 7).then(current=>{
+    openModal(`
+      <div class="modal-title">🎁 Referral Bonus Days<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#fff; font-size:12.5px; margin-bottom:16px;">ஒருத்தர் referral code apply பண்ணா, referrer-க்கும் புது customer-க்கும் இத்தனை நாள் extra trial கிடைக்கும் நு set பண்ணுங்க.</div>
+      <div class="field-label">Bonus Days</div>
+      <input type="number" id="referralBonusDaysInput" inputmode="numeric" value="${current}">
+      <button class="btn-primary" id="saveReferralBonusBtn" style="margin-top:14px;">Save</button>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.getElementById('saveReferralBonusBtn').addEventListener('click', ()=>{
+      const days = Number(document.getElementById('referralBonusDaysInput').value);
+      if(!days || days < 0){ showToast('Correct number போடுங்க'); return; }
+      db.ref('appConfig/referralBonusDays').set(days).then(()=>{
+        showToast('Referral Bonus ' + days + ' நாள்-ஆ set ஆச்சு!');
+        closeModal();
+      }).catch(err=> showToast('Failed: ' + err.message));
+    });
+  });
+}
+document.getElementById('openReferralBonusConfigBtn').addEventListener('click', openReferralBonusConfigModal);
 function loadFuelPriceWidget(){
   // Display disabled per owner's decision (22 Jul 2026) — data in
   // appConfig/fuelPrices stays intact, just not shown to users.
@@ -2487,6 +2544,9 @@ function renderVehicleChips(){
 }
 
 function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+function getAppConfigNumber(key, fallback){
+  return db.ref('appConfig/'+key).once('value').then(snap=> snap.exists() ? Number(snap.val()) : fallback);
+}
 function getAllowedVehicleEntries(includeInactiveId){
   let entries = Object.entries(STATE.vehicles).filter(([id,v]) => v.active !== false || id===includeInactiveId);
   if(STATE.restrictedVehicleId){
@@ -3576,6 +3636,7 @@ async function handleGenerateCode(){
   btn.disabled = true;
   btn.textContent = 'Generate ஆகுது...';
   try{
+    const price = await getAppConfigNumber('premiumPrice', 250);
     let code, attempts = 0;
     // ensure uniqueness (extremely unlikely to collide, but check anyway)
     do{
@@ -3588,14 +3649,14 @@ async function handleGenerateCode(){
     await db.ref('redeemCodes/'+code).set({
       tier: 'paid',
       used: false,
-      amount: isComp ? 0 : 250,
+      amount: isComp ? 0 : price,
       isComp: isComp,
       createdAt: firebase.database.ServerValue.TIMESTAMP,
       createdBy: currentUser.uid
     });
 
     const shareMsg = encodeURIComponent(
-      `🎉 GarageBook Pro Premium Code!\n\nCode: ${code}\n\nApp-ல Settings → Upgrade to Premium → இந்த code போடுங்க.\nUnlimited vehicles + Full Reports + Cloud Backup ₹250/year!\n\ngaragebookpro.in`
+      `🎉 GarageBook Pro Premium Code!\n\nCode: ${code}\n\nApp-ல Settings → Upgrade to Premium → இந்த code போடுங்க.\nUnlimited vehicles + Full Reports + Cloud Backup ₹${price}/year!\n\ngaragebookpro.in`
     );
     resEl.innerHTML = `
       <div style="padding:16px; background:#1A1A1A; border:1px solid #FFC800; border-radius:12px; text-align:center;">
@@ -3658,14 +3719,15 @@ async function loadRecentCodes(){
         const code = btn.getAttribute('data-code');
         const currentlyComp = btn.getAttribute('data-iscomp') === '1';
         const makeComp = !currentlyComp;
+        const price = await getAppConfigNumber('premiumPrice', 250);
         if(!confirm(makeComp
           ? `"${code}" code-ஐ Comp/Free-ஆ mark பண்ணலாமா? (Revenue-ல count ஆகாது)`
-          : `"${code}" code-ஐ Paid-ஆ mark பண்ணலாமா? (₹250 Revenue-ல count ஆகும்)`
+          : `"${code}" code-ஐ Paid-ஆ mark பண்ணலாமா? (₹${price} Revenue-ல count ஆகும்)`
         )) return;
         try{
           await db.ref('redeemCodes/'+code).update({
             isComp: makeComp,
-            amount: makeComp ? 0 : 250
+            amount: makeComp ? 0 : price
           });
           loadRecentCodes();
         }catch(e){
@@ -4048,21 +4110,26 @@ function renderEntryForm(existing){
 
 // ---- Add Vehicle ----
 function openUpgradeModal(){
-  db.ref('appConfig/payLinkUrl').once('value').then(snap=>{
+  Promise.all([
+    db.ref('appConfig/payLinkUrl').once('value'),
+    db.ref('appConfig/premiumPrice').once('value')
+  ]).then(([snap, priceSnap])=>{
     const payLinkUrl = snap.exists() && snap.val() ? snap.val() : 'https://paylink.sramesh.in/p/?id=-OxJreZ79F9VcQg0TaG-';
+    const price = priceSnap.exists() ? Number(priceSnap.val()) : 250;
+    const perMonth = Math.round(price/12);
     const qrImg = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(payLinkUrl);
     openModal(`
       <div class="modal-title">⭐ Upgrade to Premium<span class="close-x" id="closeModalX">✕</span></div>
       <div style="text-align:center; padding:10px 0 20px;">
         <div style="font-size:48px; margin-bottom:10px;">🚗🏍️🚙</div>
         <div style="font-weight:400; font-size:17px; margin-bottom:8px;">Free tier-ல 1 vehicle மட்டும்</div>
-        <div style="color:#fff; font-size:14px; margin-bottom:20px;">Unlimited vehicles + Full Reports + Compare + Cloud Backup வேணும்னா Premium-க்கு upgrade பண்ணுங்க — ₹250/year <span class="price-highlight">₹21/month</span></div>
+        <div style="color:#fff; font-size:14px; margin-bottom:20px;">Unlimited vehicles + Full Reports + Compare + Cloud Backup வேணும்னா Premium-க்கு upgrade பண்ணுங்க — ₹${price}/year <span class="price-highlight">₹${perMonth}/month</span></div>
 
         <div style="background:#161616; border-radius:14px; padding:18px; margin-bottom:20px;">
           <div style="color:#FFC800; font-weight:700; font-size:14px; margin-bottom:12px;">💳 Step 1: Pay பண்ணுங்க</div>
           <img src="${qrImg}" alt="Payment QR" style="width:180px; height:180px; border-radius:10px; background:#fff; padding:8px;">
           <div style="margin-top:12px;">
-            <a href="${payLinkUrl}" target="_blank" rel="noopener" style="display:inline-block; background:var(--yellow); color:#0A0A0A; padding:12px 28px; border-radius:12px; font-weight:700; font-size:15px; text-decoration:none;">₹250 Pay பண்ணுங்க</a>
+            <a href="${payLinkUrl}" target="_blank" rel="noopener" style="display:inline-block; background:var(--yellow); color:#0A0A0A; padding:12px 28px; border-radius:12px; font-weight:700; font-size:15px; text-decoration:none;">₹${price} Pay பண்ணுங்க</a>
           </div>
           <div style="color:#fff; font-size:12px; margin-top:12px; line-height:1.6;">QR scan பண்ணி, illa button tap பண்ணி UPI-ல pay பண்ணுங்க</div>
         </div>
@@ -4084,7 +4151,7 @@ function openUpgradeModal(){
     document.getElementById('closeModalX').addEventListener('click', closeModal);
     document.getElementById('redeemCodeBtn').addEventListener('click', redeemPremiumCode);
     document.getElementById('notifyPaymentDoneBtn').addEventListener('click', ()=>{
-      openContactUsModal('GarageBookPro Premium payment (₹250) செய்துவிட்டேன், Redeem code அனுப்புங்க 🙏', true);
+      openContactUsModal('GarageBookPro Premium payment (₹'+price+') செய்துவிட்டேன், Redeem code அனுப்புங்க 🙏', true);
     });
   });
 }
@@ -4858,16 +4925,18 @@ function exportCSV(){
 // ---- Vehicle Full Report ----
 // ============ V2.2: YEARLY WRAP-UP REPORT ============
 // ============ V2.2: REFERRAL SYSTEM ============
-const REFERRAL_BONUS_DAYS = 7;
 function openReferralModal(){
-  db.ref(ROOT+'/profile').once('value').then(snap=>{
+  Promise.all([
+    db.ref(ROOT+'/profile').once('value'),
+    getAppConfigNumber('referralBonusDays', 7)
+  ]).then(([snap, bonusDays])=>{
     const p = snap.val() || {};
     const myCode = p.referralCode || '-';
     const applied = p.appliedReferral;
-    const shareText = `🎁 Garage Book Pro use பண்ணுங்க! என் referral code "${myCode}" போட்டு signup பண்ணா, உங்களுக்கும் எனக்கும் ${REFERRAL_BONUS_DAYS} நாள் extra free trial கிடைக்கும்.\n\ngaragebookpro.in`;
+    const shareText = `🎁 Garage Book Pro use பண்ணுங்க! என் referral code "${myCode}" போட்டு signup பண்ணா, உங்களுக்கும் எனக்கும் ${bonusDays} நாள் extra free trial கிடைக்கும்.\n\ngaragebookpro.in`;
     openModal(`
       <div class="modal-title">Refer & Earn<span class="close-x" id="closeModalX">✕</span></div>
-      <div style="color:#fff; font-size:13px; margin-bottom:16px;">உங்க friends/family-க்கு Garage Book Pro-ஐ suggest பண்ணுங்க. அவங்க உங்க code போட்டா, ரெண்டு பேருக்கும் ${REFERRAL_BONUS_DAYS} நாள் extra trial கிடைக்கும்!</div>
+      <div style="color:#fff; font-size:13px; margin-bottom:16px;">உங்க friends/family-க்கு Garage Book Pro-ஐ suggest பண்ணுங்க. அவங்க உங்க code போட்டா, ரெண்டு பேருக்கும் ${bonusDays} நாள் extra trial கிடைக்கும்!</div>
       <div style="background:#161616; border-radius:12px; padding:18px; text-align:center; margin-bottom:16px;">
         <div style="color:#fff; font-size:11px; opacity:.7; text-transform:uppercase;">உங்க Referral Code</div>
         <div style="color:#FFC800; font-size:28px; font-weight:900; letter-spacing:3px; margin:8px 0;">${escapeHtml(myCode)}</div>
@@ -4888,28 +4957,29 @@ function openReferralModal(){
     });
     const applyBtn = document.getElementById('applyReferralBtn');
     if(applyBtn){
-      applyBtn.addEventListener('click', ()=> applyReferralCode(myCode));
+      applyBtn.addEventListener('click', ()=> applyReferralCode(myCode, bonusDays));
     }
   });
 }
-function applyReferralCode(myOwnCode){
+function applyReferralCode(myOwnCode, bonusDays){
   const input = document.getElementById('referralInput').value.trim().toUpperCase();
   const errEl = document.getElementById('referralError');
   if(!input){ errEl.textContent = 'Code போடுங்க'; return; }
   if(input === myOwnCode){ errEl.textContent = 'இது உங்க own code'; return; }
+  bonusDays = bonusDays || 7;
   db.ref('referralCodes/'+input).once('value').then(snap=>{
     const data = snap.val();
     if(!data || !data.ownerUid){ errEl.textContent = 'Code தப்பா இருக்கு'; return; }
-    // Extend my own trial by REFERRAL_BONUS_DAYS
+    // Extend my own trial by bonusDays
     db.ref(ROOT+'/profile').once('value').then(pSnap=>{
       const p = pSnap.val() || {};
       const baseTime = (p.trialEndsAt && p.trialEndsAt > Date.now()) ? p.trialEndsAt : Date.now();
-      const newTrialEnd = baseTime + REFERRAL_BONUS_DAYS*24*60*60*1000;
+      const newTrialEnd = baseTime + bonusDays*24*60*60*1000;
       db.ref(ROOT+'/profile').update({ trialEndsAt: newTrialEnd, appliedReferral: input }).then(()=>{
         // Log redemption under own uid so admin can see and manually credit the referrer
         db.ref('referralRedemptions/'+input+'/'+currentUser.uid).set({ at: Date.now() });
         logActivity('referral', 'Referral code apply பண்ணாங்க: ' + input);
-        showToast('🎁 ' + REFERRAL_BONUS_DAYS + ' நாள் extra trial கிடைச்சது!');
+        showToast('🎁 ' + bonusDays + ' நாள் extra trial கிடைச்சது!');
         closeModal();
       }).catch(err=> errEl.textContent = 'Failed: ' + err.message);
     });
