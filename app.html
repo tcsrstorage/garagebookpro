@@ -1876,10 +1876,18 @@ function updateUserActivityStats(){
   if(!currentUser) return;
   const vehicleCount = Object.keys(STATE.vehicles || {}).length;
   const entryCount = Object.keys(STATE.expenses || {}).length;
+  const docVaultCount = Object.values(STATE.vehicles || {}).filter(v => v.docInsurance || v.docRC || v.docPUC).length;
+  const recurringCount = Object.keys(STATE.recurring || {}).length;
+  const budgetSetCount = Object.values(STATE.vehicles || {}).filter(v => v.budgetMonthly).length;
+  const familyLinked = (STATE.linkedOwners || []).length > 0;
   db.ref('adminUserDirectory/' + currentUser.uid).update({
     lastActiveAt: Date.now(),
     vehicleCount: vehicleCount,
-    entryCount: entryCount
+    entryCount: entryCount,
+    docVaultCount: docVaultCount,
+    recurringCount: recurringCount,
+    budgetSetCount: budgetSetCount,
+    familyLinked: familyLinked
   }).catch(()=>{ /* rules may not be updated yet — ignore silently */ });
 }
 function syncAdminDirectory(tier, trialEndsAt, name, phone, premiumActivatedAt, premiumExpiresAt){
