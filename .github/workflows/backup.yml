@@ -1,0 +1,39 @@
+name: Weekly Firebase Backup
+
+on:
+  schedule:
+    # Runs every Sunday at 2:00 AM IST (20:30 UTC Saturday)
+    - cron: '30 20 * * 6'
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: scripts
+        run: npm install --no-save firebase-admin
+
+      - name: Run backup
+        working-directory: scripts
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: node backup_firebase.js
+
+      - name: Commit and push backup
+        run: |
+          git config user.name "backup-bot"
+          git config user.email "backup-bot@garagebookpro.in"
+          git add backups/
+          git diff --staged --quiet || git commit -m "Weekly Firebase backup $(date -u +'%Y-%m-%d')"
+          git push
