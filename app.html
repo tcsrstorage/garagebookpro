@@ -3510,7 +3510,7 @@ function openUpgradeModal(){
     document.getElementById('closeModalX').addEventListener('click', closeModal);
     document.getElementById('redeemCodeBtn').addEventListener('click', redeemPremiumCode);
     document.getElementById('notifyPaymentDoneBtn').addEventListener('click', ()=>{
-      openContactUsModal('GarageBookPro Premium payment (₹250) செய்துவிட்டேன், Redeem code அனுப்புங்க 🙏');
+      openContactUsModal('GarageBookPro Premium payment (₹250) செய்துவிட்டேன், Redeem code அனுப்புங்க 🙏', true);
     });
   });
 }
@@ -4002,7 +4002,7 @@ function attachMsgDeleteHandlers(userUid){
     });
   });
 }
-function openContactUsModal(prefillText){
+function openContactUsModal(prefillText, isPaymentClaim){
   db.ref('supportMessages/'+currentUser.uid).once('value').then(snap=>{
     const msgs = snap.val() || {};
     openModal(`
@@ -4025,15 +4025,18 @@ function openContactUsModal(prefillText){
       const timestamp = Date.now();
       const updates = {};
       updates['supportMessages/'+currentUser.uid+'/'+msgId] = { from:'user', text, timestamp };
-      updates['supportThreads/'+currentUser.uid] = {
-        userEmail: currentUser.email || '',
-        userName: STATE.profileName || '',
-        userPhone: STATE.profilePhone || '',
-        lastMessage: text, lastTimestamp: timestamp, lastFrom: 'user',
-        unreadForAdmin: true, unreadForUser: false
-      };
+      updates['supportThreads/'+currentUser.uid+'/userEmail'] = currentUser.email || '';
+      updates['supportThreads/'+currentUser.uid+'/userName'] = STATE.profileName || '';
+      updates['supportThreads/'+currentUser.uid+'/userPhone'] = STATE.profilePhone || '';
+      updates['supportThreads/'+currentUser.uid+'/lastMessage'] = text;
+      updates['supportThreads/'+currentUser.uid+'/lastTimestamp'] = timestamp;
+      updates['supportThreads/'+currentUser.uid+'/lastFrom'] = 'user';
+      updates['supportThreads/'+currentUser.uid+'/unreadForAdmin'] = true;
+      updates['supportThreads/'+currentUser.uid+'/unreadForUser'] = false;
+      if(isPaymentClaim) updates['supportThreads/'+currentUser.uid+'/paymentPending'] = true;
       db.ref().update(updates).then(()=>{
         input.value = '';
+        isPaymentClaim = false;
         db.ref('supportMessages/'+currentUser.uid).once('value').then(s2=>{
           document.getElementById('supportThreadBody').innerHTML = renderSupportThread(s2.val()||{}, false);
           document.getElementById('supportThreadBody').scrollTop = 999999;
