@@ -521,6 +521,10 @@
             <div class="settings-row-left"><span class="ic">🎁</span><span class="txt">Trial Duration Set பண்ணு</span></div>
             <span class="arrow">›</span>
           </div>
+          <div class="settings-row" id="openTrialAlertConfigBtn">
+            <div class="settings-row-left"><span class="ic">⏰</span><span class="txt">Trial Alert Window Set பண்ணு</span></div>
+            <span class="arrow">›</span>
+          </div>
           <div class="settings-row" id="openFuelPriceConfigBtn">
             <div class="settings-row-left"><span class="ic">⛽</span><span class="txt">Fuel Prices Update பண்ணு</span></div>
             <span class="arrow">›</span>
@@ -1072,6 +1076,7 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('adminSectionTitle').style.display = '';
         document.getElementById('openAdminGenCodeBtn').style.display = '';
         document.getElementById('openAdminTrialConfigBtn').style.display = '';
+        document.getElementById('openTrialAlertConfigBtn').style.display = '';
         document.getElementById('openFuelPriceConfigBtn').style.display = '';
         document.getElementById('openPayLinkConfigBtn').style.display = '';
         document.getElementById('openAdminUserListBtn').style.display = '';
@@ -1729,13 +1734,17 @@ function openPaymentPendingModal(){
 function loadTrialExpiryWidget(){
   const listEl = document.getElementById('adminTrialExpiryList');
   if(!listEl) return;
-  db.ref('adminUserDirectory').once('value').then(snap=>{
+  Promise.all([
+    db.ref('adminUserDirectory').once('value'),
+    db.ref('appConfig/trialExpiryAlertDays').once('value')
+  ]).then(([snap, cfgSnap])=>{
     const directory = snap.val() || {};
+    const alertDays = cfgSnap.exists() ? Number(cfgSnap.val()) : 3;
     const now = Date.now();
     const dayMs = 24*60*60*1000;
-    const soon = Object.entries(directory).filter(([_, u]) => u.tier !== 'paid' && u.trialEndsAt && (u.trialEndsAt - now) <= 3*dayMs && (u.trialEndsAt - now) > -3*dayMs);
+    const soon = Object.entries(directory).filter(([_, u]) => u.tier !== 'paid' && u.trialEndsAt && (u.trialEndsAt - now) <= alertDays*dayMs && (u.trialEndsAt - now) > -alertDays*dayMs);
     if(soon.length === 0){
-      listEl.innerHTML = '<div style="color:#666; font-size:12px;">அடுத்த 3 நாள்ல trial முடியற customers இல்ல</div>';
+      listEl.innerHTML = `<div style="color:#666; font-size:12px;">அடுத்த ${alertDays} நாள்ல trial முடியற customers இல்ல</div>`;
       return;
     }
     soon.sort((a,b) => a[1].trialEndsAt - b[1].trialEndsAt);
@@ -1758,11 +1767,15 @@ function loadTrialExpiryWidget(){
   });
 }
 function openTrialExpiryModal(){
-  db.ref('adminUserDirectory').once('value').then(snap=>{
+  Promise.all([
+    db.ref('adminUserDirectory').once('value'),
+    db.ref('appConfig/trialExpiryAlertDays').once('value')
+  ]).then(([snap, cfgSnap])=>{
     const directory = snap.val() || {};
+    const alertDays = cfgSnap.exists() ? Number(cfgSnap.val()) : 3;
     const now = Date.now();
     const dayMs = 24*60*60*1000;
-    const soon = Object.entries(directory).filter(([_, u]) => u.tier !== 'paid' && u.trialEndsAt && (u.trialEndsAt - now) <= 3*dayMs && (u.trialEndsAt - now) > -3*dayMs);
+    const soon = Object.entries(directory).filter(([_, u]) => u.tier !== 'paid' && u.trialEndsAt && (u.trialEndsAt - now) <= alertDays*dayMs && (u.trialEndsAt - now) > -alertDays*dayMs);
     soon.sort((a,b) => a[1].trialEndsAt - b[1].trialEndsAt);
     const rows = soon.map(([uidKey, u])=>{
       const who = u.name || u.email || uidKey.slice(0,8);
@@ -1783,8 +1796,8 @@ function openTrialExpiryModal(){
     }).join('');
     openModal(`
       <div class="modal-title">⏰ Trial Expiring Soon<span class="close-x" id="closeModalX">✕</span></div>
-      <div style="color:#888; font-size:12px; margin-bottom:14px;">அடுத்த 3 நாள்ல trial முடியற/முடிஞ்ச (last 3 நாள்) customers. Reminder அனுப்பி Premium-க்கு convert பண்ணுங்க.</div>
-      <div>${rows || '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">அடுத்த 3 நாள்ல trial முடியற customers இல்ல</div>'}</div>
+      <div style="color:#888; font-size:12px; margin-bottom:14px;">அடுத்த ${alertDays} நாள்ல trial முடியற/முடிஞ்ச (last ${alertDays} நாள்) customers. Reminder அனுப்பி Premium-க்கு convert பண்ணுங்க. இந்த window-ஐ Settings → "⏰ Trial Alert Window Set பண்ணு"-ல மாத்தலாம்.</div>
+      <div>${rows || `<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">அடுத்த ${alertDays} நாள்ல trial முடியற customers இல்ல</div>`}</div>
     `);
     document.getElementById('closeModalX').addEventListener('click', closeModal);
     document.querySelectorAll('.sendTrialReminderBtn').forEach(btn=>{
@@ -1903,6 +1916,29 @@ function openAdminTrialConfigModal(){
     });
   });
 }
+function openTrialAlertConfigModal(){
+  db.ref('appConfig/trialExpiryAlertDays').once('value').then(snap=>{
+    const currentDays = snap.exists() ? snap.val() : 3;
+    openModal(`
+      <div class="modal-title">⏰ Trial Alert Window<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#fff; font-size:13px; margin-bottom:16px;">"Trial Expiring Soon" widget-ல, trial முடிய இத்தனை நாள் இருக்கும்போதே customer தெரியணும் நு set பண்ணுங்க. அதிகமா வெச்சா, முன்னாடியே reminder அனுப்ப நேரம் கிடைக்கும்.</div>
+      <div class="field-label">எத்தனை நாள் முன்னாடி காட்டணும்</div>
+      <input type="number" id="trialAlertDaysInput" inputmode="numeric" value="${currentDays}">
+      <button class="btn-primary" id="saveTrialAlertDaysBtn" style="margin-top:14px;">Save</button>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.getElementById('saveTrialAlertDaysBtn').addEventListener('click', ()=>{
+      const days = Number(document.getElementById('trialAlertDaysInput').value);
+      if(!days || days < 0){ showToast('Correct number போடுங்க'); return; }
+      db.ref('appConfig/trialExpiryAlertDays').set(days).then(()=>{
+        showToast('Trial Alert Window ' + days + ' நாள்-ஆ set ஆச்சு!');
+        closeModal();
+        loadTrialExpiryWidget();
+      }).catch(err=> showToast('Failed: ' + err.message));
+    });
+  });
+}
+document.getElementById('openTrialAlertConfigBtn').addEventListener('click', openTrialAlertConfigModal);
 function fuelSlugify(name){
   return name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
 }
