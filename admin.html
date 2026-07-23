@@ -507,6 +507,12 @@
             <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
           </div>
         </div>
+        <div id="adminRenewalDueWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openRenewalDueModal()">
+          <div style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">🔔 ADMIN — RENEWAL DUE SOON</div>
+          <div id="adminRenewalDueList" style="display:flex; flex-direction:column; gap:8px;">
+            <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
+          </div>
+        </div>
         <div id="adminToolsSection" style="background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:6px 16px; margin-bottom:14px;">
           <div style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px; padding:10px 0 4px;">🛠️ ADMIN TOOLS</div>
           <div class="settings-row" id="openAdminSupportBtn">
@@ -539,6 +545,18 @@
           </div>
           <div class="settings-row" id="openRevenueBtn">
             <div class="settings-row-left"><span class="ic">💰</span><span class="txt">Revenue Tracker</span></div>
+            <span class="arrow">›</span>
+          </div>
+          <div class="settings-row" id="openFeatureUsageBtn">
+            <div class="settings-row-left"><span class="ic">📊</span><span class="txt">Feature Usage Stats</span></div>
+            <span class="arrow">›</span>
+          </div>
+          <div class="settings-row" id="openReferralLeaderboardBtn">
+            <div class="settings-row-left"><span class="ic">🏆</span><span class="txt">Referral Leaderboard</span></div>
+            <span class="arrow">›</span>
+          </div>
+          <div class="settings-row" id="openRenewalDueConfigBtn">
+            <div class="settings-row-left"><span class="ic">🔔</span><span class="txt">Renewal Alert Window Set பண்ணு</span></div>
             <span class="arrow">›</span>
           </div>
           <div class="settings-row" id="testTrialBtn">
@@ -1092,6 +1110,10 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('adminPremiumSubsWidget').style.display = '';
         document.getElementById('adminPaymentPendingWidget').style.display = '';
         document.getElementById('adminTrialExpiryWidget').style.display = '';
+        document.getElementById('adminRenewalDueWidget').style.display = '';
+        document.getElementById('openFeatureUsageBtn').style.display = '';
+        document.getElementById('openReferralLeaderboardBtn').style.display = '';
+        document.getElementById('openRenewalDueConfigBtn').style.display = '';
         document.getElementById('openAdminSupportBtn').style.display = '';
         startAdminLiveActivityWidget();
         refreshAllAdminWidgets(true);
@@ -1813,6 +1835,179 @@ function openTrialExpiryModal(){
   }).catch(err=> showToast('Load failed: ' + err.message));
 }
 
+// ============ RENEWAL DUE SOON (Premium expiry, Home widget) ============
+function loadRenewalDueWidget(){
+  const listEl = document.getElementById('adminRenewalDueList');
+  if(!listEl) return;
+  Promise.all([
+    db.ref('adminUserDirectory').once('value'),
+    db.ref('appConfig/renewalAlertDays').once('value')
+  ]).then(([snap, cfgSnap])=>{
+    const directory = snap.val() || {};
+    const alertDays = cfgSnap.exists() ? Number(cfgSnap.val()) : 7;
+    const now = Date.now();
+    const dayMs = 24*60*60*1000;
+    const due = Object.entries(directory).filter(([_, u]) => u.tier === 'paid' && u.premiumExpiresAt && (u.premiumExpiresAt - now) <= alertDays*dayMs);
+    if(due.length === 0){
+      listEl.innerHTML = `<div style="color:#666; font-size:12px;">அடுத்த ${alertDays} நாள்ல renewal due Premium users இல்ல</div>`;
+      return;
+    }
+    due.sort((a,b) => a[1].premiumExpiresAt - b[1].premiumExpiresAt);
+    listEl.innerHTML = `<div style="max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">` + due.map(([uidKey, u])=>{
+      const who = u.name || u.email || uidKey.slice(0,8);
+      const daysLeft = Math.ceil((u.premiumExpiresAt - now) / dayMs);
+      const expired = daysLeft < 0;
+      const color = expired ? '#FF6B6B' : '#FFC800';
+      const label = expired ? `${Math.abs(daysLeft)}d முடிஞ்சு` : (daysLeft===0 ? 'இன்னைக்கே' : `${daysLeft}d மிச்சம்`);
+      return `
+      <div style="display:flex; align-items:flex-start; gap:8px;">
+        <span style="font-size:14px; margin-top:1px;">🔔</span>
+        <span style="color:#FFFFFF; font-size:12px; flex:1;">${escapeHtml(who)}${u.phone ? `<br><a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:10.5px; text-decoration:none;" onclick="event.stopPropagation()">📞 ${escapeHtml(u.phone)}</a>` : ''}</span>
+        <span style="color:${color}; font-size:11px; white-space:nowrap; font-weight:700;">${label}</span>
+      </div>
+    `;
+    }).join('') + `</div>`;
+  }).catch(()=>{
+    listEl.innerHTML = '<div style="color:#666; font-size:12px;">Load ஆகல</div>';
+  });
+}
+function openRenewalDueModal(){
+  // Reuses the existing Premium Subscribers detail view/reminder flow — just pre-filtered to the due window.
+  Promise.all([
+    db.ref('adminUserDirectory').once('value'),
+    db.ref('appConfig/renewalAlertDays').once('value')
+  ]).then(([snap, cfgSnap])=>{
+    const directory = snap.val() || {};
+    const alertDays = cfgSnap.exists() ? Number(cfgSnap.val()) : 7;
+    const now = Date.now();
+    const dayMs = 24*60*60*1000;
+    const due = Object.entries(directory).filter(([_, u]) => u.tier === 'paid' && u.premiumExpiresAt && (u.premiumExpiresAt - now) <= alertDays*dayMs);
+    due.sort((a,b) => a[1].premiumExpiresAt - b[1].premiumExpiresAt);
+    const rows = due.map(([uidKey, u])=>{
+      const who = u.name || u.email || uidKey.slice(0,8);
+      const daysLeft = Math.ceil((u.premiumExpiresAt - now) / dayMs);
+      const expired = daysLeft < 0;
+      const color = expired ? '#FF6B6B' : '#FFC800';
+      const label = expired ? `${Math.abs(daysLeft)} நாள் முன்னாடி முடிஞ்சுது` : (daysLeft===0 ? 'இன்னைக்கே முடியுது' : `${daysLeft} நாள்ல முடியுது`);
+      const phoneHtml = u.phone ? ` <a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;">📞</a> <a href="https://wa.me/${waPhone(u.phone)}" target="_blank" style="color:#4CD964; font-size:12px; text-decoration:none;">💬</a>` : '';
+      return `
+      <div style="padding:10px 0; border-bottom:1px solid #222;">
+        <div style="color:#fff; font-size:13px; font-weight:600;">${escapeHtml(who)}${phoneHtml}</div>
+        <div style="color:#666; font-size:11px;">${escapeHtml(u.email||'-')}</div>
+        <div style="color:${color}; font-size:11.5px; font-weight:700; margin-top:3px;">${label} (${new Date(u.premiumExpiresAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})})</div>
+        <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">
+          <span class="renewalReminderBtn" data-uid="${uidKey}" data-name="${escapeHtml(u.name||'')}" data-email="${escapeHtml(u.email||'')}" data-phone="${escapeHtml(u.phone||'')}" data-expiry="${u.premiumExpiresAt||''}" style="display:inline-block; color:#FFC800; font-size:11.5px; border:1px solid #FFC800; border-radius:8px; padding:4px 10px; cursor:pointer;">💬 Reminder அனுப்பு</span>
+        </div>
+      </div>`;
+    }).join('');
+    openModal(`
+      <div class="modal-title">🔔 Renewal Due Soon<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#888; font-size:12px; margin-bottom:14px;">அடுத்த ${alertDays} நாள்ல (அல்லது ஏற்கனவே) renewal due ஆன Premium subscribers. Window-ஐ Settings → "🔔 Renewal Alert Window Set பண்ணு"-ல மாத்தலாம்.</div>
+      <div>${rows || `<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">அடுத்த ${alertDays} நாள்ல renewal due யாரும் இல்ல 👍</div>`}</div>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.querySelectorAll('.renewalReminderBtn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const uidKey = btn.getAttribute('data-uid');
+        const name = btn.getAttribute('data-name');
+        const email = btn.getAttribute('data-email');
+        const phone = btn.getAttribute('data-phone');
+        const expiry = btn.getAttribute('data-expiry');
+        const expiryText = expiry ? new Date(Number(expiry)).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : 'soon';
+        const msg = `வணக்கம்${name ? ' ' + name : ''}! உங்க Garage Book Pro Premium subscription ${expiryText}-ல expire ஆகுது. Renew பண்ண ₹250 pay பண்ணி, "Payment Done" message அனுப்புங்க — புது Redeem Code அனுப்புறேன். 🙏`;
+        openAdminThreadView(uidKey, { userName: name, userEmail: email, userPhone: phone }, {}, msg);
+      });
+    });
+  }).catch(err=> showToast('Load failed: ' + err.message));
+}
+function openRenewalDueConfigModal(){
+  db.ref('appConfig/renewalAlertDays').once('value').then(snap=>{
+    const currentDays = snap.exists() ? snap.val() : 7;
+    openModal(`
+      <div class="modal-title">🔔 Renewal Alert Window<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#fff; font-size:13px; margin-bottom:16px;">"Renewal Due Soon" widget-ல, Premium subscription expire ஆக இத்தனை நாள் இருக்கும்போதே customer தெரியணும் நு set பண்ணுங்க.</div>
+      <div class="field-label">எத்தனை நாள் முன்னாடி காட்டணும்</div>
+      <input type="number" id="renewalAlertDaysInput" inputmode="numeric" value="${currentDays}">
+      <button class="btn-primary" id="saveRenewalAlertDaysBtn" style="margin-top:14px;">Save</button>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.getElementById('saveRenewalAlertDaysBtn').addEventListener('click', ()=>{
+      const days = Number(document.getElementById('renewalAlertDaysInput').value);
+      if(!days || days < 0){ showToast('Correct number போடுங்க'); return; }
+      db.ref('appConfig/renewalAlertDays').set(days).then(()=>{
+        showToast('Renewal Alert Window ' + days + ' நாள்-ஆ set ஆச்சு!');
+        closeModal();
+        loadRenewalDueWidget();
+      }).catch(err=> showToast('Failed: ' + err.message));
+    });
+  });
+}
+document.getElementById('openRenewalDueConfigBtn').addEventListener('click', openRenewalDueConfigModal);
+
+// ============ FEATURE USAGE STATS (Admin Tools) ============
+function openFeatureUsageModal(){
+  db.ref('adminUserDirectory').once('value').then(snap=>{
+    const directory = snap.val() || {};
+    const entries = Object.values(directory);
+    const total = entries.length;
+    const tracked = entries.filter(u => u.lastActiveAt);
+    const trackedCount = tracked.length;
+    const docVault = tracked.filter(u => (u.docVaultCount||0) > 0).length;
+    const recurring = tracked.filter(u => (u.recurringCount||0) > 0).length;
+    const budget = tracked.filter(u => (u.budgetSetCount||0) > 0).length;
+    const family = tracked.filter(u => u.familyLinked).length;
+    const pct = (n)=> trackedCount ? Math.round((n/trackedCount)*100) : 0;
+    const row = (icon, label, count)=> `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #222;">
+        <span style="color:#fff; font-size:13px;">${icon} ${label}</span>
+        <span style="color:#FFC800; font-weight:700; font-size:14px;">${count} <span style="color:#666; font-size:11px; font-weight:400;">(${pct(count)}%)</span></span>
+      </div>`;
+    openModal(`
+      <div class="modal-title">📊 Feature Usage Stats<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#888; font-size:12px; margin-bottom:14px;">Total ${total} users-ல, ${trackedCount} பேர் app open பண்ணி tracked ஆயிருக்காங்க. கீழ இருக்கறது அந்த ${trackedCount} பேர்ல எத்தனை பேர் ஒவ்வொரு feature use பண்றாங்க-ன்னு.</div>
+      ${row('📎','Document Vault use பண்றவங்க', docVault)}
+      ${row('🔁','Recurring Expenses வெச்சிருக்கறவங்க', recurring)}
+      ${row('💰','Budget Alerts set பண்ணினவங்க', budget)}
+      ${row('👨‍👩‍👧','Family Sharing use பண்றவங்க', family)}
+      <div style="color:#666; font-size:11px; margin-top:14px; line-height:1.5;">Note: Family Sharing count-ல, share பண்ணின Owner இன்னும் சேர்க்கல — ஒருத்தர் invite code use பண்ணி join ஆனா மட்டும் தான் இங்க count ஆகும்.</div>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+  }).catch(err=> showToast('Load failed: ' + err.message));
+}
+document.getElementById('openFeatureUsageBtn').addEventListener('click', openFeatureUsageModal);
+
+// ============ REFERRAL LEADERBOARD (Admin Tools) ============
+function openReferralLeaderboardModal(){
+  Promise.all([
+    db.ref('referralCodes').once('value'),
+    db.ref('referralRedemptions').once('value')
+  ]).then(([codesSnap, redSnap])=>{
+    const codes = codesSnap.val() || {};
+    const redemptions = redSnap.val() || {};
+    const leaderboard = Object.entries(codes).map(([code, c])=>{
+      const count = redemptions[code] ? Object.keys(redemptions[code]).length : 0;
+      return { code, ownerEmail: c.ownerEmail || '-', ownerUid: c.ownerUid, count };
+    }).filter(x => x.count > 0);
+    leaderboard.sort((a,b) => b.count - a.count);
+    const rows = leaderboard.map((l, i)=> `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #222;">
+        <div>
+          <span style="color:#FFC800; font-weight:800; font-size:14px;">#${i+1}</span>
+          <span style="color:#fff; font-size:13px; margin-left:8px;">${escapeHtml(l.ownerEmail)}</span>
+          <div style="color:#666; font-size:10.5px; margin-left:24px;">Code: ${escapeHtml(l.code)}</div>
+        </div>
+        <span style="color:#58A6FF; font-weight:700; font-size:15px;">${l.count} 👥</span>
+      </div>`).join('');
+    openModal(`
+      <div class="modal-title">🏆 Referral Leaderboard<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#888; font-size:12px; margin-bottom:14px;">யார் referral code மூலம் எத்தனை பேரை கொண்டு வந்தாங்க. நல்லா referral பண்றவங்களுக்கு "Users & Trial Status"-ல manual-ஆ trial நாள் extra கொடுக்கலாம்.</div>
+      <div>${rows || '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Referral மூலம் யாரும் இன்னும் join ஆகல</div>'}</div>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+  }).catch(err=> showToast('Load failed: ' + err.message));
+}
+document.getElementById('openReferralLeaderboardBtn').addEventListener('click', openReferralLeaderboardModal);
+
 function openAdminUserListModal(){
   db.ref('adminUserDirectory').once('value').then(snap=>{
     const val = snap.val() || {};
@@ -2168,10 +2363,18 @@ function updateUserActivityStats(){
   if(!currentUser) return;
   const vehicleCount = Object.keys(STATE.vehicles || {}).length;
   const entryCount = Object.keys(STATE.expenses || {}).length;
+  const docVaultCount = Object.values(STATE.vehicles || {}).filter(v => v.docInsurance || v.docRC || v.docPUC).length;
+  const recurringCount = Object.keys(STATE.recurring || {}).length;
+  const budgetSetCount = Object.values(STATE.vehicles || {}).filter(v => v.budgetMonthly).length;
+  const familyLinked = (STATE.linkedOwners || []).length > 0;
   db.ref('adminUserDirectory/' + currentUser.uid).update({
     lastActiveAt: Date.now(),
     vehicleCount: vehicleCount,
-    entryCount: entryCount
+    entryCount: entryCount,
+    docVaultCount: docVaultCount,
+    recurringCount: recurringCount,
+    budgetSetCount: budgetSetCount,
+    familyLinked: familyLinked
   }).catch(()=>{ /* rules may not be updated yet — ignore silently */ });
 }
 function syncAdminDirectory(tier, trialEndsAt, name, phone, premiumActivatedAt, premiumExpiresAt){
@@ -2857,6 +3060,7 @@ function refreshAllAdminWidgets(silent){
   loadPremiumSubsWidget();
   loadPaymentPendingWidget();
   loadTrialExpiryWidget();
+  loadRenewalDueWidget();
   checkAdminUnreadSupport();
   updateAdminQuickStatus();
   loadTodaySummary();
