@@ -455,6 +455,12 @@
           <div style="color:#FF6B6B; font-weight:700; font-size:14px;">🔴 புது Support Message வந்திருக்கு!</div>
           <div id="adminSupportBannerText" style="color:#fff; font-size:12.5px; margin-top:4px;"></div>
         </div>
+        <div id="adminPaymentPendingWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openPaymentPendingModal()">
+          <div style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">💰 ADMIN — PAYMENT PENDING APPROVALS</div>
+          <div id="adminPaymentPendingList" style="display:flex; flex-direction:column; gap:8px;">
+            <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
+          </div>
+        </div>
         <div id="adminStatsWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openAnalyticsModal()">
           <div style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">📈 ADMIN — VISITS & SIGNUPS</div>
           <div style="display:flex; gap:8px;">
@@ -492,6 +498,12 @@
         <div id="adminPremiumSubsWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openPremiumSubscribersModal()">
           <div style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">⭐ ADMIN — PREMIUM SUBSCRIBERS</div>
           <div id="adminPremiumSubsList" style="display:flex; flex-direction:column; gap:8px;">
+            <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
+          </div>
+        </div>
+        <div id="adminTrialExpiryWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openTrialExpiryModal()">
+          <div style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">⏰ ADMIN — TRIAL EXPIRING SOON</div>
+          <div id="adminTrialExpiryList" style="display:flex; flex-direction:column; gap:8px;">
             <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
           </div>
         </div>
@@ -1073,6 +1085,8 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('adminLiveActivityWidget').style.display = '';
         document.getElementById('adminCustomerActivityWidget').style.display = '';
         document.getElementById('adminPremiumSubsWidget').style.display = '';
+        document.getElementById('adminPaymentPendingWidget').style.display = '';
+        document.getElementById('adminTrialExpiryWidget').style.display = '';
         document.getElementById('openAdminSupportBtn').style.display = '';
         startAdminLiveActivityWidget();
         refreshAllAdminWidgets(true);
@@ -1621,6 +1635,171 @@ function openPremiumSubscribersModal(){
     });
   });
 }
+// ============ PAYMENT PENDING APPROVALS (Home widget) ============
+function loadPaymentPendingWidget(){
+  const listEl = document.getElementById('adminPaymentPendingList');
+  if(!listEl) return;
+  Promise.all([
+    db.ref('supportThreads').orderByChild('paymentPending').equalTo(true).once('value'),
+    db.ref('adminUserDirectory').once('value')
+  ]).then(([snap, dirSnap])=>{
+    const threads = snap.val() || {};
+    const directory = dirSnap.val() || {};
+    const list = Object.entries(threads).sort((a,b)=> (a[1].lastTimestamp||0)-(b[1].lastTimestamp||0)); // oldest waiting first
+    if(list.length === 0){
+      listEl.innerHTML = '<div style="color:#666; font-size:12px;">Pending payment approvals இல்ல 👍</div>';
+      return;
+    }
+    listEl.innerHTML = `<div style="max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">` + list.map(([uidKey,t])=>{
+      const dirEntry = directory[uidKey] || {};
+      const who = t.userName || dirEntry.name || t.userEmail || dirEntry.email || uidKey.slice(0,8);
+      const phone = t.userPhone || dirEntry.phone || '';
+      const waitMins = Math.round((Date.now() - (t.lastTimestamp||Date.now())) / 60000);
+      const waitLabel = waitMins < 60 ? `${waitMins} நிமிடம்` : waitMins < 1440 ? `${Math.round(waitMins/60)} மணி` : `${Math.round(waitMins/1440)} நாள்`;
+      return `
+      <div style="display:flex; align-items:flex-start; gap:8px;">
+        <span style="font-size:14px; margin-top:1px;">💰</span>
+        <span style="color:#FFFFFF; font-size:12px; flex:1;">${escapeHtml(who)}${phone ? `<br><a href="tel:${escapeHtml(phone)}" style="color:#58A6FF; font-size:10.5px; text-decoration:none;" onclick="event.stopPropagation()">📞 ${escapeHtml(phone)}</a>` : ''}</span>
+        <span style="color:#FFC800; font-size:10.5px; white-space:nowrap;">${waitLabel} wait</span>
+      </div>
+    `;
+    }).join('') + `</div>`;
+  }).catch(()=>{
+    listEl.innerHTML = '<div style="color:#666; font-size:12px;">Load ஆகல</div>';
+  });
+}
+function openPaymentPendingModal(){
+  Promise.all([
+    db.ref('supportThreads').orderByChild('paymentPending').equalTo(true).once('value'),
+    db.ref('adminUserDirectory').once('value')
+  ]).then(([snap, dirSnap])=>{
+    const threads = snap.val() || {};
+    const directory = dirSnap.val() || {};
+    const list = Object.entries(threads).sort((a,b)=> (a[1].lastTimestamp||0)-(b[1].lastTimestamp||0));
+    const rows = list.map(([uidKey,t])=>{
+      const dirEntry = directory[uidKey] || {};
+      const who = t.userName || dirEntry.name || t.userEmail || dirEntry.email || uidKey.slice(0,8);
+      const email = t.userEmail || dirEntry.email || '';
+      const phone = t.userPhone || dirEntry.phone || '';
+      const claimedAt = t.lastTimestamp ? new Date(t.lastTimestamp).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '-';
+      const phoneHtml = phone ? ` <a href="tel:${escapeHtml(phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;">📞</a> <a href="https://wa.me/${waPhone(phone)}" target="_blank" style="color:#4CD964; font-size:12px; text-decoration:none;">💬</a>` : '';
+      return `
+      <div style="padding:10px 0; border-bottom:1px solid #222;">
+        <div style="color:#fff; font-size:13px; font-weight:600;">${escapeHtml(who)}${phoneHtml}</div>
+        <div style="color:#666; font-size:11px;">${escapeHtml(email)}</div>
+        <div style="color:#FFC800; font-size:11px; margin-top:3px;">Claimed: ${claimedAt}</div>
+        <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">
+          <span class="openThreadBtn" data-uid="${uidKey}" style="display:inline-block; color:#58A6FF; font-size:11.5px; border:1px solid #58A6FF; border-radius:8px; padding:4px 10px; cursor:pointer;">💬 Chat திற</span>
+          <span class="genCodeForUserBtn" data-uid="${uidKey}" style="display:inline-block; color:#FFC800; font-size:11.5px; border:1px solid #FFC800; border-radius:8px; padding:4px 10px; cursor:pointer;">🔑 Code Generate</span>
+          <span class="resolvePendingBtn" data-uid="${uidKey}" style="display:inline-block; color:#2ECC71; font-size:11.5px; border:1px solid #2ECC71; border-radius:8px; padding:4px 10px; cursor:pointer;">✅ Resolved</span>
+        </div>
+      </div>`;
+    }).join('');
+    openModal(`
+      <div class="modal-title">💰 Payment Pending Approvals<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#888; font-size:12px; margin-bottom:14px;">"Payment Done" click பண்ணின customers இங்க வரிசையா காட்டப்படுவாங்க — Code அனுப்பினதும் "✅ Resolved" press பண்ணுங்க.</div>
+      <div>${rows || '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Pending payment approvals இல்ல 👍</div>'}</div>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.querySelectorAll('.openThreadBtn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const uidKey = btn.getAttribute('data-uid');
+        openAdminThreadView(uidKey, threads[uidKey], directory[uidKey]);
+      });
+    });
+    document.querySelectorAll('.genCodeForUserBtn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        openAdminGenCodeModal();
+      });
+    });
+    document.querySelectorAll('.resolvePendingBtn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const uidKey = btn.getAttribute('data-uid');
+        db.ref('supportThreads/'+uidKey+'/paymentPending').remove().then(()=>{
+          showToast('Resolved ஆக மார்க் பண்ணாச்சு');
+          openPaymentPendingModal();
+          loadPaymentPendingWidget();
+        });
+      });
+    });
+  }).catch(err=> showToast('Load failed: ' + err.message));
+}
+
+// ============ TRIAL EXPIRING SOON (Home widget) ============
+function loadTrialExpiryWidget(){
+  const listEl = document.getElementById('adminTrialExpiryList');
+  if(!listEl) return;
+  db.ref('adminUserDirectory').once('value').then(snap=>{
+    const directory = snap.val() || {};
+    const now = Date.now();
+    const dayMs = 24*60*60*1000;
+    const soon = Object.entries(directory).filter(([_, u]) => u.tier !== 'paid' && u.trialEndsAt && (u.trialEndsAt - now) <= 3*dayMs && (u.trialEndsAt - now) > -3*dayMs);
+    if(soon.length === 0){
+      listEl.innerHTML = '<div style="color:#666; font-size:12px;">அடுத்த 3 நாள்ல trial முடியற customers இல்ல</div>';
+      return;
+    }
+    soon.sort((a,b) => a[1].trialEndsAt - b[1].trialEndsAt);
+    listEl.innerHTML = `<div style="max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">` + soon.map(([uidKey, u])=>{
+      const who = u.name || u.email || uidKey.slice(0,8);
+      const daysLeft = Math.ceil((u.trialEndsAt - now) / dayMs);
+      const expired = daysLeft < 0;
+      const color = expired ? '#FF6B6B' : '#FFC800';
+      const label = expired ? `${Math.abs(daysLeft)}d முடிஞ்சு` : (daysLeft===0 ? 'இன்னைக்கே' : `${daysLeft}d மிச்சம்`);
+      return `
+      <div style="display:flex; align-items:flex-start; gap:8px;">
+        <span style="font-size:14px; margin-top:1px;">⏰</span>
+        <span style="color:#FFFFFF; font-size:12px; flex:1;">${escapeHtml(who)}${u.phone ? `<br><a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:10.5px; text-decoration:none;" onclick="event.stopPropagation()">📞 ${escapeHtml(u.phone)}</a>` : ''}</span>
+        <span style="color:${color}; font-size:11px; white-space:nowrap; font-weight:700;">${label}</span>
+      </div>
+    `;
+    }).join('') + `</div>`;
+  }).catch(()=>{
+    listEl.innerHTML = '<div style="color:#666; font-size:12px;">Load ஆகல</div>';
+  });
+}
+function openTrialExpiryModal(){
+  db.ref('adminUserDirectory').once('value').then(snap=>{
+    const directory = snap.val() || {};
+    const now = Date.now();
+    const dayMs = 24*60*60*1000;
+    const soon = Object.entries(directory).filter(([_, u]) => u.tier !== 'paid' && u.trialEndsAt && (u.trialEndsAt - now) <= 3*dayMs && (u.trialEndsAt - now) > -3*dayMs);
+    soon.sort((a,b) => a[1].trialEndsAt - b[1].trialEndsAt);
+    const rows = soon.map(([uidKey, u])=>{
+      const who = u.name || u.email || uidKey.slice(0,8);
+      const daysLeft = Math.ceil((u.trialEndsAt - now) / dayMs);
+      const expired = daysLeft < 0;
+      const color = expired ? '#FF6B6B' : '#FFC800';
+      const label = expired ? `${Math.abs(daysLeft)} நாள் முன்னாடி முடிஞ்சுது` : (daysLeft===0 ? 'இன்னைக்கே முடியுது' : `${daysLeft} நாள்ல முடியுது`);
+      const phoneHtml = u.phone ? ` <a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;">📞</a> <a href="https://wa.me/${waPhone(u.phone)}" target="_blank" style="color:#4CD964; font-size:12px; text-decoration:none;">💬</a>` : '';
+      return `
+      <div style="padding:10px 0; border-bottom:1px solid #222;">
+        <div style="color:#fff; font-size:13px; font-weight:600;">${escapeHtml(who)}${phoneHtml}</div>
+        <div style="color:#666; font-size:11px;">${escapeHtml(u.email||'-')}</div>
+        <div style="color:${color}; font-size:11.5px; font-weight:700; margin-top:3px;">${label} (${new Date(u.trialEndsAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})})</div>
+        <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">
+          <span class="sendTrialReminderBtn" data-uid="${uidKey}" data-name="${escapeHtml(u.name||'')}" data-email="${escapeHtml(u.email||'')}" data-phone="${escapeHtml(u.phone||'')}" style="display:inline-block; color:#FFC800; font-size:11.5px; border:1px solid #FFC800; border-radius:8px; padding:4px 10px; cursor:pointer;">💬 Reminder அனுப்பு</span>
+        </div>
+      </div>`;
+    }).join('');
+    openModal(`
+      <div class="modal-title">⏰ Trial Expiring Soon<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#888; font-size:12px; margin-bottom:14px;">அடுத்த 3 நாள்ல trial முடியற/முடிஞ்ச (last 3 நாள்) customers. Reminder அனுப்பி Premium-க்கு convert பண்ணுங்க.</div>
+      <div>${rows || '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">அடுத்த 3 நாள்ல trial முடியற customers இல்ல</div>'}</div>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.querySelectorAll('.sendTrialReminderBtn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const uidKey = btn.getAttribute('data-uid');
+        const name = btn.getAttribute('data-name');
+        const email = btn.getAttribute('data-email');
+        const phone = btn.getAttribute('data-phone');
+        const msg = `வணக்கம்${name ? ' ' + name : ''}! உங்க Garage Book Pro trial period முடியப்போகுது (அல்லது முடிஞ்சிருச்சு). Premium-க்கு continue பண்ண ₹250 pay பண்ணி, "Payment Done" message அனுப்புங்க — உடனே Redeem Code அனுப்புறேன். 🙏`;
+        openAdminThreadView(uidKey, { userName: name, userEmail: email, userPhone: phone }, {}, msg);
+      });
+    });
+  }).catch(err=> showToast('Load failed: ' + err.message));
+}
+
 function openAdminUserListModal(){
   db.ref('adminUserDirectory').once('value').then(snap=>{
     const val = snap.val() || {};
@@ -2640,6 +2819,8 @@ function refreshAllAdminWidgets(silent){
   loadAdminHomeStats();
   loadCustomerActivityWidget();
   loadPremiumSubsWidget();
+  loadPaymentPendingWidget();
+  loadTrialExpiryWidget();
   checkAdminUnreadSupport();
   updateAdminQuickStatus();
   loadTodaySummary();
@@ -3663,7 +3844,7 @@ function openUpgradeModal(){
     document.getElementById('closeModalX').addEventListener('click', closeModal);
     document.getElementById('redeemCodeBtn').addEventListener('click', redeemPremiumCode);
     document.getElementById('notifyPaymentDoneBtn').addEventListener('click', ()=>{
-      openContactUsModal('GarageBookPro Premium payment (₹250) செய்துவிட்டேன், Redeem code அனுப்புங்க 🙏');
+      openContactUsModal('GarageBookPro Premium payment (₹250) செய்துவிட்டேன், Redeem code அனுப்புங்க 🙏', true);
     });
   });
 }
@@ -4155,7 +4336,7 @@ function attachMsgDeleteHandlers(userUid){
     });
   });
 }
-function openContactUsModal(prefillText){
+function openContactUsModal(prefillText, isPaymentClaim){
   db.ref('supportMessages/'+currentUser.uid).once('value').then(snap=>{
     const msgs = snap.val() || {};
     openModal(`
@@ -4178,15 +4359,18 @@ function openContactUsModal(prefillText){
       const timestamp = Date.now();
       const updates = {};
       updates['supportMessages/'+currentUser.uid+'/'+msgId] = { from:'user', text, timestamp };
-      updates['supportThreads/'+currentUser.uid] = {
-        userEmail: currentUser.email || '',
-        userName: STATE.profileName || '',
-        userPhone: STATE.profilePhone || '',
-        lastMessage: text, lastTimestamp: timestamp, lastFrom: 'user',
-        unreadForAdmin: true, unreadForUser: false
-      };
+      updates['supportThreads/'+currentUser.uid+'/userEmail'] = currentUser.email || '';
+      updates['supportThreads/'+currentUser.uid+'/userName'] = STATE.profileName || '';
+      updates['supportThreads/'+currentUser.uid+'/userPhone'] = STATE.profilePhone || '';
+      updates['supportThreads/'+currentUser.uid+'/lastMessage'] = text;
+      updates['supportThreads/'+currentUser.uid+'/lastTimestamp'] = timestamp;
+      updates['supportThreads/'+currentUser.uid+'/lastFrom'] = 'user';
+      updates['supportThreads/'+currentUser.uid+'/unreadForAdmin'] = true;
+      updates['supportThreads/'+currentUser.uid+'/unreadForUser'] = false;
+      if(isPaymentClaim) updates['supportThreads/'+currentUser.uid+'/paymentPending'] = true;
       db.ref().update(updates).then(()=>{
         input.value = '';
+        isPaymentClaim = false; // only tag the first send as the claim; follow-up replies in same session don't re-trigger
         db.ref('supportMessages/'+currentUser.uid).once('value').then(s2=>{
           document.getElementById('supportThreadBody').innerHTML = renderSupportThread(s2.val()||{}, false);
           document.getElementById('supportThreadBody').scrollTop = 999999;
