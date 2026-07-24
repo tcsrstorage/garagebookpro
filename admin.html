@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260724-1141">
+<meta name="app-build" content="20260724-1359">
 <style>
   :root{
     --yellow:#FFC800;
@@ -2932,7 +2932,9 @@ function renderDocVaultReminder(){
 function renderGoogleReviewBanner(){
   const banner = document.getElementById('googleReviewBanner');
   if(!banner) return;
-  if(localStorage.getItem('gbpReviewBannerDismissed') === '1'){ banner.style.display = 'none'; return; }
+  const dismissedAt = Number(localStorage.getItem('gbpReviewBannerDismissedAt') || 0);
+  const SNOOZE_MS = 14*24*60*60*1000; // 14 days
+  if(dismissedAt && (Date.now() - dismissedAt) < SNOOZE_MS){ banner.style.display = 'none'; return; }
   const entryCount = Object.keys(STATE.expenses || {}).length + Object.keys(STATE.dailyLogs || {}).length;
   if(entryCount < 3){ banner.style.display = 'none'; return; }
   banner.style.display = 'block';
@@ -2941,7 +2943,7 @@ function renderGoogleReviewBanner(){
     closeBtn._bound = true;
     closeBtn.addEventListener('click', (e)=>{
       e.stopPropagation();
-      localStorage.setItem('gbpReviewBannerDismissed', '1');
+      localStorage.setItem('gbpReviewBannerDismissedAt', String(Date.now()));
       banner.style.display = 'none';
     });
   }
