@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260724-0850">
+<meta name="app-build" content="20260724-1000">
 <style>
   :root{
     --yellow:#FFC800;
@@ -2021,8 +2021,8 @@ function openLeadsTrackerModal(){
         allLeads.forEach(l=>{ if(counts[l.status] != null) counts[l.status]++; });
         return Object.entries(LEAD_STATUSES).map(([key,st])=>
           `<div style="flex:1; min-width:64px; background:#161616; border-radius:10px; padding:8px 4px; text-align:center;">
-            <div style="color:${st.color}; font-size:16px; font-weight:800;">${counts[key]}</div>
-            <div style="color:#FFFFFF; font-size:9px; margin-top:2px;">${st.label.replace(/^\S+\s/,'')}</div>
+            <div style="color:${st.color}; font-size:20px; font-weight:800;">${counts[key]}</div>
+            <div style="color:#FFFFFF; font-size:11px; margin-top:2px;">${st.label.replace(/^\S+\s/,'')}</div>
           </div>`
         ).join('');
       }
