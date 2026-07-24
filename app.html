@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260724-0543">
+<meta name="app-build" content="20260724-0545">
 <style>
   :root{
     --yellow:#FFC800;
@@ -1911,67 +1911,122 @@ const LEAD_STATUSES = {
   lost: { label: '❌ Lost', color: '#FF6B6B' }
 };
 let leadsTrackerFilter = 'all';
+function normalizePhoneDigits(p){
+  return (p||'').replace(/\D/g,'').slice(-10); // last 10 digits, ignore +91 etc.
+}
 function openLeadsTrackerModal(){
-  db.ref('adminLeads').once('value').then(snap=>{
-    const val = snap.val() || {};
-    const allLeads = Object.entries(val).map(([id,l])=>({id, ...l}));
-    allLeads.sort((a,b)=> (b.updatedAt||b.createdAt||0) - (a.updatedAt||a.createdAt||0));
-    function renderLeadRows(){
-      const filtered = leadsTrackerFilter === 'all' ? allLeads : allLeads.filter(l => l.status === leadsTrackerFilter);
-      if(filtered.length === 0){
-        return '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Leads இல்ல</div>';
+  Promise.all([
+    db.ref('adminLeads').once('value'),
+    db.ref('adminUserDirectory').once('value')
+  ]).then(([leadsSnap, dirSnap])=>{
+    const leadsVal = leadsSnap.val() || {};
+    const dirVal = dirSnap.val() || {};
+    let allLeads = Object.entries(leadsVal).map(([id,l])=>({id, ...l}));
+    const existingPhones = new Set(allLeads.map(l => normalizePhoneDigits(l.phone)).filter(Boolean));
+
+    // Auto-entry: any signed-up user (with a phone number) not already tracked as a lead
+    // gets auto-added, with status inferred from their current tier/trial state.
+    const now = Date.now();
+    const autoWrites = [];
+    Object.entries(dirVal).forEach(([uid, u])=>{
+      const digits = normalizePhoneDigits(u.phone);
+      if(!digits || existingPhones.has(digits)) return;
+      existingPhones.add(digits);
+      let status = 'enquiry';
+      if(u.tier === 'paid') status = 'paid';
+      else if(u.trialEndsAt && u.trialEndsAt > now) status = 'trial';
+      const newLead = {
+        name: u.name || u.email || '',
+        phone: u.phone || '',
+        status,
+        notes: '',
+        source: 'auto',
+        linkedUid: uid,
+        createdAt: u.updatedAt || now,
+        updatedAt: u.updatedAt || now
+      };
+      const ref = db.ref('adminLeads').push();
+      autoWrites.push(ref.set(newLead));
+      allLeads.push({ id: ref.key, ...newLead });
+    });
+
+    const finishRender = ()=>{
+      allLeads.sort((a,b)=> (b.updatedAt||b.createdAt||0) - (a.updatedAt||a.createdAt||0));
+      function renderSummary(){
+        const counts = { enquiry:0, trial:0, payment_pending:0, paid:0, lost:0 };
+        allLeads.forEach(l=>{ if(counts[l.status] != null) counts[l.status]++; });
+        return Object.entries(LEAD_STATUSES).map(([key,st])=>
+          `<div style="flex:1; min-width:64px; background:#161616; border-radius:10px; padding:8px 4px; text-align:center;">
+            <div style="color:${st.color}; font-size:16px; font-weight:800;">${counts[key]}</div>
+            <div style="color:#888; font-size:9px; margin-top:2px;">${st.label.replace(/^\S+\s/,'')}</div>
+          </div>`
+        ).join('');
       }
-      return filtered.map(l=>{
-        const st = LEAD_STATUSES[l.status] || LEAD_STATUSES.enquiry;
-        const waMsg = encodeURIComponent(`வணக்கம்${l.name ? ' ' + l.name : ''}! Garage Book Pro பத்தி கேட்டீங்களே, அது பத்தி பேசலாமா? 🙏`);
-        const phoneHtml = l.phone ? `<a href="tel:${escapeHtml(l.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;" onclick="event.stopPropagation()">📞 ${escapeHtml(l.phone)}</a> <a href="https://wa.me/${waPhone(l.phone)}?text=${waMsg}" target="_blank" style="color:#4CD964; text-decoration:none;" onclick="event.stopPropagation()">💬</a>` : '';
-        return `
-        <div class="leadRow" data-id="${l.id}" style="padding:10px 0; border-bottom:1px solid #222; cursor:pointer;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span style="color:#fff; font-size:13px; font-weight:700;">${escapeHtml(l.name||'பேர் இல்ல')}</span>
-            <span style="color:${st.color}; font-size:11px; font-weight:700;">${st.label}</span>
-          </div>
-          ${phoneHtml ? `<div style="margin-top:3px;">${phoneHtml}</div>` : ''}
-          ${l.notes ? `<div style="color:#888; font-size:11.5px; margin-top:3px;">📝 ${escapeHtml(l.notes)}</div>` : ''}
-          <div style="color:#555; font-size:10.5px; margin-top:3px;">${timeAgo(l.updatedAt||l.createdAt||Date.now())}</div>
-        </div>`;
+      function renderLeadRows(){
+        const filtered = leadsTrackerFilter === 'all' ? allLeads : allLeads.filter(l => l.status === leadsTrackerFilter);
+        if(filtered.length === 0){
+          return '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Leads இல்ல</div>';
+        }
+        return filtered.map(l=>{
+          const st = LEAD_STATUSES[l.status] || LEAD_STATUSES.enquiry;
+          const waMsg = encodeURIComponent(`வணக்கம்${l.name ? ' ' + l.name : ''}! Garage Book Pro பத்தி கேட்டீங்களே, அது பத்தி பேசலாமா? 🙏`);
+          const phoneHtml = l.phone ? `<a href="tel:${escapeHtml(l.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;" onclick="event.stopPropagation()">📞 ${escapeHtml(l.phone)}</a> <a href="https://wa.me/${waPhone(l.phone)}?text=${waMsg}" target="_blank" style="color:#4CD964; text-decoration:none;" onclick="event.stopPropagation()">💬</a>` : '';
+          const autoTag = l.source === 'auto' ? `<span style="color:#666; font-size:10px; margin-left:6px;">(app signup-ல auto)</span>` : '';
+          return `
+          <div class="leadRow" data-id="${l.id}" style="padding:10px 0; border-bottom:1px solid #222; cursor:pointer;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="color:#fff; font-size:13px; font-weight:700;">${escapeHtml(l.name||'பேர் இல்ல')}${autoTag}</span>
+              <span style="color:${st.color}; font-size:11px; font-weight:700;">${st.label}</span>
+            </div>
+            ${phoneHtml ? `<div style="margin-top:3px;">${phoneHtml}</div>` : ''}
+            ${l.notes ? `<div style="color:#888; font-size:11.5px; margin-top:3px;">📝 ${escapeHtml(l.notes)}</div>` : ''}
+            <div style="color:#555; font-size:10.5px; margin-top:3px;">${timeAgo(l.updatedAt||l.createdAt||Date.now())}</div>
+          </div>`;
+        }).join('');
+      }
+      function attachRowClicks(){
+        document.querySelectorAll('.leadRow').forEach(row=>{
+          row.addEventListener('click', ()=> openLeadFormModal(row.dataset.id));
+        });
+      }
+      function refresh(){
+        document.getElementById('leadsTrackerRows').innerHTML = renderLeadRows();
+        attachRowClicks();
+        document.querySelectorAll('.leadFilterChip').forEach(chip=>{
+          const active = chip.dataset.status === leadsTrackerFilter;
+          chip.style.background = active ? '#FFC800' : 'transparent';
+          chip.style.color = active ? '#0A0A0A' : '#FFC800';
+        });
+      }
+      const filterChipsHtml = ['all','enquiry','trial','payment_pending','paid','lost'].map(s=>{
+        const label = s === 'all' ? 'எல்லாம்' : LEAD_STATUSES[s].label;
+        return `<span class="leadFilterChip" data-status="${s}" style="display:inline-block; color:#FFC800; font-size:11px; border:1px solid #FFC800; border-radius:20px; padding:5px 11px; margin:0 6px 8px 0; cursor:pointer;">${label}</span>`;
       }).join('');
-    }
-    function attachRowClicks(){
-      document.querySelectorAll('.leadRow').forEach(row=>{
-        row.addEventListener('click', ()=> openLeadFormModal(row.dataset.id));
-      });
-    }
-    function refresh(){
-      document.getElementById('leadsTrackerRows').innerHTML = renderLeadRows();
+      openModal(`
+        <div class="modal-title">📋 Leads Tracker<span class="close-x" id="closeModalX">✕</span></div>
+        <div style="color:#888; font-size:12px; margin-bottom:10px;">App-ல signup/trial எடுத்தவங்க தானா இங்க வந்து சேருவாங்க. WhatsApp/call-ல மட்டும் பேசின enquiries-ஐ "+ புது Lead" ல manual-ஆ add பண்ணுங்க.</div>
+        <div style="display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;">${renderSummary()}</div>
+        <button class="btn-primary" id="addLeadBtn" style="margin-bottom:14px;">+ புது Lead Add பண்ணு</button>
+        <div style="margin-bottom:6px;">${filterChipsHtml}</div>
+        <div id="leadsTrackerRows" style="max-height:380px; overflow-y:auto;">${renderLeadRows()}</div>
+      `);
+      document.getElementById('closeModalX').addEventListener('click', closeModal);
+      document.getElementById('addLeadBtn').addEventListener('click', ()=> openLeadFormModal(null));
       attachRowClicks();
       document.querySelectorAll('.leadFilterChip').forEach(chip=>{
-        const active = chip.dataset.status === leadsTrackerFilter;
-        chip.style.background = active ? '#FFC800' : 'transparent';
-        chip.style.color = active ? '#0A0A0A' : '#FFC800';
+        chip.addEventListener('click', ()=>{
+          leadsTrackerFilter = chip.dataset.status;
+          refresh();
+        });
       });
+      refresh();
+    };
+
+    if(autoWrites.length){
+      Promise.all(autoWrites).then(finishRender).catch(finishRender);
+    } else {
+      finishRender();
     }
-    const filterChipsHtml = ['all','enquiry','trial','payment_pending','paid','lost'].map(s=>{
-      const label = s === 'all' ? 'எல்லாம்' : LEAD_STATUSES[s].label;
-      return `<span class="leadFilterChip" data-status="${s}" style="display:inline-block; color:#FFC800; font-size:11px; border:1px solid #FFC800; border-radius:20px; padding:5px 11px; margin:0 6px 8px 0; cursor:pointer;">${label}</span>`;
-    }).join('');
-    openModal(`
-      <div class="modal-title">📋 Leads Tracker<span class="close-x" id="closeModalX">✕</span></div>
-      <div style="color:#888; font-size:12px; margin-bottom:12px;">WhatsApp/call enquiries-ஐ இங்க track பண்ணுங்க. Row click பண்ணா edit பண்ணலாம்.</div>
-      <button class="btn-primary" id="addLeadBtn" style="margin-bottom:14px;">+ புது Lead Add பண்ணு</button>
-      <div style="margin-bottom:6px;">${filterChipsHtml}</div>
-      <div id="leadsTrackerRows" style="max-height:400px; overflow-y:auto;">${renderLeadRows()}</div>
-    `);
-    document.getElementById('closeModalX').addEventListener('click', closeModal);
-    document.getElementById('addLeadBtn').addEventListener('click', ()=> openLeadFormModal(null));
-    attachRowClicks();
-    document.querySelectorAll('.leadFilterChip').forEach(chip=>{
-      chip.addEventListener('click', ()=>{
-        leadsTrackerFilter = chip.dataset.status;
-        refresh();
-      });
-    });
-    refresh();
   }).catch(err=> showToast('Load failed: ' + err.message));
 }
 function openLeadFormModal(leadId){
