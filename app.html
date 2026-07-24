@@ -402,45 +402,6 @@
           <div style="color:#FF6B6B; font-weight:700; font-size:14px;">🔴 புது Support Message வந்திருக்கு!</div>
           <div id="adminSupportBannerText" style="color:#fff; font-size:12.5px; margin-top:4px;"></div>
         </div>
-        <div id="adminStatsWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openAnalyticsModal()">
-          <div style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">📈 ADMIN — VISITS & SIGNUPS</div>
-          <div style="display:flex; gap:8px;">
-            <div style="flex:1; text-align:center;">
-              <div id="adminStatsVisits" style="color:#58A6FF; font-size:20px; font-weight:700;">0</div>
-              <div style="color:#FFFFFF; font-size:9.5px;">Visits</div>
-            </div>
-            <div style="flex:1; text-align:center;">
-              <div id="adminStatsSignups" style="color:#FFC800; font-size:20px; font-weight:700;">0</div>
-              <div style="color:#FFFFFF; font-size:9.5px;">Signups</div>
-            </div>
-            <div style="flex:1; text-align:center;">
-              <div id="adminStatsConversion" style="color:#2ECC71; font-size:20px; font-weight:700;">0</div>
-              <div style="color:#FFFFFF; font-size:9.5px;">Conversion</div>
-            </div>
-            <div style="flex:1; text-align:center;" onclick="event.stopPropagation(); openRevenueModal();">
-              <div id="adminStatsRedemptions" style="color:#FF9F45; font-size:20px; font-weight:700;">0</div>
-              <div style="color:#FFFFFF; font-size:9.5px;">Redemptions</div>
-            </div>
-          </div>
-        </div>
-        <div id="adminLiveActivityWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openLiveActivityModal()">
-          <div style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">📡 ADMIN — LIVE ACTIVITY</div>
-          <div id="adminLiveActivityList" style="display:flex; flex-direction:column; gap:8px;">
-            <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
-          </div>
-        </div>
-        <div id="adminCustomerActivityWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openCustomerActivityModal()">
-          <div style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">👥 ADMIN — CUSTOMER ACTIVITY</div>
-          <div id="adminCustomerActivityList" style="display:flex; flex-direction:column; gap:8px;">
-            <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
-          </div>
-        </div>
-        <div id="adminPremiumSubsWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openPremiumSubscribersModal()">
-          <div style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">⭐ ADMIN — PREMIUM SUBSCRIBERS</div>
-          <div id="adminPremiumSubsList" style="display:flex; flex-direction:column; gap:8px;">
-            <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
-          </div>
-        </div>
         <div id="customerSupportBanner" style="display:none; background:#0F2E1A; border:1px solid #2ECC71; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openContactUsModal()">
           <div style="color:#2ECC71; font-weight:700; font-size:14px;">💬 உங்க message-க்கு reply வந்திருக்கு!</div>
           <div id="customerSupportBannerText" style="color:#fff; font-size:12.5px; margin-top:4px;"></div>
@@ -1042,15 +1003,7 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('openCustomerActivityBtn').style.display = '';
         document.getElementById('openRevenueBtn').style.display = '';
         document.getElementById('testTrialBtn').style.display = '';
-        document.getElementById('adminStatsWidget').style.display = '';
-        document.getElementById('adminLiveActivityWidget').style.display = '';
-        document.getElementById('adminCustomerActivityWidget').style.display = '';
-        document.getElementById('adminPremiumSubsWidget').style.display = '';
         document.getElementById('openAdminSupportBtn').style.display = '';
-        loadAdminHomeStats();
-        startAdminLiveActivityWidget();
-        loadCustomerActivityWidget();
-        loadPremiumSubsWidget();
         checkAdminUnreadSupport();
       }
       checkMyUnreadSupport();
