@@ -608,6 +608,14 @@
           <div class="settings-row-left"><span class="ic">🎁</span><span class="txt">Trial Duration Set பண்ணு</span></div>
           <span class="arrow">›</span>
         </div>
+        <div class="settings-row" id="openTrialExpiryBtn" style="display:none;">
+          <div class="settings-row-left"><span class="ic">⏰</span><span class="txt">Trial Expiring Soon</span></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="settings-row" id="openTrialAlertConfigBtn" style="display:none;">
+          <div class="settings-row-left"><span class="ic">⏰</span><span class="txt">Trial Alert Window Set பண்ணு</span></div>
+          <span class="arrow">›</span>
+        </div>
         <div class="settings-row" id="openFuelPriceConfigBtn" style="display:none;">
           <div class="settings-row-left"><span class="ic">⛽</span><span class="txt">Fuel Prices Update பண்ணு</span></div>
           <span class="arrow">›</span>
@@ -650,6 +658,14 @@
         </div>
         <div class="settings-row" id="openRevenueBtn" style="display:none;">
           <div class="settings-row-left"><span class="ic">💰</span><span class="txt">Revenue Tracker</span></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="settings-row" id="openRenewalDueBtn" style="display:none;">
+          <div class="settings-row-left"><span class="ic">🔔</span><span class="txt">Renewal Due Soon</span></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="settings-row" id="openRenewalDueConfigBtn" style="display:none;">
+          <div class="settings-row-left"><span class="ic">🔔</span><span class="txt">Renewal Alert Window Set பண்ணு</span></div>
           <span class="arrow">›</span>
         </div>
         <div class="settings-row" id="testTrialBtn" style="display:none;">
@@ -1004,6 +1020,8 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('adminSectionTitle').style.display = '';
         document.getElementById('openAdminGenCodeBtn').style.display = '';
         document.getElementById('openAdminTrialConfigBtn').style.display = '';
+        document.getElementById('openTrialExpiryBtn').style.display = '';
+        document.getElementById('openTrialAlertConfigBtn').style.display = '';
         document.getElementById('openFuelPriceConfigBtn').style.display = '';
         document.getElementById('openPayLinkConfigBtn').style.display = '';
         document.getElementById('openPremiumPriceConfigBtn').style.display = '';
@@ -1015,6 +1033,8 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('openCustomerActivityBtn').style.display = '';
         document.getElementById('openInactiveUsersBtn').style.display = '';
         document.getElementById('openRevenueBtn').style.display = '';
+        document.getElementById('openRenewalDueBtn').style.display = '';
+        document.getElementById('openRenewalDueConfigBtn').style.display = '';
         document.getElementById('testTrialBtn').style.display = '';
         document.getElementById('openAdminSupportBtn').style.display = '';
         document.getElementById('adminDashboardLinkWidget').style.display = 'flex';
@@ -1388,6 +1408,216 @@ function openRevenueModal(){
   });
 }
 
+function loadTrialExpiryWidget(){
+  const listEl = document.getElementById('adminTrialExpiryList');
+  if(!listEl) return;
+  Promise.all([
+    db.ref('adminUserDirectory').once('value'),
+    db.ref('appConfig/trialExpiryAlertDays').once('value')
+  ]).then(([snap, cfgSnap])=>{
+    const directory = snap.val() || {};
+    const alertDays = cfgSnap.exists() ? Number(cfgSnap.val()) : 3;
+    const now = Date.now();
+    const dayMs = 24*60*60*1000;
+    const soon = Object.entries(directory).filter(([_, u]) => u.tier !== 'paid' && u.trialEndsAt && (u.trialEndsAt - now) <= alertDays*dayMs && (u.trialEndsAt - now) > -alertDays*dayMs);
+    if(soon.length === 0){
+      listEl.innerHTML = `<div style="color:#666; font-size:12px;">அடுத்த ${alertDays} நாள்ல trial முடியற customers இல்ல</div>`;
+      return;
+    }
+    soon.sort((a,b) => a[1].trialEndsAt - b[1].trialEndsAt);
+    listEl.innerHTML = `<div style="max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">` + soon.map(([uidKey, u])=>{
+      const who = u.name || u.email || uidKey.slice(0,8);
+      const daysLeft = Math.ceil((u.trialEndsAt - now) / dayMs);
+      const expired = daysLeft < 0;
+      const color = expired ? '#FF6B6B' : '#FFC800';
+      const label = expired ? `${Math.abs(daysLeft)}d முடிஞ்சு` : (daysLeft===0 ? 'இன்னைக்கே' : `${daysLeft}d மிச்சம்`);
+      return `
+      <div style="display:flex; align-items:flex-start; gap:8px;">
+        <span style="font-size:14px; margin-top:1px;">⏰</span>
+        <span style="color:#FFFFFF; font-size:12px; flex:1;">${escapeHtml(who)}${u.phone ? `<br><a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:10.5px; text-decoration:none;" onclick="event.stopPropagation()">📞 ${escapeHtml(u.phone)}</a>` : ''}</span>
+        <span style="color:${color}; font-size:11px; white-space:nowrap; font-weight:700;">${label}</span>
+      </div>
+    `;
+    }).join('') + `</div>`;
+  }).catch(()=>{
+    listEl.innerHTML = '<div style="color:#666; font-size:12px;">Load ஆகல</div>';
+  });
+}
+function openTrialExpiryModal(){
+  Promise.all([
+    db.ref('adminUserDirectory').once('value'),
+    db.ref('appConfig/trialExpiryAlertDays').once('value'),
+    getAppConfigNumber('premiumPrice', 250)
+  ]).then(([snap, cfgSnap, price])=>{
+    const directory = snap.val() || {};
+    const alertDays = cfgSnap.exists() ? Number(cfgSnap.val()) : 3;
+    const now = Date.now();
+    const dayMs = 24*60*60*1000;
+    const soon = Object.entries(directory).filter(([_, u]) => u.tier !== 'paid' && u.trialEndsAt && (u.trialEndsAt - now) <= alertDays*dayMs && (u.trialEndsAt - now) > -alertDays*dayMs);
+    soon.sort((a,b) => a[1].trialEndsAt - b[1].trialEndsAt);
+    const rows = soon.map(([uidKey, u])=>{
+      const who = u.name || u.email || uidKey.slice(0,8);
+      const daysLeft = Math.ceil((u.trialEndsAt - now) / dayMs);
+      const expired = daysLeft < 0;
+      const color = expired ? '#FF6B6B' : '#FFC800';
+      const label = expired ? `${Math.abs(daysLeft)} நாள் முன்னாடி முடிஞ்சுது` : (daysLeft===0 ? 'இன்னைக்கே முடியுது' : `${daysLeft} நாள்ல முடியுது`);
+      const phoneHtml = u.phone ? ` <a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;">📞</a> <a href="https://wa.me/${waPhone(u.phone)}" target="_blank" style="color:#4CD964; font-size:12px; text-decoration:none;">💬</a>` : '';
+      return `
+      <div style="padding:10px 0; border-bottom:1px solid #222;">
+        <div style="color:#fff; font-size:13px; font-weight:600;">${escapeHtml(who)}${phoneHtml}</div>
+        <div style="color:#666; font-size:11px;">${escapeHtml(u.email||'-')}</div>
+        <div style="color:${color}; font-size:11.5px; font-weight:700; margin-top:3px;">${label} (${new Date(u.trialEndsAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})})</div>
+        <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">
+          <span class="sendTrialReminderBtn" data-uid="${uidKey}" data-name="${escapeHtml(u.name||'')}" data-email="${escapeHtml(u.email||'')}" data-phone="${escapeHtml(u.phone||'')}" style="display:inline-block; color:#FFC800; font-size:11.5px; border:1px solid #FFC800; border-radius:8px; padding:4px 10px; cursor:pointer;">💬 Reminder அனுப்பு</span>
+        </div>
+      </div>`;
+    }).join('');
+    openModal(`
+      <div class="modal-title">⏰ Trial Expiring Soon<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#888; font-size:12px; margin-bottom:14px;">அடுத்த ${alertDays} நாள்ல trial முடியற/முடிஞ்ச (last ${alertDays} நாள்) customers. Reminder அனுப்பி Premium-க்கு convert பண்ணுங்க. இந்த window-ஐ Settings → "⏰ Trial Alert Window Set பண்ணு"-ல மாத்தலாம்.</div>
+      <div>${rows || `<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">அடுத்த ${alertDays} நாள்ல trial முடியற customers இல்ல</div>`}</div>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.querySelectorAll('.sendTrialReminderBtn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const uidKey = btn.getAttribute('data-uid');
+        const name = btn.getAttribute('data-name');
+        const email = btn.getAttribute('data-email');
+        const phone = btn.getAttribute('data-phone');
+        const msg = `வணக்கம்${name ? ' ' + name : ''}! உங்க Garage Book Pro trial period முடியப்போகுது (அல்லது முடிஞ்சிருச்சு). Premium-க்கு continue பண்ண ₹${price} pay பண்ணி, "Payment Done" message அனுப்புங்க — உடனே Redeem Code அனுப்புறேன். 🙏`;
+        openAdminThreadView(uidKey, { userName: name, userEmail: email, userPhone: phone }, {}, msg);
+      });
+    });
+  }).catch(err=> showToast('Load failed: ' + err.message));
+}
+function openTrialAlertConfigModal(){
+  db.ref('appConfig/trialExpiryAlertDays').once('value').then(snap=>{
+    const currentDays = snap.exists() ? snap.val() : 3;
+    openModal(`
+      <div class="modal-title">⏰ Trial Alert Window<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#fff; font-size:13px; margin-bottom:16px;">"Trial Expiring Soon" list-ல, trial முடிய இத்தனை நாள் இருக்கும்போதே customer தெரியணும் நு set பண்ணுங்க. அதிகமா வெச்சா, முன்னாடியே reminder அனுப்ப நேரம் கிடைக்கும்.</div>
+      <div class="field-label">எத்தனை நாள் முன்னாடி காட்டணும்</div>
+      <input type="number" id="trialAlertDaysInput" inputmode="numeric" value="${currentDays}">
+      <button class="btn-primary" id="saveTrialAlertDaysBtn" style="margin-top:14px;">Save</button>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.getElementById('saveTrialAlertDaysBtn').addEventListener('click', ()=>{
+      const days = Number(document.getElementById('trialAlertDaysInput').value);
+      if(!days || days < 0){ showToast('Correct number போடுங்க'); return; }
+      db.ref('appConfig/trialExpiryAlertDays').set(days).then(()=>{
+        showToast('Trial Alert Window ' + days + ' நாள்-ஆ set ஆச்சு!');
+        closeModal();
+        loadTrialExpiryWidget();
+      }).catch(err=> showToast('Failed: ' + err.message));
+    });
+  });
+}
+function loadRenewalDueWidget(){
+  const listEl = document.getElementById('adminRenewalDueList');
+  if(!listEl) return;
+  Promise.all([
+    db.ref('adminUserDirectory').once('value'),
+    db.ref('appConfig/renewalAlertDays').once('value')
+  ]).then(([snap, cfgSnap])=>{
+    const directory = snap.val() || {};
+    const alertDays = cfgSnap.exists() ? Number(cfgSnap.val()) : 7;
+    const now = Date.now();
+    const dayMs = 24*60*60*1000;
+    const due = Object.entries(directory).filter(([_, u]) => u.tier === 'paid' && u.premiumExpiresAt && (u.premiumExpiresAt - now) <= alertDays*dayMs);
+    if(due.length === 0){
+      listEl.innerHTML = `<div style="color:#666; font-size:12px;">அடுத்த ${alertDays} நாள்ல renewal due Premium users இல்ல</div>`;
+      return;
+    }
+    due.sort((a,b) => a[1].premiumExpiresAt - b[1].premiumExpiresAt);
+    listEl.innerHTML = `<div style="max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">` + due.map(([uidKey, u])=>{
+      const who = u.name || u.email || uidKey.slice(0,8);
+      const daysLeft = Math.ceil((u.premiumExpiresAt - now) / dayMs);
+      const expired = daysLeft < 0;
+      const color = expired ? '#FF6B6B' : '#FFC800';
+      const label = expired ? `${Math.abs(daysLeft)}d முடிஞ்சு` : (daysLeft===0 ? 'இன்னைக்கே' : `${daysLeft}d மிச்சம்`);
+      return `
+      <div style="display:flex; align-items:flex-start; gap:8px;">
+        <span style="font-size:14px; margin-top:1px;">🔔</span>
+        <span style="color:#FFFFFF; font-size:12px; flex:1;">${escapeHtml(who)}${u.phone ? `<br><a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:10.5px; text-decoration:none;" onclick="event.stopPropagation()">📞 ${escapeHtml(u.phone)}</a>` : ''}</span>
+        <span style="color:${color}; font-size:11px; white-space:nowrap; font-weight:700;">${label}</span>
+      </div>
+    `;
+    }).join('') + `</div>`;
+  }).catch(()=>{
+    listEl.innerHTML = '<div style="color:#666; font-size:12px;">Load ஆகல</div>';
+  });
+}
+function openRenewalDueModal(){
+  Promise.all([
+    db.ref('adminUserDirectory').once('value'),
+    db.ref('appConfig/renewalAlertDays').once('value'),
+    getAppConfigNumber('premiumPrice', 250)
+  ]).then(([snap, cfgSnap, price])=>{
+    const directory = snap.val() || {};
+    const alertDays = cfgSnap.exists() ? Number(cfgSnap.val()) : 7;
+    const now = Date.now();
+    const dayMs = 24*60*60*1000;
+    const due = Object.entries(directory).filter(([_, u]) => u.tier === 'paid' && u.premiumExpiresAt && (u.premiumExpiresAt - now) <= alertDays*dayMs);
+    due.sort((a,b) => a[1].premiumExpiresAt - b[1].premiumExpiresAt);
+    const rows = due.map(([uidKey, u])=>{
+      const who = u.name || u.email || uidKey.slice(0,8);
+      const daysLeft = Math.ceil((u.premiumExpiresAt - now) / dayMs);
+      const expired = daysLeft < 0;
+      const color = expired ? '#FF6B6B' : '#FFC800';
+      const label = expired ? `${Math.abs(daysLeft)} நாள் முன்னாடி முடிஞ்சுது` : (daysLeft===0 ? 'இன்னைக்கே முடியுது' : `${daysLeft} நாள்ல முடியுது`);
+      const phoneHtml = u.phone ? ` <a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;">📞</a> <a href="https://wa.me/${waPhone(u.phone)}" target="_blank" style="color:#4CD964; font-size:12px; text-decoration:none;">💬</a>` : '';
+      return `
+      <div style="padding:10px 0; border-bottom:1px solid #222;">
+        <div style="color:#fff; font-size:13px; font-weight:600;">${escapeHtml(who)}${phoneHtml}</div>
+        <div style="color:#666; font-size:11px;">${escapeHtml(u.email||'-')}</div>
+        <div style="color:${color}; font-size:11.5px; font-weight:700; margin-top:3px;">${label} (${new Date(u.premiumExpiresAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})})</div>
+        <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">
+          <span class="renewalReminderBtn" data-uid="${uidKey}" data-name="${escapeHtml(u.name||'')}" data-email="${escapeHtml(u.email||'')}" data-phone="${escapeHtml(u.phone||'')}" data-expiry="${u.premiumExpiresAt||''}" style="display:inline-block; color:#FFC800; font-size:11.5px; border:1px solid #FFC800; border-radius:8px; padding:4px 10px; cursor:pointer;">💬 Reminder அனுப்பு</span>
+        </div>
+      </div>`;
+    }).join('');
+    openModal(`
+      <div class="modal-title">🔔 Renewal Due Soon<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#888; font-size:12px; margin-bottom:14px;">அடுத்த ${alertDays} நாள்ல (அல்லது ஏற்கனவே) renewal due ஆன Premium subscribers. Window-ஐ Settings → "🔔 Renewal Alert Window Set பண்ணு"-ல மாத்தலாம்.</div>
+      <div>${rows || `<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">அடுத்த ${alertDays} நாள்ல renewal due யாரும் இல்ல 👍</div>`}</div>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.querySelectorAll('.renewalReminderBtn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const uidKey = btn.getAttribute('data-uid');
+        const name = btn.getAttribute('data-name');
+        const email = btn.getAttribute('data-email');
+        const phone = btn.getAttribute('data-phone');
+        const expiry = btn.getAttribute('data-expiry');
+        const expiryText = expiry ? new Date(Number(expiry)).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : 'soon';
+        const msg = `வணக்கம்${name ? ' ' + name : ''}! உங்க Garage Book Pro Premium subscription ${expiryText}-ல expire ஆகுது. Renew பண்ண ₹${price} pay பண்ணி, "Payment Done" message அனுப்புங்க — புது Redeem Code அனுப்புறேன். 🙏`;
+        openAdminThreadView(uidKey, { userName: name, userEmail: email, userPhone: phone }, {}, msg);
+      });
+    });
+  }).catch(err=> showToast('Load failed: ' + err.message));
+}
+function openRenewalDueConfigModal(){
+  db.ref('appConfig/renewalAlertDays').once('value').then(snap=>{
+    const currentDays = snap.exists() ? snap.val() : 7;
+    openModal(`
+      <div class="modal-title">🔔 Renewal Alert Window<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#fff; font-size:13px; margin-bottom:16px;">"Renewal Due Soon" list-ல, Premium subscription expire ஆக இத்தனை நாள் இருக்கும்போதே customer தெரியணும் நு set பண்ணுங்க.</div>
+      <div class="field-label">எத்தனை நாள் முன்னாடி காட்டணும்</div>
+      <input type="number" id="renewalAlertDaysInput" inputmode="numeric" value="${currentDays}">
+      <button class="btn-primary" id="saveRenewalAlertDaysBtn" style="margin-top:14px;">Save</button>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.getElementById('saveRenewalAlertDaysBtn').addEventListener('click', ()=>{
+      const days = Number(document.getElementById('renewalAlertDaysInput').value);
+      if(!days || days < 0){ showToast('Correct number போடுங்க'); return; }
+      db.ref('appConfig/renewalAlertDays').set(days).then(()=>{
+        showToast('Renewal Alert Window ' + days + ' நாள்-ஆ set ஆச்சு!');
+        closeModal();
+        loadRenewalDueWidget();
+      }).catch(err=> showToast('Failed: ' + err.message));
+    });
+  });
+}
 function waPhone(phone){
   let d = (phone||'').replace(/[^0-9]/g,'');
   if(d.length === 10) d = '91' + d;
@@ -3113,6 +3343,8 @@ updateNotifToggleUI();
 document.getElementById('openAccountBtn').addEventListener('click', openAccountModal);
 document.getElementById('openAdminGenCodeBtn').addEventListener('click', openAdminGenCodeModal);
 document.getElementById('openAdminTrialConfigBtn').addEventListener('click', openAdminTrialConfigModal);
+document.getElementById('openTrialExpiryBtn').addEventListener('click', openTrialExpiryModal);
+document.getElementById('openTrialAlertConfigBtn').addEventListener('click', openTrialAlertConfigModal);
 document.getElementById('openFuelPriceConfigBtn').addEventListener('click', openFuelPriceConfigModal);
 document.getElementById('openPayLinkConfigBtn').addEventListener('click', openPayLinkConfigModal);
 document.getElementById('openAdminUserListBtn').addEventListener('click', openAdminUserListModal);
@@ -3122,6 +3354,8 @@ document.getElementById('openAnalyticsBtn').addEventListener('click', openAnalyt
 document.getElementById('openLiveActivityBtn').addEventListener('click', openLiveActivityModal);
 document.getElementById('openCustomerActivityBtn').addEventListener('click', openCustomerActivityModal);
 document.getElementById('openRevenueBtn').addEventListener('click', openRevenueModal);
+document.getElementById('openRenewalDueBtn').addEventListener('click', openRenewalDueModal);
+document.getElementById('openRenewalDueConfigBtn').addEventListener('click', openRenewalDueConfigModal);
 document.getElementById('testTrialBtn').addEventListener('click', testMyTrial);
 document.getElementById('homePremiumBanner').addEventListener('click', openUpgradeModal);
 document.getElementById('exportBtn').addEventListener('click', exportData);
