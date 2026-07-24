@@ -1482,6 +1482,23 @@ function openRevenueModal(){
         <span style="color:#FFC800; font-weight:700;">₹${byMonth[m].amount}</span>
       </div>
     `).join('') || '<div style="color:#fff; font-size:13px; padding:10px 0;">Data இன்னும் இல்ல</div>';
+    // Trend chart: last 6 months, oldest→newest, simple CSS bar chart.
+    const chartMonths = Object.keys(byMonth).sort().slice(-6);
+    const maxAmount = Math.max(1, ...chartMonths.map(m => byMonth[m].amount));
+    const chartHtml = chartMonths.length ? `
+      <div class="section-title" style="margin-top:0;">Monthly Trend (last ${chartMonths.length} மாதம்)</div>
+      <div style="display:flex; align-items:flex-end; gap:8px; height:140px; padding:10px 4px 0; background:#111; border-radius:10px; margin-bottom:18px;">
+        ${chartMonths.map(m => {
+          const pct = Math.max(6, Math.round((byMonth[m].amount / maxAmount) * 100));
+          const label = m.slice(5,7) + '/' + m.slice(2,4);
+          return `<div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;">
+            <div style="color:#FFC800; font-size:10px; font-weight:700; margin-bottom:3px;">₹${byMonth[m].amount}</div>
+            <div style="width:100%; max-width:34px; height:${pct}%; background:linear-gradient(180deg,#FFC800,#FF9F45); border-radius:5px 5px 0 0;"></div>
+            <div style="color:#888; font-size:10px; margin-top:5px;">${label}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    ` : '';
     contentEl.innerHTML = `
       <div style="background:linear-gradient(135deg,#1A1400,#0A0A0A); border:1px solid #FFC800; border-radius:14px; padding:20px; text-align:center; margin-bottom:16px;">
         <div style="color:#FFC800; font-size:36px; font-weight:900;">₹${totalRevenue}</div>
@@ -1497,6 +1514,7 @@ function openRevenueModal(){
           <div style="color:#fff; font-size:11px;">Comp/Free Given</div>
         </div>
       </div>
+      ${chartHtml}
       <div class="section-title" style="margin-top:0;">Month-wise Breakdown</div>
       <div style="max-height:280px; overflow-y:auto;">${monthRows}</div>
     `;
@@ -1561,37 +1579,56 @@ function loadCustomerActivityWidget(){
 function openCustomerActivityModal(){
   db.ref('adminUserDirectory').once('value').then(snap=>{
     const directory = snap.val() || {};
-    const list = Object.entries(directory)
+    const allList = Object.entries(directory)
       .sort((a,b) => (b[1].lastActiveAt||0) - (a[1].lastActiveAt||0));
-    const rows = list.map(([uid, u])=>{
-      const idLabel = u.name || u.email || uid.slice(0,8);
-      const subLabel = (u.name && u.email) ? u.email : '';
-      const timeLabel = u.lastActiveAt ? timeAgo(u.lastActiveAt) : 'Not tracked yet';
-      const countsLabel = u.lastActiveAt
-        ? `<span style="color:#58A6FF; font-size:12px;">🚗 ${u.vehicleCount != null ? u.vehicleCount : '-'} vehicles</span>
-           <span style="color:#FFC800; font-size:12px;">📝 ${u.entryCount != null ? u.entryCount : '-'} entries</span>`
-        : `<span style="color:#666; font-size:11.5px;">App திறந்ததும் தானா தெரியும்</span>`;
-      return `
-      <div style="padding:10px 0; border-bottom:1px solid #222;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span style="color:#fff; font-size:13px; font-weight:600;">${escapeHtml(idLabel)}</span>
-          <span style="color:#666; font-size:11px;">${timeLabel}</span>
-        </div>
-        ${subLabel ? `<div style="color:#666; font-size:11px;">${escapeHtml(subLabel)}</div>` : ''}
-        <div style="display:flex; gap:14px; margin-top:4px;">
-          ${countsLabel}
-          <span style="color:${u.tier==='paid' ? '#2ECC71' : '#888'}; font-size:12px;">${u.tier==='paid' ? '⭐ Premium' : 'Free/Trial'}</span>
-        </div>
-      </div>`;
-    }).join('');
+    function renderRows(list){
+      return list.map(([uid, u])=>{
+        const idLabel = u.name || u.email || uid.slice(0,8);
+        const subLabel = (u.name && u.email) ? u.email : '';
+        const timeLabel = u.lastActiveAt ? timeAgo(u.lastActiveAt) : 'Not tracked yet';
+        const countsLabel = u.lastActiveAt
+          ? `<span style="color:#58A6FF; font-size:12px;">🚗 ${u.vehicleCount != null ? u.vehicleCount : '-'} vehicles</span>
+             <span style="color:#FFC800; font-size:12px;">📝 ${u.entryCount != null ? u.entryCount : '-'} entries</span>`
+          : `<span style="color:#666; font-size:11.5px;">App திறந்ததும் தானா தெரியும்</span>`;
+        return `
+        <div style="padding:10px 0; border-bottom:1px solid #222;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="color:#fff; font-size:13px; font-weight:600;">${escapeHtml(idLabel)}</span>
+            <span style="color:#666; font-size:11px;">${timeLabel}</span>
+          </div>
+          ${subLabel ? `<div style="color:#666; font-size:11px;">${escapeHtml(subLabel)}</div>` : ''}
+          <div style="display:flex; gap:14px; margin-top:4px;">
+            ${countsLabel}
+            <span style="color:${u.tier==='paid' ? '#2ECC71' : '#888'}; font-size:12px;">${u.tier==='paid' ? '⭐ Premium' : 'Free/Trial'}</span>
+          </div>
+        </div>`;
+      }).join('') || '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Match இல்ல</div>';
+    }
+    let showOnlyNotTracked = false;
+    function refresh(query){
+      const q = (query||'').trim().toLowerCase();
+      let list = allList;
+      if(showOnlyNotTracked) list = list.filter(([_, u]) => !u.lastActiveAt);
+      if(q) list = list.filter(([uid, u]) => (u.name||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q));
+      document.getElementById('custActModalRows').innerHTML = renderRows(list);
+    }
     openModal(`
       <div class="modal-title">👥 Customer Activity<span class="close-x" id="closeModalX">✕</span></div>
-      <div style="color:#888; font-size:12px; margin-bottom:14px;">Users, last active time first. Vehicle/entry count காட்டும் — யாரு எவ்வளவு app-ஐ use பண்றாங்கனு தெரியும். "Not tracked yet" = அந்த user இந்த feature வந்த பிறகு app இன்னும் open பண்ணல.</div>
-      <div style="max-height:420px; overflow-y:auto;">
-        ${rows || '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Data இன்னும் இல்ல (இந்த feature add பண்ணின பிறகு app open பண்ணினா தெரியும்)</div>'}
+      <div style="color:#888; font-size:12px; margin-bottom:12px;">Users, last active time first. "Not tracked yet" = அந்த user இந்த feature வந்த பிறகு app இன்னும் open பண்ணல.</div>
+      <input type="text" id="custActModalSearch" placeholder="🔍 Name / email search..." style="width:100%; background:#111; border:1px solid #333; border-radius:8px; padding:9px 10px; color:#fff; font-size:13px; margin-bottom:8px; box-sizing:border-box;">
+      <div id="notTrackedFilterChip" style="display:inline-block; color:#FF6B6B; font-size:11.5px; border:1px solid #FF6B6B; border-radius:20px; padding:5px 12px; margin-bottom:12px; cursor:pointer;">😴 Not tracked yet மட்டும் காமிக்கு</div>
+      <div style="max-height:420px; overflow-y:auto;" id="custActModalRows">
+        ${allList.length ? renderRows(allList) : '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Data இன்னும் இல்ல (இந்த feature add பண்ணின பிறகு app open பண்ணினா தெரியும்)</div>'}
       </div>
     `);
     document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.getElementById('custActModalSearch').addEventListener('input', (e)=> refresh(e.target.value));
+    document.getElementById('notTrackedFilterChip').addEventListener('click', function(){
+      showOnlyNotTracked = !showOnlyNotTracked;
+      this.style.background = showOnlyNotTracked ? '#FF6B6B' : 'transparent';
+      this.style.color = showOnlyNotTracked ? '#0A0A0A' : '#FF6B6B';
+      refresh(document.getElementById('custActModalSearch').value);
+    });
   });
 }
 function openInactiveUsersModal(){
@@ -2171,40 +2208,55 @@ document.getElementById('openReferralLeaderboardBtn').addEventListener('click', 
 function openAdminUserListModal(){
   db.ref('adminUserDirectory').once('value').then(snap=>{
     const val = snap.val() || {};
-    const entries = Object.entries(val).map(([uid,u])=>({uid, ...u}));
+    const allEntries = Object.entries(val).map(([uid,u])=>({uid, ...u}));
     const now = Date.now();
-    entries.sort((a,b)=> (b.updatedAt||0) - (a.updatedAt||0));
-    const rows = entries.map(u=>{
-      let statusHtml;
-      if(u.tier === 'paid'){
-        statusHtml = '<span style="color:#FFC800;">⭐ Premium</span>';
-      } else if(u.trialEndsAt && now < u.trialEndsAt){
-        const daysLeft = Math.ceil((u.trialEndsAt - now) / 86400000);
-        statusHtml = `<span style="color:#58A6FF;">🎁 Trial — ${daysLeft} நாள்</span>`;
-      } else if(u.trialEndsAt){
-        statusHtml = '<span style="color:#fff; opacity:.6;">Trial முடிஞ்சது</span>';
-      } else {
-        statusHtml = '<span style="color:#fff; opacity:.6;">Free</span>';
-      }
-      const nameHtml = u.name ? `<div style="color:#fff; font-size:13px; font-weight:700;">${escapeHtml(u.name)}</div>` : '';
-      const phoneHtml = u.phone ? `<a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;" onclick="event.stopPropagation()">📞 ${escapeHtml(u.phone)}</a> <a href="https://wa.me/${waPhone(u.phone)}" target="_blank" style="color:#4CD964; text-decoration:none;" onclick="event.stopPropagation()">💬</a>` : '';
-      const placeHtml = u.place ? `<div style="color:#888; font-size:11.5px; margin-top:2px;">📍 ${escapeHtml(u.place)}</div>` : '';
-      return `<div style="padding:10px 0; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          ${nameHtml}
-          <div style="color:#B8B8B8; font-size:12px;">${escapeHtml(u.email||'-')}</div>
-          ${phoneHtml ? `<div style="margin-top:2px;">${phoneHtml}</div>` : ''}
-          ${placeHtml}
-          <div style="font-size:12px; margin-top:2px;">${statusHtml}</div>
-        </div>
-        <span style="display:flex; flex-direction:column; gap:4px; align-items:center;">
-          <span class="editUserTrialBtn" data-uid="${u.uid}" data-days="${u.trialEndsAt ? Math.max(0, Math.ceil((u.trialEndsAt - now) / 86400000)) : 0}" style="color:#FFC800; font-size:18px; padding:4px 8px; cursor:pointer;">✏️</span>
-          <span class="editUserPlaceBtn" data-uid="${u.uid}" data-place="${escapeHtml(u.place||'')}" style="color:#58A6FF; font-size:16px; padding:4px 8px; cursor:pointer;">📍</span>
-        </span>
-      </div>`;
-    }).join('') || '<div style="color:#fff; font-size:13px; padding:10px 0;">இன்னும் users இல்ல</div>';
-    const trialCount = entries.filter(u=> u.tier!=='paid' && u.trialEndsAt && now < u.trialEndsAt).length;
-    const paidCount = entries.filter(u=> u.tier==='paid').length;
+    allEntries.sort((a,b)=> (b.updatedAt||0) - (a.updatedAt||0));
+    function renderUserRows(entries){
+      return entries.map(u=>{
+        let statusHtml;
+        if(u.tier === 'paid'){
+          statusHtml = '<span style="color:#FFC800;">⭐ Premium</span>';
+        } else if(u.trialEndsAt && now < u.trialEndsAt){
+          const daysLeft = Math.ceil((u.trialEndsAt - now) / 86400000);
+          statusHtml = `<span style="color:#58A6FF;">🎁 Trial — ${daysLeft} நாள்</span>`;
+        } else if(u.trialEndsAt){
+          statusHtml = '<span style="color:#fff; opacity:.6;">Trial முடிஞ்சது</span>';
+        } else {
+          statusHtml = '<span style="color:#fff; opacity:.6;">Free</span>';
+        }
+        const nameHtml = u.name ? `<div style="color:#fff; font-size:13px; font-weight:700;">${escapeHtml(u.name)}</div>` : '';
+        const phoneHtml = u.phone ? `<a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;" onclick="event.stopPropagation()">📞 ${escapeHtml(u.phone)}</a> <a href="https://wa.me/${waPhone(u.phone)}" target="_blank" style="color:#4CD964; text-decoration:none;" onclick="event.stopPropagation()">💬</a>` : '';
+        const placeHtml = u.place ? `<div style="color:#888; font-size:11.5px; margin-top:2px;">📍 ${escapeHtml(u.place)}</div>` : '';
+        return `<div style="padding:10px 0; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            ${nameHtml}
+            <div style="color:#B8B8B8; font-size:12px;">${escapeHtml(u.email||'-')}</div>
+            ${phoneHtml ? `<div style="margin-top:2px;">${phoneHtml}</div>` : ''}
+            ${placeHtml}
+            <div style="font-size:12px; margin-top:2px;">${statusHtml}</div>
+          </div>
+          <span style="display:flex; flex-direction:column; gap:4px; align-items:center;">
+            <span class="editUserTrialBtn" data-uid="${u.uid}" data-days="${u.trialEndsAt ? Math.max(0, Math.ceil((u.trialEndsAt - now) / 86400000)) : 0}" style="color:#FFC800; font-size:18px; padding:4px 8px; cursor:pointer;">✏️</span>
+            <span class="editUserPlaceBtn" data-uid="${u.uid}" data-place="${escapeHtml(u.place||'')}" style="color:#58A6FF; font-size:16px; padding:4px 8px; cursor:pointer;">📍</span>
+          </span>
+        </div>`;
+      }).join('') || '<div style="color:#fff; font-size:13px; padding:10px 0;">Match இல்ல</div>';
+    }
+    function refreshRows(query){
+      const q = (query||'').trim().toLowerCase();
+      const filtered = !q ? allEntries : allEntries.filter(u=>{
+        return (u.name||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q) || (u.phone||'').toLowerCase().includes(q);
+      });
+      document.getElementById('userListRows').innerHTML = renderUserRows(filtered);
+      document.querySelectorAll('.editUserTrialBtn').forEach(btn=>{
+        btn.addEventListener('click', ()=> editUserTrial(btn.dataset.uid, Number(btn.dataset.days)));
+      });
+      document.querySelectorAll('.editUserPlaceBtn').forEach(btn=>{
+        btn.addEventListener('click', ()=> editUserPlace(btn.dataset.uid, btn.dataset.place));
+      });
+    }
+    const trialCount = allEntries.filter(u=> u.tier!=='paid' && u.trialEndsAt && now < u.trialEndsAt).length;
+    const paidCount = allEntries.filter(u=> u.tier==='paid').length;
     openModal(`
       <div class="modal-title">Users & Trial Status<span class="close-x" id="closeModalX">✕</span></div>
       <div style="display:flex; gap:10px; margin-bottom:16px;">
@@ -2217,13 +2269,15 @@ function openAdminUserListModal(){
           <div style="color:#fff; font-size:11px;">On Trial</div>
         </div>
         <div style="flex:1; background:#161616; border-radius:10px; padding:12px; text-align:center;">
-          <div style="color:#fff; font-size:20px; font-weight:700;">${entries.length}</div>
+          <div style="color:#fff; font-size:20px; font-weight:700;">${allEntries.length}</div>
           <div style="color:#fff; font-size:11px;">Total Users</div>
         </div>
       </div>
-      <div>${rows}</div>
+      <input type="text" id="userListSearch" placeholder="🔍 Name / email / phone search..." style="width:100%; background:#111; border:1px solid #333; border-radius:8px; padding:9px 10px; color:#fff; font-size:13px; margin-bottom:14px; box-sizing:border-box;">
+      <div id="userListRows">${renderUserRows(allEntries)}</div>
     `);
     document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.getElementById('userListSearch').addEventListener('input', (e)=> refreshRows(e.target.value));
     document.querySelectorAll('.editUserTrialBtn').forEach(btn=>{
       btn.addEventListener('click', ()=> editUserTrial(btn.dataset.uid, Number(btn.dataset.days)));
     });
