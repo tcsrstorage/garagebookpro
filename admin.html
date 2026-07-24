@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260724-0600">
+<meta name="app-build" content="20260724-0632">
 <style>
   :root{
     --yellow:#FFC800;
@@ -463,6 +463,12 @@
             <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
           </div>
         </div>
+        <div id="adminLeadsWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openLeadsTrackerModal()">
+          <div style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">📋 ADMIN — LEADS TRACKER</div>
+          <div id="adminLeadsSummary" style="display:flex; gap:6px; flex-wrap:wrap;">
+            <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
+          </div>
+        </div>
         <div id="adminStatsWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openAnalyticsModal()">
           <div style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">📈 ADMIN — VISITS & SIGNUPS</div>
           <div style="display:flex; gap:8px;">
@@ -512,12 +518,6 @@
         <div id="adminRenewalDueWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openRenewalDueModal()">
           <div style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">🔔 ADMIN — RENEWAL DUE SOON</div>
           <div id="adminRenewalDueList" style="display:flex; flex-direction:column; gap:8px;">
-            <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
-          </div>
-        </div>
-        <div id="adminLeadsWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openLeadsTrackerModal()">
-          <div style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">📋 ADMIN — LEADS TRACKER</div>
-          <div id="adminLeadsSummary" style="display:flex; gap:6px; flex-wrap:wrap;">
             <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
           </div>
         </div>
