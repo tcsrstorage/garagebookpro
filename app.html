@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260724-1429">
+<meta name="app-build" content="20260724-1815">
 <style>
   :root{
     --yellow:#FFC800;
@@ -3235,7 +3235,8 @@ const ALL_FEATURES = [
   '📜 Resale Certificate — professional PDF with QR-verified vehicle history',
   '⛽ Today\'s Fuel Price — Chennai & Coimbatore petrol/diesel rates on Home',
   '⭐ Redeem Code / Upgrade to Premium — accessible anytime from Settings',
-  '📖 User Guide — full how-to-use manual (English + Tamil), downloadable PDF'
+  '📖 User Guide — full how-to-use manual (English + Tamil), downloadable PDF',
+  '⭐ Google Review — one-tap link to rate GarageBookPro on Google'
 ];
 function renderAllFeaturesList(){
   const list = document.getElementById('allFeaturesList');
@@ -3259,17 +3260,16 @@ function renderAllFeaturesList(){
 }
 
 // ============ V2.1: WHAT'S NEW ON HOME ============
-const WHATS_NEW_VERSION = '2026-07-22c';
+const WHATS_NEW_VERSION = '2026-07-24a';
 const WHATS_NEW_ITEMS = [
+  '🛣️ Daily KM Log — This Week KM (Mon–Sun) total added, alongside Monthly KM',
+  '⭐ Enjoying the app? One-tap "Rate us on Google" from Home',
   '📖 Settings → "User Guide" — download a full how-to-use manual (English + Tamil, PDF)',
   '⭐ Settings → "Redeem Code / Upgrade to Premium" — enter your code anytime, no need to wait for trial to end',
   '📜 Resale Certificate — PDF with QR-verified live vehicle data, great for resale',
   '💬 Contact Us / Feedback — chat with developer directly in the app',
   '🔒 Family Sharing — restrict a driver to only their assigned vehicle',
-  '👨‍👩‍👧 Family Sharing — now switch between multiple linked family accounts',
-  '🔧 Mechanic QR Share — vehicle service/expiry info via QR scan',
-  '📈 Visits & Signups tracking (admin)',
-  '🔄 Manual "Check for Update" button'
+  '🔧 Mechanic QR Share — vehicle service/expiry info via QR scan'
 ];
 function renderWhatsNewCard(){
   const card = document.getElementById('whatsNewCard');
