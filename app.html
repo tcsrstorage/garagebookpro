@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260724-0223">
+<meta name="app-build" content="20260724-0243">
 <style>
   :root{
     --yellow:#FFC800;
@@ -467,6 +467,12 @@
           <div class="stat-box">
             <div class="num" id="homeAvgKmDay">0</div>
             <div class="lbl">Avg KM/day</div>
+          </div>
+        </div>
+        <div class="quick-stats" id="homeWeekKmRow" style="display:none; grid-template-columns:1fr;">
+          <div class="stat-box">
+            <div class="num" id="homeWeekKm">0</div>
+            <div class="lbl">This Week KM (Mon–Sun)</div>
           </div>
         </div>
         <div class="quick-stats" id="homePetrolStatsRow" style="display:none;">
@@ -2933,7 +2939,7 @@ const ALL_FEATURES = [
   '🚗 Multi-vehicle management (bike/car/other)',
   '⛽ Expense tracking — Petrol, Service, Repair, Spares, Insurance, etc.',
   '💳 Payment Modes management',
-  '🛣️ Daily KM Log — odometer tracking, auto distance calc',
+  '🛣️ Daily KM Log — odometer tracking, auto distance calc, Weekly (Mon–Sun) + Monthly KM totals, Avg KM/day',
   '📊 Home Dashboard — monthly total, entries, top category',
   '🔧 Service Due Reminder (km/month based)',
   '📄 Insurance/PUC/RC Expiry Reminders',
@@ -3117,6 +3123,26 @@ function renderHome(){
     document.getElementById('homeAvgKmDay').textContent = avgKm.toFixed(1) + ' km';
   } else {
     kmRow.style.display = 'none';
+  }
+
+  // This Week KM (Monday–Sunday), from Daily KM Logs
+  const weekLogsList = Object.entries(STATE.dailyLogs||{})
+    .map(([id,d])=>({id,...d}))
+    .filter(d => vid==='all' ? true : d.vehicleId===vid);
+  const dayNum = now.getDay(); // 0=Sun...6=Sat
+  const diffToMonday = (dayNum === 0) ? 6 : dayNum - 1;
+  const mondayDate = new Date(now); mondayDate.setDate(now.getDate() - diffToMonday);
+  const sundayDate = new Date(mondayDate); sundayDate.setDate(mondayDate.getDate() + 6);
+  const mondayStr = mondayDate.toISOString().slice(0,10);
+  const sundayStr = sundayDate.toISOString().slice(0,10);
+  const thisWeekLogs = weekLogsList.filter(d => d.date && d.date >= mondayStr && d.date <= sundayStr);
+  const weekRow = document.getElementById('homeWeekKmRow');
+  if(thisWeekLogs.length){
+    const weekKm = thisWeekLogs.reduce((s,d)=> s + Math.max(0, (d.endKm||0) - (d.startKm||0)), 0);
+    weekRow.style.display = '';
+    document.getElementById('homeWeekKm').textContent = weekKm + ' km';
+  } else {
+    weekRow.style.display = 'none';
   }
   renderDailyLogList();
 
