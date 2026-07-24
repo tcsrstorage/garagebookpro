@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260724-0720">
+<meta name="app-build" content="20260724-0842">
 <style>
   :root{
     --yellow:#FFC800;
@@ -607,6 +607,13 @@
         <div id="trialBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center;"></div>
         <div id="premiumStatusBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center;"></div>
         <div id="docVaultReminderBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center; background:rgba(88,166,255,0.12); color:#58A6FF; border:1px solid rgba(88,166,255,0.35); cursor:pointer;">📎 உங்க Insurance/RC/PUC Documents இன்னும் upload பண்ணல — ஒரு நிமிடத்துல செய்யுங்க, எப்போ வேணும்னாலும் easy-ஆ access பண்ணலாம். <u>Upload பண்ண இங்க Click பண்ணுங்க</u></div>
+        <div id="googleReviewBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center; background:rgba(46,204,113,0.10); color:#2ECC71; border:1px solid rgba(46,204,113,0.35); position:relative;">
+          <span id="googleReviewBannerClose" style="position:absolute; top:8px; right:10px; color:#2ECC71; font-size:15px; cursor:pointer; opacity:.7;">✕</span>
+          ⭐ GarageBookPro பிடிச்சிருக்கா? Google-ல ஒரு நிமிடம் எடுத்து <b>Review</b> போடுங்களேன் 🙏
+          <div style="margin-top:8px;">
+            <a href="https://g.page/r/Cfwf-i1zNvFzEAE/review" target="_blank" style="display:inline-block; background:#2ECC71; color:#0A0A0A; font-weight:800; font-size:12.5px; padding:7px 16px; border-radius:20px; text-decoration:none;">⭐ Review போடு</a>
+          </div>
+        </div>
         <div id="homePremiumBanner" class="home-premium-banner hidden">
           <span>⭐ Premium-க்கு switch பண்ணுங்க — <span class="price-highlight">₹21/month</span> மட்டும்</span>
           <div style="margin-top:8px; font-size:12.5px; font-weight:700; text-decoration:underline;">👉 Payment பண்ண இங்க Click பண்ணுங்க</div>
@@ -2875,6 +2882,23 @@ function renderDocVaultReminder(){
   banner.onclick = ()=> openVehicleDocuments(vehicles[0][0]);
   banner.style.display = 'block';
 }
+function renderGoogleReviewBanner(){
+  const banner = document.getElementById('googleReviewBanner');
+  if(!banner) return;
+  if(localStorage.getItem('gbpReviewBannerDismissed') === '1'){ banner.style.display = 'none'; return; }
+  const entryCount = Object.keys(STATE.expenses || {}).length + Object.keys(STATE.dailyLogs || {}).length;
+  if(entryCount < 3){ banner.style.display = 'none'; return; }
+  banner.style.display = 'block';
+  const closeBtn = document.getElementById('googleReviewBannerClose');
+  if(closeBtn && !closeBtn._bound){
+    closeBtn._bound = true;
+    closeBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      localStorage.setItem('gbpReviewBannerDismissed', '1');
+      banner.style.display = 'none';
+    });
+  }
+}
 function ensureUserProfile(){
   db.ref(ROOT + '/profile').once('value').then(snap=>{
     if(!snap.exists()){
@@ -2999,6 +3023,7 @@ function initFirebase(){
     renderPremiumStatusBanner();
     STATE.vehicles = val.vehicles || {};
     renderDocVaultReminder();
+    renderGoogleReviewBanner();
     STATE.categories = val.categories || DEFAULT_CATEGORIES;
     STATE.paymodes = val.paymodes || DEFAULT_PAYMODES;
     STATE.expenses = val.expenses || {};
