@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260724-0923">
+<meta name="app-build" content="20260724-0929">
 <style>
   :root{
     --yellow:#FFC800;
@@ -420,109 +420,109 @@
         </div>
         <div id="adminTodaySummary" style="background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px;">
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-            <span style="color:#58A6FF; font-size:11px; font-weight:700; letter-spacing:0.5px;">📆 TODAY'S SUMMARY</span>
-            <span id="adminRefreshBtn" style="color:#58A6FF; font-size:11px; font-weight:700; cursor:pointer; padding:3px 8px; border:1px solid #58A6FF; border-radius:8px;">🔄 Refresh</span>
+            <span style="color:#58A6FF; font-size:13px; font-weight:700; letter-spacing:0.5px;">📆 TODAY'S SUMMARY</span>
+            <span id="adminRefreshBtn" style="color:#58A6FF; font-size:13px; font-weight:700; cursor:pointer; padding:3px 8px; border:1px solid #58A6FF; border-radius:8px;">🔄 Refresh</span>
           </div>
-          <div id="adminLastUpdated" style="color:#666; font-size:9.5px; text-align:right; margin-top:-6px; margin-bottom:8px;"></div>
+          <div id="adminLastUpdated" style="color:#666; font-size:11px; text-align:right; margin-top:-6px; margin-bottom:8px;"></div>
           <div style="display:flex; gap:8px;">
             <div style="flex:1; text-align:center;">
-              <div id="todaySignups" style="color:#FFC800; font-size:20px; font-weight:700;">0</div>
-              <div style="color:#FFFFFF; font-size:9.5px;">New Signups</div>
+              <div id="todaySignups" style="color:#FFC800; font-size:23px; font-weight:700;">0</div>
+              <div style="color:#FFFFFF; font-size:11px;">New Signups</div>
             </div>
             <div style="flex:1; text-align:center;">
-              <div id="todayRedemptions" style="color:#FF9F45; font-size:20px; font-weight:700;">0</div>
-              <div style="color:#FFFFFF; font-size:9.5px;">Redemptions</div>
+              <div id="todayRedemptions" style="color:#FF9F45; font-size:23px; font-weight:700;">0</div>
+              <div style="color:#FFFFFF; font-size:11px;">Redemptions</div>
             </div>
             <div style="flex:1; text-align:center;">
-              <div id="todaySupport" style="color:#2ECC71; font-size:20px; font-weight:700;">0</div>
-              <div style="color:#FFFFFF; font-size:9.5px;">Support Msgs</div>
+              <div id="todaySupport" style="color:#2ECC71; font-size:23px; font-weight:700;">0</div>
+              <div style="color:#FFFFFF; font-size:11px;">Support Msgs</div>
             </div>
           </div>
         </div>
         <div id="adminQuickActionsRow" style="display:flex; gap:8px; margin-bottom:14px;">
           <div onclick="openAdminGenCodeModal()" style="flex:1; background:#000000; border:1px solid #2a2a2a; border-radius:12px; padding:10px 6px; text-align:center; cursor:pointer;">
             <div style="font-size:18px;">🔑</div>
-            <div style="color:#FFFFFF; font-size:10px; margin-top:3px;">Generate Code</div>
+            <div style="color:#FFFFFF; font-size:11px; margin-top:3px;">Generate Code</div>
           </div>
           <div onclick="openAdminSupportInbox()" style="flex:1; background:#000000; border:1px solid #2a2a2a; border-radius:12px; padding:10px 6px; text-align:center; cursor:pointer;">
             <div style="font-size:18px;">💬</div>
-            <div style="color:#FFFFFF; font-size:10px; margin-top:3px;">Support</div>
+            <div style="color:#FFFFFF; font-size:11px; margin-top:3px;">Support</div>
           </div>
           <div onclick="openAdminUserListModal()" style="flex:1; background:#000000; border:1px solid #2a2a2a; border-radius:12px; padding:10px 6px; text-align:center; cursor:pointer;">
             <div style="font-size:18px;">👥</div>
-            <div style="color:#FFFFFF; font-size:10px; margin-top:3px;">Users</div>
+            <div style="color:#FFFFFF; font-size:11px; margin-top:3px;">Users</div>
           </div>
         </div>
         <div id="adminSupportBanner" style="display:none; background:#3A0E0E; border:1px solid #FF6B6B; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openAdminSupportInbox()">
-          <div style="color:#FF6B6B; font-weight:700; font-size:14px;">🔴 புது Support Message வந்திருக்கு!</div>
-          <div id="adminSupportBannerText" style="color:#fff; font-size:12.5px; margin-top:4px;"></div>
+          <div style="color:#FF6B6B; font-weight:700; font-size:15px;">🔴 புது Support Message வந்திருக்கு!</div>
+          <div id="adminSupportBannerText" style="color:#fff; font-size:13.5px; margin-top:4px;"></div>
         </div>
         <div id="adminPaymentPendingWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openPaymentPendingModal()">
-          <div style="color:#FF9F45; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">💰 ADMIN — PAYMENT PENDING APPROVALS</div>
+          <div style="color:#FF9F45; font-size:13px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">💰 ADMIN — PAYMENT PENDING APPROVALS</div>
           <div id="adminPaymentPendingList" style="display:flex; flex-direction:column; gap:8px;">
-            <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
+            <div style="color:#FFFFFF; font-size:13.5px;">Loading...</div>
           </div>
         </div>
         <div id="adminLeadsWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openLeadsTrackerModal()">
-          <div style="color:#BB86FC; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">📋 ADMIN — LEADS TRACKER</div>
+          <div style="color:#BB86FC; font-size:13px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">📋 ADMIN — LEADS TRACKER</div>
           <div id="adminLeadsSummary" style="display:flex; gap:6px; flex-wrap:wrap;">
-            <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
+            <div style="color:#FFFFFF; font-size:13.5px;">Loading...</div>
           </div>
         </div>
         <div id="adminGoogleRatingWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openGoogleRatingModal()">
-          <div style="color:#FFC800; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">⭐ ADMIN — GOOGLE RATING</div>
-          <div id="adminGoogleRatingSummary" style="color:#FFFFFF; font-size:12px;">Loading...</div>
+          <div style="color:#FFC800; font-size:13px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">⭐ ADMIN — GOOGLE RATING</div>
+          <div id="adminGoogleRatingSummary" style="color:#FFFFFF; font-size:13.5px;">Loading...</div>
         </div>
         <div id="adminStatsWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openAnalyticsModal()">
-          <div style="color:#2EC4B6; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">📈 ADMIN — VISITS & SIGNUPS</div>
+          <div style="color:#2EC4B6; font-size:13px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">📈 ADMIN — VISITS & SIGNUPS</div>
           <div style="display:flex; gap:8px;">
             <div style="flex:1; text-align:center;">
-              <div id="adminStatsVisits" style="color:#58A6FF; font-size:20px; font-weight:700;">0</div>
-              <div style="color:#FFFFFF; font-size:9.5px;">Visits</div>
+              <div id="adminStatsVisits" style="color:#58A6FF; font-size:23px; font-weight:700;">0</div>
+              <div style="color:#FFFFFF; font-size:11px;">Visits</div>
             </div>
             <div style="flex:1; text-align:center;">
-              <div id="adminStatsSignups" style="color:#FFC800; font-size:20px; font-weight:700;">0</div>
-              <div style="color:#FFFFFF; font-size:9.5px;">Signups</div>
+              <div id="adminStatsSignups" style="color:#FFC800; font-size:23px; font-weight:700;">0</div>
+              <div style="color:#FFFFFF; font-size:11px;">Signups</div>
             </div>
             <div style="flex:1; text-align:center;">
-              <div id="adminStatsConversion" style="color:#2ECC71; font-size:20px; font-weight:700;">0</div>
-              <div style="color:#FFFFFF; font-size:9.5px;">Conversion</div>
+              <div id="adminStatsConversion" style="color:#2ECC71; font-size:23px; font-weight:700;">0</div>
+              <div style="color:#FFFFFF; font-size:11px;">Conversion</div>
             </div>
             <div style="flex:1; text-align:center;" onclick="event.stopPropagation(); openRevenueModal();">
-              <div id="adminStatsRedemptions" style="color:#FF9F45; font-size:20px; font-weight:700;">0</div>
-              <div style="color:#FFFFFF; font-size:9.5px;">Redemptions</div>
+              <div id="adminStatsRedemptions" style="color:#FF9F45; font-size:23px; font-weight:700;">0</div>
+              <div style="color:#FFFFFF; font-size:11px;">Redemptions</div>
             </div>
           </div>
         </div>
         <div id="adminLiveActivityWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openLiveActivityModal()">
-          <div style="color:#FF6B9D; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">📡 ADMIN — LIVE ACTIVITY</div>
+          <div style="color:#FF6B9D; font-size:13px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">📡 ADMIN — LIVE ACTIVITY</div>
           <div id="adminLiveActivityList" style="display:flex; flex-direction:column; gap:8px;">
-            <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
+            <div style="color:#FFFFFF; font-size:13.5px;">Loading...</div>
           </div>
         </div>
         <div id="adminCustomerActivityWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px;">
-          <div style="color:#4CD964; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px; cursor:pointer;" onclick="openCustomerActivityModal()">👥 ADMIN — CUSTOMER ACTIVITY</div>
-          <input type="text" id="custActivitySearch" placeholder="🔍 Search email / name..." oninput="filterCustomerActivityList(this.value)" style="width:100%; background:#111; border:1px solid #333; border-radius:8px; padding:8px 10px; color:#fff; font-size:12px; margin-bottom:10px; box-sizing:border-box;">
+          <div style="color:#4CD964; font-size:13px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px; cursor:pointer;" onclick="openCustomerActivityModal()">👥 ADMIN — CUSTOMER ACTIVITY</div>
+          <input type="text" id="custActivitySearch" placeholder="🔍 Search email / name..." oninput="filterCustomerActivityList(this.value)" style="width:100%; background:#111; border:1px solid #333; border-radius:8px; padding:8px 10px; color:#fff; font-size:13.5px; margin-bottom:10px; box-sizing:border-box;">
           <div id="adminCustomerActivityList" style="display:flex; flex-direction:column; gap:8px;">
-            <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
+            <div style="color:#FFFFFF; font-size:13.5px;">Loading...</div>
           </div>
         </div>
         <div id="adminPremiumSubsWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openPremiumSubscribersModal()">
-          <div style="color:#FFD54F; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">⭐ ADMIN — PREMIUM SUBSCRIBERS</div>
+          <div style="color:#FFD54F; font-size:13px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">⭐ ADMIN — PREMIUM SUBSCRIBERS</div>
           <div id="adminPremiumSubsList" style="display:flex; flex-direction:column; gap:8px;">
-            <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
+            <div style="color:#FFFFFF; font-size:13.5px;">Loading...</div>
           </div>
         </div>
         <div id="adminTrialExpiryWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openTrialExpiryModal()">
-          <div style="color:#FF6B6B; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">⏰ ADMIN — TRIAL EXPIRING SOON</div>
+          <div style="color:#FF6B6B; font-size:13px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">⏰ ADMIN — TRIAL EXPIRING SOON</div>
           <div id="adminTrialExpiryList" style="display:flex; flex-direction:column; gap:8px;">
-            <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
+            <div style="color:#FFFFFF; font-size:13.5px;">Loading...</div>
           </div>
         </div>
         <div id="adminRenewalDueWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openRenewalDueModal()">
-          <div style="color:#FFA07A; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">🔔 ADMIN — RENEWAL DUE SOON</div>
+          <div style="color:#FFA07A; font-size:13px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">🔔 ADMIN — RENEWAL DUE SOON</div>
           <div id="adminRenewalDueList" style="display:flex; flex-direction:column; gap:8px;">
-            <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
+            <div style="color:#FFFFFF; font-size:13.5px;">Loading...</div>
           </div>
         </div>
         <div id="adminToolsSection" style="background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:6px 16px; margin-bottom:14px;">
