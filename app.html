@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260724-1815">
+<meta name="app-build" content="20260724-1824">
 <style>
   :root{
     --yellow:#FFC800;
@@ -106,6 +106,10 @@
   @keyframes bannerShimmer{
     0%{ background-position:0% 50%; }
     100%{ background-position:200% 50%; }
+  }
+  @keyframes flashScrollRTL{
+    0%{ transform:translateX(0); }
+    100%{ transform:translateX(-100%); }
   }
 
   /* ===== VEHICLE CHIPS ===== */
@@ -398,6 +402,9 @@
 
       <!-- HOME TAB -->
       <div id="tab-home">
+        <div id="flashMessageBanner" style="display:none; overflow:hidden; white-space:nowrap; background:#1A1400; border:1px solid #FFC800; border-radius:10px; padding:9px 0; margin-bottom:14px;">
+          <div id="flashMessageText" style="display:inline-block; padding-left:100%; color:#FFC800; font-weight:700; font-size:13px;"></div>
+        </div>
         <div id="adminSupportBanner" style="display:none; background:#3A0E0E; border:1px solid #FF6B6B; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openAdminSupportInbox()">
           <div style="color:#FF6B6B; font-weight:700; font-size:14px;">🔴 புது Support Message வந்திருக்கு!</div>
           <div id="adminSupportBannerText" style="color:#fff; font-size:12.5px; margin-top:4px;"></div>
@@ -675,6 +682,10 @@
         </div>
         <div class="settings-row" id="openGoogleRatingBtn" style="display:none;">
           <div class="settings-row-left"><span class="ic">⭐</span><span class="txt">Google Rating Update பண்ணு</span></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="settings-row" id="openFlashMessageBtn" style="display:none;">
+          <div class="settings-row-left"><span class="ic">📢</span><span class="txt">Flash Message Set பண்ணு</span></div>
           <span class="arrow">›</span>
         </div>
         <div class="settings-row" id="openRevenueBtn" style="display:none;">
@@ -1055,6 +1066,7 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('openInactiveUsersBtn').style.display = '';
         document.getElementById('openLeadsTrackerBtn').style.display = '';
         document.getElementById('openGoogleRatingBtn').style.display = '';
+        document.getElementById('openFlashMessageBtn').style.display = '';
         document.getElementById('openRevenueBtn').style.display = '';
         document.getElementById('openRenewalDueBtn').style.display = '';
         document.getElementById('openRenewalDueConfigBtn').style.display = '';
@@ -1926,6 +1938,45 @@ let leadsTrackerFilter = 'all';
 function normalizePhoneDigits(p){
   return (p||'').replace(/\D/g,'').slice(-10); // last 10 digits, ignore +91 etc.
 }
+function openFlashMessageConfigModal(){
+  db.ref('appConfig/flashMessage').once('value').then(snap=>{
+    const data = snap.val() || {};
+    const color = data.color || '#FFC800';
+    openModal(`
+      <div class="modal-title">📢 Flash Message Set பண்ணு<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#888; font-size:12px; margin-bottom:16px;">Customer app Home tab-ல மேல் ஒரு scrolling ticker message (offers/announcements) காமிக்கும், right-to-left scroll ஆகும்.</div>
+      <div class="field-label">Message Text</div>
+      <input type="text" id="flashMsgTextInput" value="${escapeHtml(data.text||'')}" placeholder="எ.கா. 🎉 Special Offer: ₹250-க்கு Premium!">
+      <div class="field-label">Scroll Speed</div>
+      <select id="flashMsgSpeedInput">
+        <option value="35" ${data.speedSec===35?'selected':''}>🐢 Slow</option>
+        <option value="22" ${(!data.speedSec || data.speedSec===22)?'selected':''}>🚶 Medium</option>
+        <option value="12" ${data.speedSec===12?'selected':''}>🏃 Fast</option>
+      </select>
+      <div class="field-label">Text Color</div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <input type="color" id="flashMsgColorInput" value="${color}" style="width:52px; height:38px; border:none; border-radius:8px; background:transparent; padding:0;">
+        <span style="color:#888; font-size:12px;">Banner border-க்கும் இதே color use ஆகும்</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; margin-top:16px;">
+        <input type="checkbox" id="flashMsgEnabledInput" ${data.enabled ? 'checked' : ''} style="width:18px; height:18px;">
+        <label for="flashMsgEnabledInput" style="color:#fff; font-size:13px;">காமிக்கணுமா? (Enable)</label>
+      </div>
+      <button class="btn-primary" id="saveFlashMsgBtn" style="margin-top:16px;">Save</button>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.getElementById('saveFlashMsgBtn').addEventListener('click', ()=>{
+      const text = document.getElementById('flashMsgTextInput').value.trim();
+      const speedSec = Number(document.getElementById('flashMsgSpeedInput').value);
+      const msgColor = document.getElementById('flashMsgColorInput').value;
+      const enabled = document.getElementById('flashMsgEnabledInput').checked;
+      db.ref('appConfig/flashMessage').set({ text, speedSec, color: msgColor, enabled, updatedAt: Date.now() }).then(()=>{
+        showToast('Flash Message save ஆச்சு!');
+        closeModal();
+      }).catch(err=> showToast('Failed: ' + err.message));
+    });
+  });
+}
 function openGoogleRatingModal(){
   db.ref('appConfig/googleRating').once('value').then(snap=>{
     const data = snap.val() || {};
@@ -2569,6 +2620,26 @@ function renderComebackReminder(){
   banner.style.display = 'block';
 }
 
+let _flashMsgLoaded = false;
+function renderFlashMessageBanner(){
+  const banner = document.getElementById('flashMessageBanner');
+  const textEl = document.getElementById('flashMessageText');
+  if(!banner || !textEl) return;
+  if(_flashMsgLoaded) return; // fetch + apply only once per app load
+  _flashMsgLoaded = true;
+  db.ref('appConfig/flashMessage').once('value').then(snap=>{
+    const data = snap.val();
+    if(!data || !data.enabled || !data.text){ banner.style.display = 'none'; return; }
+    textEl.textContent = data.text;
+    const speedSec = data.speedSec || 22;
+    const color = data.color || '#FFC800';
+    textEl.style.color = color;
+    textEl.style.animation = `flashScrollRTL ${speedSec}s linear infinite`;
+    banner.style.borderColor = color;
+    banner.style.display = 'block';
+  }).catch(()=>{ banner.style.display = 'none'; });
+}
+
 function renderGoogleReviewBanner(){
   const banner = document.getElementById('googleReviewBanner');
   if(!banner) return;
@@ -2725,6 +2796,7 @@ function initFirebase(){
     renderDocVaultReminder();
     renderComebackReminder();
     renderGoogleReviewBanner();
+    renderFlashMessageBanner();
     STATE.categories = val.categories || DEFAULT_CATEGORIES;
     STATE.paymodes = val.paymodes || DEFAULT_PAYMODES;
     STATE.expenses = val.expenses || {};
@@ -3650,6 +3722,7 @@ document.getElementById('openAdminUserListBtn').addEventListener('click', openAd
 document.getElementById('openInactiveUsersBtn').addEventListener('click', openInactiveUsersModal);
 document.getElementById('openLeadsTrackerBtn').addEventListener('click', openLeadsTrackerModal);
 document.getElementById('openGoogleRatingBtn').addEventListener('click', openGoogleRatingModal);
+document.getElementById('openFlashMessageBtn').addEventListener('click', openFlashMessageConfigModal);
 document.getElementById('openPremiumSubsBtn').addEventListener('click', openPremiumSubscribersModal);
 document.getElementById('openAnalyticsBtn').addEventListener('click', openAnalyticsModal);
 document.getElementById('openLiveActivityBtn').addEventListener('click', openLiveActivityModal);
