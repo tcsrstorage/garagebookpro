@@ -424,7 +424,7 @@
         <div id="premiumStatusBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center;"></div>
         <div id="docVaultReminderBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center; background:rgba(88,166,255,0.12); color:#58A6FF; border:1px solid rgba(88,166,255,0.35); cursor:pointer;">📎 உங்க Insurance/RC/PUC Documents இன்னும் upload பண்ணல — ஒரு நிமிடத்துல செய்யுங்க, எப்போ வேணும்னாலும் easy-ஆ access பண்ணலாம். <u>Upload பண்ண இங்க Click பண்ணுங்க</u></div>
         <div id="homePremiumBanner" class="home-premium-banner hidden">
-          <span>⭐ Premium-க்கு switch பண்ணுங்க — <span class="price-highlight">₹21/month</span> மட்டும்</span>
+          <span>⭐ Premium-க்கு switch பண்ணுங்க — <span class="price-highlight" id="homePremiumBannerPrice">₹21/month</span> மட்டும்</span>
           <div style="margin-top:8px; font-size:12.5px; font-weight:700; text-decoration:underline;">👉 Payment பண்ண இங்க Click பண்ணுங்க</div>
         </div>
         <div id="redeemCodeQuickRow" style="display:none; margin-bottom:14px;" onclick="openUpgradeModal()">
@@ -2065,6 +2065,14 @@ function initFirebase(){
     STATE.isPremiumActive = STATE.tier === 'paid' || STATE.trialActive;
     const bannerEl = document.getElementById('homePremiumBanner');
     if(bannerEl) bannerEl.classList.toggle('hidden', STATE.isPremiumActive);
+    if(bannerEl && !STATE.homePremiumPriceLoaded){
+      STATE.homePremiumPriceLoaded = true;
+      getAppConfigNumber('premiumPrice', 250).then(price=>{
+        const perMonth = Math.round(price/12);
+        const priceEl = document.getElementById('homePremiumBannerPrice');
+        if(priceEl) priceEl.textContent = `₹${perMonth}/month`;
+      });
+    }
     const redeemRow = document.getElementById('redeemCodeQuickRow');
     if(redeemRow) redeemRow.style.display = (STATE.tier !== 'paid' && STATE.trialActive) ? 'block' : 'none';
     renderTrialBanner();
@@ -3735,12 +3743,17 @@ function openFreeLimitModal(){
     <div style="text-align:center; padding:10px 0 6px;">
       <div style="font-size:44px; margin-bottom:12px;">🔒</div>
       <div style="color:#fff; font-size:15px; font-weight:600; margin-bottom:10px;">Free Tier-ல் 1 Vehicle மட்டும் Add பண்ண முடியும்</div>
-      <div style="color:#B8B8B8; font-size:13px; line-height:1.6; margin-bottom:20px;">2வது Vehicle-ஐயும் Add பண்ண, Unlimited vehicles-க்கு Premium-க்கு Upgrade பண்ணுங்க — ஒரே ₹250/year (₹21/month மட்டும்).</div>
+      <div style="color:#B8B8B8; font-size:13px; line-height:1.6; margin-bottom:20px;">2வது Vehicle-ஐயும் Add பண்ண, Unlimited vehicles-க்கு Premium-க்கு Upgrade பண்ணுங்க — ஒரே <span id="freeLimitPriceText">₹250/year (₹21/month மட்டும்)</span>.</div>
       <button class="btn-primary" id="goToUpgradeBtn">⭐ Premium-க்கு Upgrade பண்ணு</button>
     </div>
   `);
   document.getElementById('closeModalX').addEventListener('click', closeModal);
   document.getElementById('goToUpgradeBtn').addEventListener('click', openUpgradeModal);
+  getAppConfigNumber('premiumPrice', 250).then(price=>{
+    const perMonth = Math.round(price/12);
+    const el = document.getElementById('freeLimitPriceText');
+    if(el) el.textContent = `₹${price}/year (₹${perMonth}/month மட்டும்)`;
+  });
 }
 function openAddVehicleModal(){
   if(!STATE.isPremiumActive && Object.keys(STATE.vehicles).length >= FREE_TIER_VEHICLE_LIMIT){
