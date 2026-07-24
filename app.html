@@ -423,6 +423,7 @@
         <div id="trialBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center;"></div>
         <div id="premiumStatusBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center;"></div>
         <div id="docVaultReminderBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center; background:rgba(88,166,255,0.12); color:#58A6FF; border:1px solid rgba(88,166,255,0.35); cursor:pointer;">📎 உங்க Insurance/RC/PUC Documents இன்னும் upload பண்ணல — ஒரு நிமிடத்துல செய்யுங்க, எப்போ வேணும்னாலும் easy-ஆ access பண்ணலாம். <u>Upload பண்ண இங்க Click பண்ணுங்க</u></div>
+        <div id="comebackReminderBanner" style="display:none; border-radius:14px; padding:14px 16px; margin-bottom:14px; font-weight:600; font-size:13.5px; text-align:center; background:rgba(255,200,0,0.10); color:#FFC800; border:1px solid rgba(255,200,0,0.35); cursor:pointer;"></div>
         <div id="homePremiumBanner" class="home-premium-banner hidden">
           <span>⭐ Premium-க்கு switch பண்ணுங்க — <span class="price-highlight" id="homePremiumBannerPrice">₹21/month</span> மட்டும்</span>
           <div style="margin-top:8px; font-size:12.5px; font-weight:700; text-decoration:underline;">👉 Payment பண்ண இங்க Click பண்ணுங்க</div>
@@ -641,6 +642,10 @@
         </div>
         <div class="settings-row" id="openCustomerActivityBtn" style="display:none;">
           <div class="settings-row-left"><span class="ic">👥</span><span class="txt">Customer Activity</span></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="settings-row" id="openInactiveUsersBtn" style="display:none;">
+          <div class="settings-row-left"><span class="ic">😴</span><span class="txt">Inactive Users</span></div>
           <span class="arrow">›</span>
         </div>
         <div class="settings-row" id="openRevenueBtn" style="display:none;">
@@ -1008,6 +1013,7 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('openAnalyticsBtn').style.display = '';
         document.getElementById('openLiveActivityBtn').style.display = '';
         document.getElementById('openCustomerActivityBtn').style.display = '';
+        document.getElementById('openInactiveUsersBtn').style.display = '';
         document.getElementById('openRevenueBtn').style.display = '';
         document.getElementById('testTrialBtn').style.display = '';
         document.getElementById('openAdminSupportBtn').style.display = '';
@@ -1566,6 +1572,55 @@ function openPremiumSubscribersModal(){
     });
   });
 }
+function openInactiveUsersModal(){
+  const INACTIVE_THRESHOLD_MS = 3*24*60*60*1000; // 3 days
+  db.ref('adminUserDirectory').once('value').then(snap=>{
+    const directory = snap.val() || {};
+    const now = Date.now();
+    const entries = Object.entries(directory).filter(([uid]) => uid !== ADMIN_UID);
+    // Never opened the app (no lastActiveAt) sort first, then oldest lastActiveAt.
+    const inactive = entries.filter(([_, u]) => !u.lastActiveAt || (now - u.lastActiveAt) > INACTIVE_THRESHOLD_MS);
+    inactive.sort((a,b) => (a[1].lastActiveAt||0) - (b[1].lastActiveAt||0));
+    const rows = inactive.map(([uid, u])=>{
+      const who = u.name || u.email || uid.slice(0,8);
+      const statusLabel = !u.lastActiveAt
+        ? `<span style="color:#FF6B6B; font-size:11.5px;">Signup ஆனா app-ஐ ஒருபோதும் திறக்கல</span>`
+        : `<span style="color:#FFC800; font-size:11.5px;">${timeAgo(u.lastActiveAt)} இருந்து inactive</span>`;
+      const tierLabel = u.tier==='paid' ? '⭐ Premium' : (u.trialEndsAt && u.trialEndsAt > now ? '🎁 Trial' : 'Free');
+      const phoneHtml = u.phone ? `<a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;" onclick="event.stopPropagation()">📞 ${escapeHtml(u.phone)}</a> <a href="https://wa.me/${waPhone(u.phone)}" target="_blank" style="color:#4CD964; text-decoration:none;" onclick="event.stopPropagation()">💬</a>` : '';
+      return `
+      <div style="padding:10px 0; border-bottom:1px solid #222;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="color:#fff; font-size:13px; font-weight:600;">${escapeHtml(who)}</span>
+          <span style="color:#666; font-size:11px;">${tierLabel}</span>
+        </div>
+        <div style="margin-top:3px;">${statusLabel}</div>
+        <div style="margin-top:6px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          ${phoneHtml}
+          <span class="nudgeReminderBtn" data-uid="${uid}" data-name="${escapeHtml(u.name||'')}" data-email="${escapeHtml(u.email||'')}" data-phone="${escapeHtml(u.phone||'')}" style="display:inline-block; color:#FFC800; font-size:11.5px; border:1px solid #FFC800; border-radius:8px; padding:4px 10px; cursor:pointer;">💬 Nudge அனுப்பு</span>
+        </div>
+      </div>`;
+    }).join('');
+    openModal(`
+      <div class="modal-title">😴 Inactive Users<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#888; font-size:12px; margin-bottom:14px;">3+ நாள் app திறக்காதவங்க, அல்லது signup பண்ணி ஒருபோதும் use பண்ணாதவங்க. "Nudge அனுப்பு" கிளிக் பண்ணா in-app message prefill ஆகும்.</div>
+      <div style="max-height:440px; overflow-y:auto;">
+        ${rows || '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Super! எல்லாரும் active ஆ இருக்காங்க 🎉</div>'}
+      </div>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.querySelectorAll('.nudgeReminderBtn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const uid = btn.getAttribute('data-uid');
+        const name = btn.getAttribute('data-name');
+        const email = btn.getAttribute('data-email');
+        const phone = btn.getAttribute('data-phone');
+        const msg = `வணக்கம்${name ? ' ' + name : ''}! Garage Book Pro-ல உங்க vehicle expenses track பண்ண மறந்துட்டீங்களா? 🚗 ஒரு நிமிடம் இருந்தா, fuel/service entry போட்டு பாருங்க — free-ஆ இருக்கும். ஏதாவது doubt இருந்தா இங்கயே கேளுங்க! 🙏`;
+        openAdminThreadView(uid, { userName: name, userEmail: email, userPhone: phone }, {}, msg);
+      });
+    });
+  }).catch(()=>{});
+}
 function openAdminUserListModal(){
   db.ref('adminUserDirectory').once('value').then(snap=>{
     const val = snap.val() || {};
@@ -1947,6 +2002,33 @@ function renderDocVaultReminder(){
   banner.style.display = 'block';
 }
 
+function renderComebackReminder(){
+  const banner = document.getElementById('comebackReminderBanner');
+  if(!banner) return;
+  const vehicles = Object.entries(STATE.vehicles || {});
+  // Only nudge people who've actually onboarded (added a vehicle) — a brand new
+  // signup with zero vehicles isn't "inactive", they just haven't started yet.
+  if(vehicles.length === 0){ banner.style.display = 'none'; return; }
+  const IDLE_THRESHOLD_MS = 5*24*60*60*1000; // 5 days
+  let lastActivityTs = 0;
+  Object.values(STATE.expenses || {}).forEach(e=>{
+    const ts = e.createdAt || (e.date ? new Date(e.date+'T00:00:00').getTime() : 0);
+    if(ts > lastActivityTs) lastActivityTs = ts;
+  });
+  Object.values(STATE.dailyLogs || {}).forEach(l=>{
+    const ts = l.createdAt || (l.date ? new Date(l.date+'T00:00:00').getTime() : 0);
+    if(ts > lastActivityTs) lastActivityTs = ts;
+  });
+  if(lastActivityTs === 0){ banner.style.display = 'none'; return; } // never logged anything — doc vault/onboarding banners already cover this
+  const idleFor = Date.now() - lastActivityTs;
+  if(idleFor < IDLE_THRESHOLD_MS){ banner.style.display = 'none'; return; }
+  const daysIdle = Math.floor(idleFor / (24*60*60*1000));
+  banner.innerHTML = `👋 ${daysIdle} நாளா entry போடல — இன்னைக்கு ஒரு fuel/service log பண்ணுங்களா? <u>இங்க Click பண்ணுங்க</u>`;
+  banner.onclick = ()=> openAddEntryModal();
+  banner.style.display = 'block';
+}
+
+
 function ensureUserProfile(){
   db.ref(ROOT + '/profile').once('value').then(snap=>{
     if(!snap.exists()){
@@ -2079,6 +2161,7 @@ function initFirebase(){
     renderPremiumStatusBanner();
     STATE.vehicles = val.vehicles || {};
     renderDocVaultReminder();
+    renderComebackReminder();
     STATE.categories = val.categories || DEFAULT_CATEGORIES;
     STATE.paymodes = val.paymodes || DEFAULT_PAYMODES;
     STATE.expenses = val.expenses || {};
@@ -2979,6 +3062,7 @@ document.getElementById('openAdminTrialConfigBtn').addEventListener('click', ope
 document.getElementById('openFuelPriceConfigBtn').addEventListener('click', openFuelPriceConfigModal);
 document.getElementById('openPayLinkConfigBtn').addEventListener('click', openPayLinkConfigModal);
 document.getElementById('openAdminUserListBtn').addEventListener('click', openAdminUserListModal);
+document.getElementById('openInactiveUsersBtn').addEventListener('click', openInactiveUsersModal);
 document.getElementById('openPremiumSubsBtn').addEventListener('click', openPremiumSubscribersModal);
 document.getElementById('openAnalyticsBtn').addEventListener('click', openAnalyticsModal);
 document.getElementById('openLiveActivityBtn').addEventListener('click', openLiveActivityModal);
