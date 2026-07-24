@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260724-0632">
+<meta name="app-build" content="20260724-0720">
 <style>
   :root{
     --yellow:#FFC800;
@@ -1845,7 +1845,7 @@ function loadPaymentPendingWidget(){
     const directory = dirSnap.val() || {};
     const list = Object.entries(threads).sort((a,b)=> (a[1].lastTimestamp||0)-(b[1].lastTimestamp||0)); // oldest waiting first
     if(list.length === 0){
-      listEl.innerHTML = '<div style="color:#666; font-size:12px;">Pending payment approvals இல்ல 👍</div>';
+      listEl.innerHTML = '<div style="color:#FFFFFF; font-size:12px;">Pending payment approvals இல்ல 👍</div>';
       return;
     }
     listEl.innerHTML = `<div style="max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">` + list.map(([uidKey,t])=>{
@@ -1896,7 +1896,7 @@ function openPaymentPendingModal(){
     openModal(`
       <div class="modal-title">💰 Payment Pending Approvals<span class="close-x" id="closeModalX">✕</span></div>
       <div style="color:#888; font-size:12px; margin-bottom:14px;">"Payment Done" click பண்ணின customers இங்க வரிசையா காட்டப்படுவாங்க — Code அனுப்பினதும் "✅ Resolved" press பண்ணுங்க.</div>
-      <div>${rows || '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Pending payment approvals இல்ல 👍</div>'}</div>
+      <div>${rows || '<div style="color:#FFFFFF; font-size:13px; text-align:center; padding:20px 0;">Pending payment approvals இல்ல 👍</div>'}</div>
     `);
     document.getElementById('closeModalX').addEventListener('click', closeModal);
     document.querySelectorAll('.openThreadBtn').forEach(btn=>{
@@ -2254,7 +2254,7 @@ function loadLeadsWidget(){
     el.innerHTML = Object.entries(LEAD_STATUSES).map(([key,st])=>
       `<div style="background:#161616; border-radius:8px; padding:6px 10px; text-align:center;">
         <span style="color:${st.color}; font-size:13px; font-weight:800;">${counts[key]}</span>
-        <span style="color:#888; font-size:10px; margin-left:4px;">${st.label.replace(/^\S+\s/,'')}</span>
+        <span style="color:#FFFFFF; font-size:10px; margin-left:4px;">${st.label.replace(/^\S+\s/,'')}</span>
       </div>`
     ).join('');
   }).catch(()=>{
@@ -2332,7 +2332,7 @@ function openLeadsTrackerModal(){
         return Object.entries(LEAD_STATUSES).map(([key,st])=>
           `<div style="flex:1; min-width:64px; background:#161616; border-radius:10px; padding:8px 4px; text-align:center;">
             <div style="color:${st.color}; font-size:16px; font-weight:800;">${counts[key]}</div>
-            <div style="color:#888; font-size:9px; margin-top:2px;">${st.label.replace(/^\S+\s/,'')}</div>
+            <div style="color:#FFFFFF; font-size:9px; margin-top:2px;">${st.label.replace(/^\S+\s/,'')}</div>
           </div>`
         ).join('');
       }
