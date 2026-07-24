@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260724-0841">
+<meta name="app-build" content="20260724-0850">
 <style>
   :root{
     --yellow:#FFC800;
@@ -673,6 +673,10 @@
           <div class="settings-row-left"><span class="ic">📋</span><span class="txt">Leads Tracker</span></div>
           <span class="arrow">›</span>
         </div>
+        <div class="settings-row" id="openGoogleRatingBtn" style="display:none;">
+          <div class="settings-row-left"><span class="ic">⭐</span><span class="txt">Google Rating Update பண்ணு</span></div>
+          <span class="arrow">›</span>
+        </div>
         <div class="settings-row" id="openRevenueBtn" style="display:none;">
           <div class="settings-row-left"><span class="ic">💰</span><span class="txt">Revenue Tracker</span></div>
           <span class="arrow">›</span>
@@ -1050,6 +1054,7 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('openCustomerActivityBtn').style.display = '';
         document.getElementById('openInactiveUsersBtn').style.display = '';
         document.getElementById('openLeadsTrackerBtn').style.display = '';
+        document.getElementById('openGoogleRatingBtn').style.display = '';
         document.getElementById('openRevenueBtn').style.display = '';
         document.getElementById('openRenewalDueBtn').style.display = '';
         document.getElementById('openRenewalDueConfigBtn').style.display = '';
@@ -1920,6 +1925,31 @@ const LEAD_STATUSES = {
 let leadsTrackerFilter = 'all';
 function normalizePhoneDigits(p){
   return (p||'').replace(/\D/g,'').slice(-10); // last 10 digits, ignore +91 etc.
+}
+function openGoogleRatingModal(){
+  db.ref('appConfig/googleRating').once('value').then(snap=>{
+    const data = snap.val() || {};
+    openModal(`
+      <div class="modal-title">⭐ Google Rating Update பண்ணு<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#888; font-size:12px; margin-bottom:16px;">Google-ல உங்க business rating-ஐ check பண்ணி (business.google.com → Read reviews), இங்க manual-ஆ update பண்ணுங்க. Live-ஆ automatic-ஆ pull பண்ண Google API setup தேவை, இப்போ manual தான் எளிதானது.</div>
+      <div class="field-label">Star Rating (0-5)</div>
+      <input type="number" id="googleRatingStarsInput" step="0.1" min="0" max="5" value="${data.stars||''}" placeholder="எ.கா. 4.5">
+      <div class="field-label">Total Reviews Count</div>
+      <input type="number" id="googleRatingCountInput" min="0" value="${data.reviewCount||''}" placeholder="எ.கா. 3">
+      <button class="btn-primary" id="saveGoogleRatingBtn" style="margin-top:14px;">Save</button>
+      <a href="https://g.page/r/Cfwf-i1zNvFzEAE/review" target="_blank" style="display:block; text-align:center; margin-top:14px; color:#58A6FF; font-size:12.5px;">🔗 Reviews page-ஐ திற (check பண்ண)</a>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.getElementById('saveGoogleRatingBtn').addEventListener('click', ()=>{
+      const stars = Number(document.getElementById('googleRatingStarsInput').value);
+      const reviewCount = Number(document.getElementById('googleRatingCountInput').value);
+      if(!stars || stars < 0 || stars > 5){ showToast('0-5 க்குள் rating போடுங்க'); return; }
+      db.ref('appConfig/googleRating').set({ stars, reviewCount: reviewCount||0, updatedAt: Date.now() }).then(()=>{
+        showToast('Google Rating update ஆச்சு!');
+        closeModal();
+      }).catch(err=> showToast('Failed: ' + err.message));
+    });
+  });
 }
 function openLeadsTrackerModal(){
   Promise.all([
@@ -3617,6 +3647,7 @@ document.getElementById('openPayLinkConfigBtn').addEventListener('click', openPa
 document.getElementById('openAdminUserListBtn').addEventListener('click', openAdminUserListModal);
 document.getElementById('openInactiveUsersBtn').addEventListener('click', openInactiveUsersModal);
 document.getElementById('openLeadsTrackerBtn').addEventListener('click', openLeadsTrackerModal);
+document.getElementById('openGoogleRatingBtn').addEventListener('click', openGoogleRatingModal);
 document.getElementById('openPremiumSubsBtn').addEventListener('click', openPremiumSubscribersModal);
 document.getElementById('openAnalyticsBtn').addEventListener('click', openAnalyticsModal);
 document.getElementById('openLiveActivityBtn').addEventListener('click', openLiveActivityModal);
