@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260724-0243">
+<meta name="app-build" content="20260724-0350">
 <style>
   :root{
     --yellow:#FFC800;
@@ -1467,7 +1467,8 @@ function openTrialExpiryModal(){
       const expired = daysLeft < 0;
       const color = expired ? '#FF6B6B' : '#FFC800';
       const label = expired ? `${Math.abs(daysLeft)} நாள் முன்னாடி முடிஞ்சுது` : (daysLeft===0 ? 'இன்னைக்கே முடியுது' : `${daysLeft} நாள்ல முடியுது`);
-      const phoneHtml = u.phone ? ` <a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;">📞</a> <a href="https://wa.me/${waPhone(u.phone)}" target="_blank" style="color:#4CD964; font-size:12px; text-decoration:none;">💬</a>` : '';
+      const waMsgTrial = encodeURIComponent(`வணக்கம்${u.name ? ' ' + u.name : ''}! உங்க Garage Book Pro trial period முடியப்போகுது (அல்லது முடிஞ்சிருச்சு). Premium-க்கு continue பண்ண ₹${price} pay பண்ணி, "Payment Done" message அனுப்புங்க — உடனே Redeem Code அனுப்புறேன். 🙏`);
+      const phoneHtml = u.phone ? ` <a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;">📞</a> <a href="https://wa.me/${waPhone(u.phone)}?text=${waMsgTrial}" target="_blank" style="color:#4CD964; font-size:12px; text-decoration:none;">💬</a>` : '';
       return `
       <div style="padding:10px 0; border-bottom:1px solid #222;">
         <div style="color:#fff; font-size:13px; font-weight:600;">${escapeHtml(who)}${phoneHtml}</div>
@@ -1571,7 +1572,9 @@ function openRenewalDueModal(){
       const expired = daysLeft < 0;
       const color = expired ? '#FF6B6B' : '#FFC800';
       const label = expired ? `${Math.abs(daysLeft)} நாள் முன்னாடி முடிஞ்சுது` : (daysLeft===0 ? 'இன்னைக்கே முடியுது' : `${daysLeft} நாள்ல முடியுது`);
-      const phoneHtml = u.phone ? ` <a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;">📞</a> <a href="https://wa.me/${waPhone(u.phone)}" target="_blank" style="color:#4CD964; font-size:12px; text-decoration:none;">💬</a>` : '';
+      const expiryTextForWa = new Date(u.premiumExpiresAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+      const waMsgRenewal = encodeURIComponent(`வணக்கம்${u.name ? ' ' + u.name : ''}! உங்க Garage Book Pro Premium subscription ${expiryTextForWa}-ல expire ஆகுது. Renew பண்ண ₹${price} pay பண்ணி, "Payment Done" message அனுப்புங்க — புது Redeem Code அனுப்புறேன். 🙏`);
+      const phoneHtml = u.phone ? ` <a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;">📞</a> <a href="https://wa.me/${waPhone(u.phone)}?text=${waMsgRenewal}" target="_blank" style="color:#4CD964; font-size:12px; text-decoration:none;">💬</a>` : '';
       return `
       <div style="padding:10px 0; border-bottom:1px solid #222;">
         <div style="color:#fff; font-size:13px; font-weight:600;">${escapeHtml(who)}${phoneHtml}</div>
@@ -1860,7 +1863,8 @@ function openInactiveUsersModal(){
         ? `<span style="color:#FF6B6B; font-size:11.5px;">Signup ஆனா app-ஐ ஒருபோதும் திறக்கல</span>`
         : `<span style="color:#FFC800; font-size:11.5px;">${timeAgo(u.lastActiveAt)} இருந்து inactive</span>`;
       const tierLabel = u.tier==='paid' ? '⭐ Premium' : (u.trialEndsAt && u.trialEndsAt > now ? '🎁 Trial' : 'Free');
-      const phoneHtml = u.phone ? `<a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;" onclick="event.stopPropagation()">📞 ${escapeHtml(u.phone)}</a> <a href="https://wa.me/${waPhone(u.phone)}" target="_blank" style="color:#4CD964; text-decoration:none;" onclick="event.stopPropagation()">💬</a>` : '';
+      const waMsgNudge = encodeURIComponent(`வணக்கம்${u.name ? ' ' + u.name : ''}! Garage Book Pro-ல உங்க vehicle expenses track பண்ண மறந்துட்டீங்களா? 🚗 ஒரு நிமிடம் இருந்தா, fuel/service entry போட்டு பாருங்க — free-ஆ இருக்கும். ஏதாவது doubt இருந்தா இங்கயே கேளுங்க! 🙏`);
+      const phoneHtml = u.phone ? `<a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;" onclick="event.stopPropagation()">📞 ${escapeHtml(u.phone)}</a> <a href="https://wa.me/${waPhone(u.phone)}?text=${waMsgNudge}" target="_blank" style="color:#4CD964; text-decoration:none;" onclick="event.stopPropagation()">💬</a>` : '';
       return `
       <div style="padding:10px 0; border-bottom:1px solid #222;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1914,7 +1918,8 @@ function openAdminUserListModal(){
           statusHtml = '<span style="color:#fff; opacity:.6;">Free</span>';
         }
         const nameHtml = u.name ? `<div style="color:#fff; font-size:13px; font-weight:700;">${escapeHtml(u.name)}</div>` : '';
-        const phoneHtml = u.phone ? `<a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;" onclick="event.stopPropagation()">📞 ${escapeHtml(u.phone)}</a> <a href="https://wa.me/${waPhone(u.phone)}" target="_blank" style="color:#4CD964; text-decoration:none;" onclick="event.stopPropagation()">💬</a>` : '';
+        const waMsgCheckin = encodeURIComponent(`வணக்கம்${u.name ? ' ' + u.name : ''}! Garage Book Pro support-ல இருந்து பேசுறேன். App use பண்றது எப்படி போகுது? ஏதாவது doubt/help வேணும்னா சொல்லுங்க — happy to help! 🙏`);
+        const phoneHtml = u.phone ? `<a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;" onclick="event.stopPropagation()">📞 ${escapeHtml(u.phone)}</a> <a href="https://wa.me/${waPhone(u.phone)}?text=${waMsgCheckin}" target="_blank" style="color:#4CD964; text-decoration:none;" onclick="event.stopPropagation()">💬</a>` : '';
         const placeHtml = u.place ? `<div style="color:#888; font-size:11.5px; margin-top:2px;">📍 ${escapeHtml(u.place)}</div>` : '';
         return `<div style="padding:10px 0; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center;">
           <div>
