@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260724-1359">
+<meta name="app-build" content="20260724-1429">
 <style>
   :root{
     --yellow:#FFC800;
@@ -5274,6 +5274,7 @@ function attachMsgDeleteHandlers(userUid){
   });
 }
 function openContactUsModal(prefillText, isPaymentClaim){
+  const safePrefillText = (typeof prefillText === 'string') ? prefillText : '';
   db.ref('supportMessages/'+currentUser.uid).once('value').then(snap=>{
     const msgs = snap.val() || {};
     openModal(`
@@ -5281,7 +5282,7 @@ function openContactUsModal(prefillText, isPaymentClaim){
       <div style="color:#fff; font-size:12.5px; margin-bottom:12px;">Doubt/feedback இருந்தா இங்க message பண்ணுங்க — நேரடியா developer-க்கு போகும், reply இங்கயே வரும்.</div>
       <div id="supportThreadBody" style="max-height:340px; overflow-y:auto; padding:6px; background:#0A0A0A; border-radius:10px; margin-bottom:12px;">${renderSupportThread(msgs, false)}</div>
       <div style="display:flex; gap:8px;">
-        <input type="text" id="supportMsgInput" placeholder="Message type பண்ணுங்க..." value="${prefillText ? escapeHtml(prefillText) : ''}" style="flex:1;">
+        <input type="text" id="supportMsgInput" placeholder="Message type பண்ணுங்க..." value="${escapeHtml(safePrefillText)}" style="flex:1;">
         <button class="btn-primary" id="supportSendBtn" style="width:auto; padding:0 16px;">Send</button>
       </div>
     `);
@@ -5319,8 +5320,8 @@ function openContactUsModal(prefillText, isPaymentClaim){
     setTimeout(()=>{ const b=document.getElementById('supportThreadBody'); if(b) b.scrollTop = 999999; }, 100);
   });
 }
-document.getElementById('contactUsBtn').addEventListener('click', openContactUsModal);
-document.getElementById('fabChat').addEventListener('click', openContactUsModal);
+document.getElementById('contactUsBtn').addEventListener('click', ()=>openContactUsModal());
+document.getElementById('fabChat').addEventListener('click', ()=>openContactUsModal());
 
 function openAdminSupportInbox(){
   Promise.all([
