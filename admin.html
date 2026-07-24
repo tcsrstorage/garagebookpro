@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260724-0546">
+<meta name="app-build" content="20260724-0553">
 <style>
   :root{
     --yellow:#FFC800;
@@ -512,6 +512,12 @@
         <div id="adminRenewalDueWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openRenewalDueModal()">
           <div style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">🔔 ADMIN — RENEWAL DUE SOON</div>
           <div id="adminRenewalDueList" style="display:flex; flex-direction:column; gap:8px;">
+            <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
+          </div>
+        </div>
+        <div id="adminLeadsWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openLeadsTrackerModal()">
+          <div style="color:#FFFFFF; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">📋 ADMIN — LEADS TRACKER</div>
+          <div id="adminLeadsSummary" style="display:flex; gap:6px; flex-wrap:wrap;">
             <div style="color:#FFFFFF; font-size:12px;">Loading...</div>
           </div>
         </div>
@@ -1158,6 +1164,7 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('adminPaymentPendingWidget').style.display = '';
         document.getElementById('adminTrialExpiryWidget').style.display = '';
         document.getElementById('adminRenewalDueWidget').style.display = '';
+        document.getElementById('adminLeadsWidget').style.display = '';
         document.getElementById('openFeatureUsageBtn').style.display = '';
         document.getElementById('openReferralLeaderboardBtn').style.display = '';
         document.getElementById('openRenewalDueConfigBtn').style.display = '';
@@ -2231,6 +2238,28 @@ const LEAD_STATUSES = {
 let leadsTrackerFilter = 'all';
 function normalizePhoneDigits(p){
   return (p||'').replace(/\D/g,'').slice(-10); // last 10 digits, ignore +91 etc.
+}
+function loadLeadsWidget(){
+  const el = document.getElementById('adminLeadsSummary');
+  if(!el) return;
+  db.ref('adminLeads').once('value').then(snap=>{
+    const val = snap.val() || {};
+    const leads = Object.values(val);
+    if(leads.length === 0){
+      el.innerHTML = '<div style="color:#FFFFFF; font-size:12px;">Leads இல்ல இன்னும்</div>';
+      return;
+    }
+    const counts = { enquiry:0, trial:0, payment_pending:0, paid:0, lost:0 };
+    leads.forEach(l=>{ if(counts[l.status] != null) counts[l.status]++; });
+    el.innerHTML = Object.entries(LEAD_STATUSES).map(([key,st])=>
+      `<div style="background:#161616; border-radius:8px; padding:6px 10px; text-align:center;">
+        <span style="color:${st.color}; font-size:13px; font-weight:800;">${counts[key]}</span>
+        <span style="color:#888; font-size:10px; margin-left:4px;">${st.label.replace(/^\S+\s/,'')}</span>
+      </div>`
+    ).join('');
+  }).catch(()=>{
+    el.innerHTML = '<div style="color:#666; font-size:12px;">Load ஆகல</div>';
+  });
 }
 function openLeadsTrackerModal(){
   Promise.all([
@@ -3584,6 +3613,7 @@ function refreshAllAdminWidgets(silent){
   loadPaymentPendingWidget();
   loadTrialExpiryWidget();
   loadRenewalDueWidget();
+  loadLeadsWidget();
   checkAdminUnreadSupport();
   updateAdminQuickStatus();
   loadTodaySummary();
