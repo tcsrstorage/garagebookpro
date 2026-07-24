@@ -402,6 +402,13 @@
           <div style="color:#FF6B6B; font-weight:700; font-size:14px;">🔴 புது Support Message வந்திருக்கு!</div>
           <div id="adminSupportBannerText" style="color:#fff; font-size:12.5px; margin-top:4px;"></div>
         </div>
+        <div id="adminDashboardLinkWidget" style="display:none; background:#000000; border:1px solid #FFC800; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer; align-items:center; justify-content:space-between;" onclick="window.location.href='admin.html'">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:20px;">🛠️</span>
+            <span style="color:#FFC800; font-size:13.5px; font-weight:700;">Admin Dashboard</span>
+          </div>
+          <span style="color:#FFC800; font-size:16px;">›</span>
+        </div>
         <div id="customerSupportBanner" style="display:none; background:#0F2E1A; border:1px solid #2ECC71; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openContactUsModal()">
           <div style="color:#2ECC71; font-weight:700; font-size:14px;">💬 உங்க message-க்கு reply வந்திருக்கு!</div>
           <div id="customerSupportBannerText" style="color:#fff; font-size:12.5px; margin-top:4px;"></div>
@@ -1004,6 +1011,7 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('openRevenueBtn').style.display = '';
         document.getElementById('testTrialBtn').style.display = '';
         document.getElementById('openAdminSupportBtn').style.display = '';
+        document.getElementById('adminDashboardLinkWidget').style.display = 'flex';
         checkAdminUnreadSupport();
       }
       checkMyUnreadSupport();
