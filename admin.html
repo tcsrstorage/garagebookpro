@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260724-0353">
+<meta name="app-build" content="20260724-0356">
 <style>
   :root{
     --yellow:#FFC800;
@@ -5761,7 +5761,7 @@ function showUpdateNotice(){
 async function manualCheckForUpdate(){
   showToast('🔄 Check பண்றோம்...');
   try{
-    const res = await fetch('./app.html', { cache: 'no-store' });
+    const res = await fetch('./admin.html', { cache: 'no-store' });
     const text = await res.text();
     const match = text.match(/<meta name="app-build" content="([^"]*)"/);
     if(match && match[1] && APP_BUILD && match[1] !== APP_BUILD){
@@ -5775,7 +5775,7 @@ async function manualCheckForUpdate(){
 }
 async function checkForAppUpdate(){
   try{
-    const res = await fetch('./app.html', { cache: 'no-store' });
+    const res = await fetch('./admin.html', { cache: 'no-store' });
     const text = await res.text();
     const match = text.match(/<meta name="app-build" content="([^"]*)"/);
     if(match && match[1] && APP_BUILD && match[1] !== APP_BUILD){
