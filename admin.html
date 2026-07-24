@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260724-0553">
+<meta name="app-build" content="20260724-0600">
 <style>
   :root{
     --yellow:#FFC800;
@@ -2269,32 +2269,59 @@ function openLeadsTrackerModal(){
     const leadsVal = leadsSnap.val() || {};
     const dirVal = dirSnap.val() || {};
     let allLeads = Object.entries(leadsVal).map(([id,l])=>({id, ...l}));
-    const existingPhones = new Set(allLeads.map(l => normalizePhoneDigits(l.phone)).filter(Boolean));
 
-    // Auto-entry: any signed-up user (with a phone number) not already tracked as a lead
-    // gets auto-added, with status inferred from their current tier/trial state.
+    // Auto-entry + auto-sync: any signed-up user (matched by phone) gets a lead
+    // auto-created if missing, or their existing lead (auto OR manually-added) gets
+    // linked + its status upgraded when the app shows real progress
+    // (enquiry→trial, or anything→paid). This never auto-downgrades, so a manual
+    // "Lost" / "Payment Pending" mark you set here is always respected.
     const now = Date.now();
-    const autoWrites = [];
+    const writes = [];
+    function inferStatusFromDir(u){
+      if(u.tier === 'paid') return 'paid';
+      if(u.trialEndsAt && u.trialEndsAt > now) return 'trial';
+      return 'enquiry';
+    }
+    const leadByPhone = {};
+    allLeads.forEach(l=>{
+      const d = normalizePhoneDigits(l.phone);
+      if(d) leadByPhone[d] = l;
+    });
     Object.entries(dirVal).forEach(([uid, u])=>{
       const digits = normalizePhoneDigits(u.phone);
-      if(!digits || existingPhones.has(digits)) return;
-      existingPhones.add(digits);
-      let status = 'enquiry';
-      if(u.tier === 'paid') status = 'paid';
-      else if(u.trialEndsAt && u.trialEndsAt > now) status = 'trial';
-      const newLead = {
-        name: u.name || u.email || '',
-        phone: u.phone || '',
-        status,
-        notes: '',
-        source: 'auto',
-        linkedUid: uid,
-        createdAt: u.updatedAt || now,
-        updatedAt: u.updatedAt || now
-      };
-      const ref = db.ref('adminLeads').push();
-      autoWrites.push(ref.set(newLead));
-      allLeads.push({ id: ref.key, ...newLead });
+      if(!digits) return;
+      const existingLead = leadByPhone[digits];
+      if(!existingLead){
+        const status = inferStatusFromDir(u);
+        const newLead = {
+          name: u.name || u.email || '',
+          phone: u.phone || '',
+          status,
+          notes: '',
+          source: 'auto',
+          linkedUid: uid,
+          createdAt: u.updatedAt || now,
+          updatedAt: u.updatedAt || now
+        };
+        const ref = db.ref('adminLeads').push();
+        writes.push(ref.set(newLead));
+        const created = { id: ref.key, ...newLead };
+        allLeads.push(created);
+        leadByPhone[digits] = created;
+      } else {
+        const inferred = inferStatusFromDir(u);
+        const updates = {};
+        if(!existingLead.linkedUid) updates.linkedUid = uid;
+        if(inferred === 'paid' && existingLead.status !== 'paid') updates.status = 'paid';
+        else if(inferred === 'trial' && existingLead.status === 'enquiry') updates.status = 'trial';
+        if(Object.keys(updates).length){
+          updates.updatedAt = now;
+          if(updates.status) existingLead.status = updates.status;
+          if(updates.linkedUid) existingLead.linkedUid = updates.linkedUid;
+          existingLead.updatedAt = now;
+          writes.push(db.ref('adminLeads/'+existingLead.id).update(updates));
+        }
+      }
     });
 
     const finishRender = ()=>{
@@ -2318,7 +2345,7 @@ function openLeadsTrackerModal(){
           const st = LEAD_STATUSES[l.status] || LEAD_STATUSES.enquiry;
           const waMsg = encodeURIComponent(`வணக்கம்${l.name ? ' ' + l.name : ''}! Garage Book Pro பத்தி கேட்டீங்களே, அது பத்தி பேசலாமா? 🙏`);
           const phoneHtml = l.phone ? `<a href="tel:${escapeHtml(l.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;" onclick="event.stopPropagation()">📞 ${escapeHtml(l.phone)}</a> <a href="https://wa.me/${waPhone(l.phone)}?text=${waMsg}" target="_blank" style="color:#4CD964; text-decoration:none;" onclick="event.stopPropagation()">💬</a>` : '';
-          const autoTag = l.source === 'auto' ? `<span style="color:#666; font-size:10px; margin-left:6px;">(app signup-ல auto)</span>` : '';
+          const autoTag = l.linkedUid ? `<span style="color:#666; font-size:10px; margin-left:6px;">🔗 app account-உடன் linked — status auto-sync</span>` : '';
           return `
           <div class="leadRow" data-id="${l.id}" style="padding:10px 0; border-bottom:1px solid #222; cursor:pointer;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -2369,8 +2396,8 @@ function openLeadsTrackerModal(){
       refresh();
     };
 
-    if(autoWrites.length){
-      Promise.all(autoWrites).then(finishRender).catch(finishRender);
+    if(writes.length){
+      Promise.all(writes).then(finishRender).catch(finishRender);
     } else {
       finishRender();
     }
