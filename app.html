@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260725-1213">
+<meta name="app-build" content="20260725-1218">
 <style>
   :root{
     --yellow:#FFC800;
@@ -4924,7 +4924,7 @@ function renderSupportThread(msgs, isAdminView){
   if(!arr.length) return '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">இன்னும் message எதுவும் இல்ல. கீழ type பண்ணி அனுப்புங்க.</div>';
   return arr.map(([id,m])=>{
     const mine = isAdminView ? m.from==='admin' : m.from==='user';
-    const delIcon = isAdminView
+    const delIcon = (isAdminView || mine)
       ? `<span class="msgDeleteBtn" data-msg-id="${id}" style="cursor:pointer; margin-${mine?'right':'left'}:6px; color:#888; font-size:13px; align-self:flex-start; padding-top:9px;">🗑️</span>`
       : '';
     const bubble = `<div style="max-width:78%; background:${mine?'#FFC800':'#1c1c1c'}; color:${mine?'#0A0A0A':'#fff'}; padding:9px 13px; border-radius:12px; font-size:13.5px;">
@@ -4936,15 +4936,15 @@ function renderSupportThread(msgs, isAdminView){
     </div>`;
   }).join('');
 }
-function attachMsgDeleteHandlers(userUid){
+function attachMsgDeleteHandlers(userUid, isAdminView){
   document.querySelectorAll('.msgDeleteBtn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const msgId = btn.getAttribute('data-msg-id');
       if(!confirm('இந்த message-ஐ delete பண்ணணுமா?')) return;
       db.ref('supportMessages/'+userUid+'/'+msgId).remove().then(()=>{
         db.ref('supportMessages/'+userUid).once('value').then(s2=>{
-          document.getElementById('supportThreadBody').innerHTML = renderSupportThread(s2.val()||{}, true);
-          attachMsgDeleteHandlers(userUid);
+          document.getElementById('supportThreadBody').innerHTML = renderSupportThread(s2.val()||{}, isAdminView);
+          attachMsgDeleteHandlers(userUid, isAdminView);
         });
       });
     });
@@ -4966,6 +4966,7 @@ function openContactUsModal(prefillText, isPaymentClaim){
     document.getElementById('closeModalX').addEventListener('click', closeModal);
     db.ref('supportThreads/'+currentUser.uid+'/unreadForUser').set(false);
     checkMyUnreadSupport();
+    attachMsgDeleteHandlers(currentUser.uid, false);
     const sendFn = ()=>{
       const input = document.getElementById('supportMsgInput');
       const text = input.value.trim();
@@ -4989,6 +4990,7 @@ function openContactUsModal(prefillText, isPaymentClaim){
         db.ref('supportMessages/'+currentUser.uid).once('value').then(s2=>{
           document.getElementById('supportThreadBody').innerHTML = renderSupportThread(s2.val()||{}, false);
           document.getElementById('supportThreadBody').scrollTop = 999999;
+          attachMsgDeleteHandlers(currentUser.uid, false);
         });
       });
     };
@@ -5058,7 +5060,7 @@ function openAdminThreadView(userUid, threadInfo, dirEntry, prefillText){
     document.getElementById('closeModalX').addEventListener('click', closeModal);
     db.ref('supportThreads/'+userUid+'/unreadForAdmin').set(false);
     checkAdminUnreadSupport();
-    attachMsgDeleteHandlers(userUid);
+    attachMsgDeleteHandlers(userUid, true);
     const delBtn = document.getElementById('deleteThreadBtn');
     if(delBtn) delBtn.addEventListener('click', ()=>{
       if(!confirm('இந்த customer-ஓட chat முழுசா delete பண்ணணுமா? இது undo பண்ண முடியாது.')) return;
@@ -5087,7 +5089,7 @@ function openAdminThreadView(userUid, threadInfo, dirEntry, prefillText){
         db.ref('supportMessages/'+userUid).once('value').then(s2=>{
           document.getElementById('supportThreadBody').innerHTML = renderSupportThread(s2.val()||{}, true);
           document.getElementById('supportThreadBody').scrollTop = 999999;
-          attachMsgDeleteHandlers(userUid);
+          attachMsgDeleteHandlers(userUid, true);
         });
       });
     };
