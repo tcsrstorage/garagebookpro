@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260725-2130">
+<meta name="app-build" content="20260726-0530">
 <style>
   :root{
     --yellow:#FFC800;
@@ -5582,17 +5582,17 @@ function openAdminThreadView(userUid, threadInfo, dirEntry, prefillText){
     openModal(`
       <div class="modal-title">💬 ${escapeHtml(headerLabel)}${contactLinks}<span class="close-x" id="closeModalX">✕</span></div>
       ${displayEmail && displayName ? `<div style="color:#888; font-size:11.5px; margin-top:-10px; margin-bottom:10px;">${escapeHtml(displayEmail)}</div>` : ''}
-      <div id="supportThreadBody" style="max-height:340px; overflow-y:auto; padding:6px; background:#0A0A0A; border-radius:10px; margin-bottom:12px;">${renderSupportThread(msgs, true)}</div>
+      <div id="supportThreadBody" style="flex:1; min-height:0; overflow-y:auto; padding:6px; background:#0A0A0A; border-radius:10px; margin-bottom:12px;">${renderSupportThread(msgs, true)}</div>
       <div style="display:flex; gap:8px; margin-bottom:10px;">
         <input type="text" id="supportMsgInput" placeholder="Reply type பண்ணுங்க..." value="${prefillText ? escapeHtml(prefillText) : ''}" style="flex:1;">
         <button class="btn-primary" id="supportSendBtn" style="width:auto; padding:0 16px;">Send</button>
       </div>
       ${Object.keys(msgs).length ? '<div id="deleteThreadBtn" style="text-align:center; color:#FF6B6B; font-size:12.5px; cursor:pointer; padding:6px;">🗑️ இந்த Chat முழுசா Delete பண்ணு</div>' : ''}
-    `);
+    `, true);
     document.getElementById('closeModalX').addEventListener('click', closeModal);
     db.ref('supportThreads/'+userUid+'/unreadForAdmin').set(false);
     checkAdminUnreadSupport();
-    attachMsgDeleteHandlers(userUid);
+    attachMsgDeleteHandlers(userUid, true);
     const delBtn = document.getElementById('deleteThreadBtn');
     if(delBtn) delBtn.addEventListener('click', ()=>{
       if(!confirm('இந்த customer-ஓட chat முழுசா delete பண்ணணுமா? இது undo பண்ண முடியாது.')) return;
@@ -5621,7 +5621,7 @@ function openAdminThreadView(userUid, threadInfo, dirEntry, prefillText){
         db.ref('supportMessages/'+userUid).once('value').then(s2=>{
           document.getElementById('supportThreadBody').innerHTML = renderSupportThread(s2.val()||{}, true);
           document.getElementById('supportThreadBody').scrollTop = 999999;
-          attachMsgDeleteHandlers(userUid);
+          attachMsgDeleteHandlers(userUid, true);
         });
       });
     };
