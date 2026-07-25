@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260725-1310">
+<meta name="app-build" content="20260725-1940">
 <style>
   :root{
     --yellow:#FFC800;
@@ -4480,7 +4480,9 @@ async function handleGenerateCode(){
     });
 
     const shareMsg = encodeURIComponent(
-      `🎉 GarageBook Pro Premium Code!\n\nCode: ${code}\n\nApp-ல Settings → Upgrade to Premium → இந்த code போடுங்க.\nUnlimited vehicles + Full Reports + Cloud Backup ₹${price}/year!\n\ngaragebookpro.in`
+      isComp
+        ? `🎉 GarageBook Pro Premium Code!\n\nCode: ${code}\n\nApp-ல Settings → Upgrade to Premium → இந்த code போடுங்க.\nUnlimited vehicles + Full Reports + Cloud Backup — இது எங்க சின்ன gift, முழுசா free-ஆ இருக்கும்! 🎁\n\ngaragebookpro.in`
+        : `🎉 GarageBook Pro Premium Code!\n\nCode: ${code}\n\nApp-ல Settings → Upgrade to Premium → இந்த code போடுங்க.\nUnlimited vehicles + Full Reports + Cloud Backup ₹${price}/year!\n\ngaragebookpro.in`
     );
     resEl.innerHTML = `
       <div style="padding:16px; background:#1A1A1A; border:1px solid #FFC800; border-radius:12px; text-align:center;">
