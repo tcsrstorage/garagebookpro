@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260725-0109">
+<meta name="app-build" content="20260725-1310">
 <style>
   :root{
     --yellow:#FFC800;
@@ -598,6 +598,10 @@
             <div class="settings-row-left"><span class="ic">📋</span><span class="txt">Leads Tracker</span></div>
             <span class="arrow">›</span>
           </div>
+          <div class="settings-row" id="openMessageTemplatesBtn">
+            <div class="settings-row-left"><span class="ic">📋</span><span class="txt">Message Templates</span></div>
+            <span class="arrow">›</span>
+          </div>
           <div class="settings-row" id="testTrialBtn">
             <div class="settings-row-left"><span class="ic">🧪</span><span class="txt">Test Trial (என் account-க்கு)</span></div>
             <span class="arrow">›</span>
@@ -1177,6 +1181,7 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('openCustomerActivityBtn').style.display = '';
         document.getElementById('openInactiveUsersBtn').style.display = '';
         document.getElementById('openLeadsTrackerBtn').style.display = '';
+        document.getElementById('openMessageTemplatesBtn').style.display = '';
         document.getElementById('openRevenueBtn').style.display = '';
         document.getElementById('testTrialBtn').style.display = '';
         document.getElementById('adminStatsWidget').style.display = '';
@@ -2367,6 +2372,136 @@ function loadLeadsWidget(){
     el.innerHTML = '<div style="color:#666; font-size:12px;">Load ஆகல</div>';
   });
 }
+// ---- Message Templates ----
+const DEFAULT_MESSAGE_TEMPLATES = [
+  {
+    title: 'User Guide Share — தமிழ்',
+    body: `🚗 கேரேஜ் புக் ப்ரோ – User Guide 📖
+
+ஆப்-ஓட எல்லா features-உம் எப்படி use பண்றதுன்னு, step-by-step சொல்ற ஒரு User Guide (English + தமிழ்) ready பண்ணிருக்கோம்.
+
+👉 https://garagebookpro.in/user-guide.pdf
+
+Download பண்ணிட்டு, ஒரு தடவை முழுசா படிச்சிட்டு app use பண்ணுங்க. Reminders, Budget Alerts, Document Vault, Family Sharing, Resale Certificate போன்ற எல்லா features-உம் easy-ஆ புரிஞ்சிடும்.
+
+ஏதாவது doubt இருந்தா, app-ல இருக்கும் '💬 Contact Us / Feedback' பட்டன்-ல message பண்ணுங்க — நேரடியா எனக்கு வரும், reply அதே chat-ல கொடுப்பேன்.
+
+நன்றி! 🙏
+– Garage Book Pro`
+  },
+  {
+    title: 'User Guide Share — English',
+    body: `🚗 Garage Book Pro – User Guide 📖
+
+We've put together a complete User Guide (English + Tamil) explaining every feature in the app, step by step.
+
+👉 https://garagebookpro.in/user-guide.pdf
+
+Please download it and read it fully once before using the app. It covers Reminders, Budget Alerts, Document Vault, Family Sharing, Resale Certificate, and everything else — makes the app much easier to use.
+
+If you have any doubts, just message us using the '💬 Contact Us / Feedback' button inside the app — it comes directly to me, and I'll reply in the same chat.
+
+Thank you! 🙏
+– Garage Book Pro`
+  }
+];
+function seedDefaultMessageTemplatesIfEmpty(){
+  return db.ref('messageTemplates').once('value').then(snap=>{
+    if(snap.exists()) return;
+    const updates = {};
+    DEFAULT_MESSAGE_TEMPLATES.forEach(t=>{
+      const id = uid('tmpl');
+      updates[id] = { title: t.title, body: t.body, updatedAt: Date.now() };
+    });
+    return db.ref('messageTemplates').update(updates);
+  });
+}
+function copyTemplateText(text){
+  const doCopyFallback = ()=>{
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    try{ document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>showToast('📋 Copy ஆச்சு!')).catch(doCopyFallback);
+  } else {
+    doCopyFallback();
+    showToast('📋 Copy ஆச்சு!');
+  }
+}
+function openMessageTemplatesModal(){
+  seedDefaultMessageTemplatesIfEmpty().then(()=>db.ref('messageTemplates').once('value')).then(snap=>{
+    const val = snap.val() || {};
+    const list = Object.entries(val).map(([id,t])=>({id, ...t})).sort((a,b)=>(a.title||'').localeCompare(b.title||''));
+    function renderRows(){
+      if(!list.length) return '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Templates இல்ல. கீழே "+ Add Template" பண்ணுங்க.</div>';
+      return list.map(t=>{
+        const preview = (t.body||'').slice(0,90).replace(/\n/g,' ');
+        return `<div style="background:#161616; border-radius:12px; padding:12px 14px; margin-bottom:10px;">
+          <div style="color:#FFC800; font-size:13.5px; font-weight:700; margin-bottom:4px;">${escapeHtml(t.title||'Untitled')}</div>
+          <div style="color:#999; font-size:12px; margin-bottom:10px;">${escapeHtml(preview)}${(t.body||'').length>90?'…':''}</div>
+          <div style="display:flex; gap:8px;">
+            <button class="tmplCopyBtn" data-id="${t.id}" style="flex:1; background:#FFC800; color:#0A0A0A; border:none; border-radius:10px; padding:9px 0; font-size:12.5px; font-weight:700; cursor:pointer;">📋 Copy</button>
+            <button class="tmplEditBtn" data-id="${t.id}" style="flex:1; background:#222; color:#fff; border:none; border-radius:10px; padding:9px 0; font-size:12.5px; cursor:pointer;">✏️ Edit</button>
+            <button class="tmplDelBtn" data-id="${t.id}" style="background:#222; color:#FF6B6B; border:none; border-radius:10px; padding:9px 14px; font-size:12.5px; cursor:pointer;">🗑️</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    openModal(`
+      <div class="modal-title">📋 Message Templates<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#999; font-size:12px; margin-bottom:12px;">Customer-க்கு அனுப்ப ready-ஆன messages — Copy பண்ணி WhatsApp-ல paste பண்ணுங்க.</div>
+      <div id="tmplListBody">${renderRows()}</div>
+      <button class="btn-primary" id="tmplAddBtn" style="margin-top:6px;">+ Add Template</button>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    function attachHandlers(){
+      document.querySelectorAll('.tmplCopyBtn').forEach(b=>b.addEventListener('click', ()=>{
+        const t = list.find(x=>x.id===b.dataset.id);
+        if(t) copyTemplateText(t.body||'');
+      }));
+      document.querySelectorAll('.tmplEditBtn').forEach(b=>b.addEventListener('click', ()=> openMessageTemplateFormModal(b.dataset.id)));
+      document.querySelectorAll('.tmplDelBtn').forEach(b=>b.addEventListener('click', ()=>{
+        if(!confirm('இந்த template-ஐ delete பண்ணணுமா?')) return;
+        db.ref('messageTemplates/'+b.dataset.id).remove().then(()=>openMessageTemplatesModal());
+      }));
+    }
+    attachHandlers();
+    document.getElementById('tmplAddBtn').addEventListener('click', ()=> openMessageTemplateFormModal(null));
+  });
+}
+function openMessageTemplateFormModal(id){
+  const proceed = (existing)=>{
+    openModal(`
+      <div class="modal-title">${id?'✏️ Template Edit பண்ணு':'+ புது Template'}<span class="close-x" id="closeModalX">✕</span></div>
+      <div class="field-label">Title</div>
+      <input type="text" id="tmplTitleInput" placeholder="e.g. Payment Reminder" value="${existing?escapeHtml(existing.title||''):''}">
+      <div class="field-label">Message</div>
+      <textarea id="tmplBodyInput" style="min-height:180px;" placeholder="Message text போடுங்க...">${existing?escapeHtml(existing.body||''):''}</textarea>
+      <button class="btn-primary" id="tmplSaveBtn" style="margin-top:14px;">Save பண்ணு</button>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.getElementById('tmplSaveBtn').addEventListener('click', ()=>{
+      const title = document.getElementById('tmplTitleInput').value.trim();
+      const body = document.getElementById('tmplBodyInput').value.trim();
+      if(!title || !body){ showToast('Title & Message இரண்டும் போடுங்க'); return; }
+      const templateId = id || uid('tmpl');
+      db.ref('messageTemplates/'+templateId).update({ title, body, updatedAt: Date.now() }).then(()=>{
+        showToast('Save ஆச்சு!');
+        openMessageTemplatesModal();
+      });
+    });
+  };
+  if(id){
+    db.ref('messageTemplates/'+id).once('value').then(s=> proceed(s.val()));
+  } else {
+    proceed(null);
+  }
+}
+document.getElementById('openMessageTemplatesBtn').addEventListener('click', openMessageTemplatesModal);
+
 function openLeadsTrackerModal(){
   Promise.all([
     db.ref('adminLeads').once('value'),
