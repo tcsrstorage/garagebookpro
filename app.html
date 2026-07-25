@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260724-1824">
+<meta name="app-build" content="20260725-0109">
 <style>
   :root{
     --yellow:#FFC800;
@@ -402,7 +402,7 @@
 
       <!-- HOME TAB -->
       <div id="tab-home">
-        <div id="flashMessageBanner" style="display:none; overflow:hidden; white-space:nowrap; background:#1A1400; border:1px solid #FFC800; border-radius:10px; padding:9px 0; margin-bottom:14px;">
+        <div id="flashMessageBanner" style="display:none; overflow:hidden; white-space:nowrap; background:#1A1400; border-radius:10px; padding:9px 0; margin-bottom:14px;">
           <div id="flashMessageText" style="display:inline-block; padding-left:100%; color:#FFC800; font-weight:700; font-size:13px;"></div>
         </div>
         <div id="adminSupportBanner" style="display:none; background:#3A0E0E; border:1px solid #FF6B6B; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openAdminSupportInbox()">
@@ -1956,7 +1956,7 @@ function openFlashMessageConfigModal(){
       <div class="field-label">Text Color</div>
       <div style="display:flex; align-items:center; gap:12px;">
         <input type="color" id="flashMsgColorInput" value="${color}" style="width:52px; height:38px; border:none; border-radius:8px; background:transparent; padding:0;">
-        <span style="color:#888; font-size:12px;">Banner border-க்கும் இதே color use ஆகும்</span>
+        <span style="color:#888; font-size:12px;">Scrolling text-ஓட color இது</span>
       </div>
       <div style="display:flex; align-items:center; gap:8px; margin-top:16px;">
         <input type="checkbox" id="flashMsgEnabledInput" ${data.enabled ? 'checked' : ''} style="width:18px; height:18px;">
@@ -2635,7 +2635,6 @@ function renderFlashMessageBanner(){
     const color = data.color || '#FFC800';
     textEl.style.color = color;
     textEl.style.animation = `flashScrollRTL ${speedSec}s linear infinite`;
-    banner.style.borderColor = color;
     banner.style.display = 'block';
   }).catch(()=>{ banner.style.display = 'none'; });
 }
