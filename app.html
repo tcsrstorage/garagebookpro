@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260725-0245">
+<meta name="app-build" content="20260725-0310">
 <style>
   :root{
     --yellow:#FFC800;
@@ -442,7 +442,7 @@
           <span>⭐ Premium-க்கு switch பண்ணுங்க — <span class="price-highlight" id="homePremiumBannerPrice">₹21/month</span> மட்டும்</span>
           <div style="margin-top:8px; font-size:12.5px; font-weight:700; text-decoration:underline;">👉 Payment பண்ண இங்க Click பண்ணுங்க</div>
         </div>
-        <div id="redeemCodeQuickRow" style="display:none; margin-bottom:14px;" onclick="openUpgradeModal()">
+        <div id="redeemCodeQuickRow" style="display:none; margin-bottom:14px;" onclick="openRedeemOnlyModal()">
           <div style="background:#161616; border:2px solid #FFC800; border-radius:12px; padding:14px 16px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
             <span style="color:#fff; font-size:14px; font-weight:600;">🎁 Redeem Code / Activation Code பொட்டுக்கலாம்</span>
             <span style="color:#FFC800; font-weight:800; font-size:14px;">›</span>
@@ -4374,6 +4374,24 @@ function renderEntryForm(existing){
 }
 
 // ---- Add Vehicle ----
+function openRedeemOnlyModal(){
+  openModal(`
+    <div class="modal-title">🎁 Redeem Code / Activation Code<span class="close-x" id="closeModalX">✕</span></div>
+    <div style="text-align:center; padding:8px 0 16px;">
+      <div style="font-size:40px; margin-bottom:10px;">🔑</div>
+      <div style="color:#fff; font-size:13.5px; margin-bottom:20px;">உங்ககிட்ட ஏற்கனவே Premium Code இருந்தா, கீழே போட்டு Redeem பண்ணுங்க.</div>
+      <div style="text-align:left;">
+        <div class="field-label">Activation Code</div>
+        <input type="text" id="redeemCodeInput" placeholder="e.g. GBP-XXXXXX" style="text-transform:uppercase;">
+        <button class="btn-primary" id="redeemCodeBtn" style="margin-top:12px;">Redeem பண்ணுங்க</button>
+        <div id="redeemError" style="color:#FF4D4D; font-size:12.5px; margin-top:8px; min-height:16px;"></div>
+      </div>
+      <div style="margin-top:18px; color:#888; font-size:12px;">Code இல்லையா? <span onclick="closeModal(); openUpgradeModal();" style="color:#FFC800; font-weight:700; cursor:pointer; text-decoration:underline;">Premium வாங்க இங்க Click பண்ணுங்க</span></div>
+    </div>
+  `);
+  document.getElementById('closeModalX').addEventListener('click', closeModal);
+  document.getElementById('redeemCodeBtn').addEventListener('click', redeemPremiumCode);
+}
 function openUpgradeModal(){
   Promise.all([
     db.ref('appConfig/payLinkUrl').once('value'),
