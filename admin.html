@@ -2531,7 +2531,7 @@ function openMessageTemplatesModal(){
     const val = snap.val() || {};
     const list = Object.entries(val).map(([id,t])=>({id, ...t})).sort((a,b)=>(a.title||'').localeCompare(b.title||''));
     function renderRows(){
-      if(!list.length) return '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Templates இல்ல. கீழே "+ Add Template" பண்ணுங்க.</div>';
+      if(!list.length) return '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Templates இல்ல. மேலே "+ Add Template" பண்ணுங்க.</div>';
       return list.map(t=>{
         const preview = (t.body||'').slice(0,90).replace(/\n/g,' ');
         return `<div style="background:#161616; border-radius:12px; padding:12px 14px; margin-bottom:10px;">
@@ -2548,8 +2548,8 @@ function openMessageTemplatesModal(){
     openModal(`
       <div class="modal-title">📋 Message Templates<span class="close-x" id="closeModalX">✕</span></div>
       <div style="color:#999; font-size:12px; margin-bottom:12px;">Customer-க்கு அனுப்ப ready-ஆன messages — Copy பண்ணி WhatsApp-ல paste பண்ணுங்க.</div>
+      <button class="btn-primary" id="tmplAddBtn" style="margin-bottom:14px;">+ Add Template</button>
       <div id="tmplListBody">${renderRows()}</div>
-      <button class="btn-primary" id="tmplAddBtn" style="margin-top:6px;">+ Add Template</button>
     `);
     document.getElementById('closeModalX').addEventListener('click', closeModal);
     function attachHandlers(){
