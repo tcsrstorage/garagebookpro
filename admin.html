@@ -874,6 +874,89 @@ const ADMIN_UID = '5BEDkBEWsFUoveA6e2OZUENLmYe2'; // Ramesh's UID — only this 
 let liveActivityRef = null; // holds the active Firebase listener for the Live Activity modal
 let ROOT = null; // set to "users/{uid}" after login
 
+// ============ AUTO CHECK: background error/crash logger ============
+// Same reporting pipe as app.html — logs any JS crash from either surface to
+// the same Firebase errorLogs node. This admin page shows the digest itself
+// too (every visit here is already an admin visit).
+let errorLogQueue = [];
+let errorLogFlushTimer = null;
+function logAppError(type, message, extra){
+  try{
+    const entry = {
+      type: type,
+      message: String(message || '').slice(0, 500),
+      extra: extra ? String(extra).slice(0, 800) : '',
+      time: Date.now(),
+      ua: navigator.userAgent.slice(0, 200),
+      page: location.pathname
+    };
+    errorLogQueue.push(entry);
+    if(errorLogFlushTimer) clearTimeout(errorLogFlushTimer);
+    errorLogFlushTimer = setTimeout(flushErrorLogQueue, 1500);
+  }catch(e){ /* never let the logger itself crash the app */ }
+}
+function flushErrorLogQueue(){
+  if(!errorLogQueue.length) return;
+  const batch = errorLogQueue.splice(0, errorLogQueue.length);
+  batch.forEach(entry=>{
+    db.ref('errorLogs').push(entry).catch(()=>{});
+  });
+}
+window.addEventListener('error', (e)=>{
+  logAppError('JS Error (admin)', e.message, (e.filename||'') + ':' + (e.lineno||'') + ' ' + (e.error && e.error.stack ? e.error.stack.slice(0,400) : ''));
+});
+window.addEventListener('unhandledrejection', (e)=>{
+  const reason = e.reason;
+  logAppError('Unhandled Promise (admin)', reason && reason.message ? reason.message : String(reason), reason && reason.stack ? reason.stack.slice(0,400) : '');
+});
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flushErrorLogQueue(); });
+
+const AUTO_CHECK_INTERVAL_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
+async function runAutoCheckDigest(){
+  try{
+    const lastCheck = Number(localStorage.getItem('gbpadmin_lastErrorCheck') || 0);
+    if(Date.now() - lastCheck < AUTO_CHECK_INTERVAL_MS) return;
+    const snap = await db.ref('errorLogs').once('value');
+    const all = snap.val() || {};
+    const unresolved = Object.entries(all).filter(([id, e]) => !e.seen);
+    localStorage.setItem('gbpadmin_lastErrorCheck', String(Date.now()));
+    if(unresolved.length === 0) return;
+    showAutoCheckPopup(unresolved);
+  }catch(e){ console.warn('Auto Check digest failed:', e.message); }
+}
+function showAutoCheckPopup(entries){
+  const groups = {};
+  entries.forEach(([id, e])=>{
+    const key = (e.type||'Error') + ': ' + (e.message||'');
+    if(!groups[key]) groups[key] = { count:0, first:e.time, last:e.time, extra:e.extra, ids:[] };
+    groups[key].count++;
+    groups[key].first = Math.min(groups[key].first, e.time);
+    groups[key].last = Math.max(groups[key].last, e.time);
+    groups[key].ids.push(id);
+  });
+  const lines = Object.entries(groups).map(([key, g])=>
+    `• ${key}\n   (${g.count}x, last: ${new Date(g.last).toLocaleString()})${g.extra ? '\n   ↳ '+g.extra : ''}`
+  );
+  const fullText = `GarageBookPro Auto Check — ${entries.length} issue(s) found in last 3 days:\n\n` + lines.join('\n\n');
+  openModal(`
+    <h3 style="margin:4px 0 12px; color:#FF5C5C;">⚠️ Auto Check — ${entries.length} issue(s) found</h3>
+    <pre id="autoCheckText" style="white-space:pre-wrap; font-family:inherit; font-size:13px; background:#111; color:#fff; padding:12px; border-radius:12px; max-height:45vh; overflow-y:auto; margin:0 0 16px;">${fullText.replace(/</g,'&lt;')}</pre>
+    <div style="display:flex; gap:10px;">
+      <button id="autoCheckCopyBtn" style="flex:1; padding:12px; border:none; border-radius:12px; background:#FFC800; color:#000; font-weight:700;">📋 Copy</button>
+      <button id="autoCheckCloseBtn" style="flex:1; padding:12px; border:none; border-radius:12px; background:#333; color:#fff; font-weight:700;">Mark reviewed & close</button>
+    </div>
+  `);
+  document.getElementById('autoCheckCopyBtn').addEventListener('click', ()=>{
+    navigator.clipboard.writeText(fullText).then(()=> showToast('Copied — paste it to Claude')).catch(()=> showToast('Copy failed, select text manually'));
+  });
+  document.getElementById('autoCheckCloseBtn').addEventListener('click', ()=>{
+    const allIds = Object.values(groups).flatMap(g=>g.ids);
+    allIds.forEach(id => db.ref('errorLogs/' + id).update({ seen: true }).catch(()=>{}));
+    closeModal();
+  });
+}
+
+
 // ============ STATE ============
 let STATE = {
   vehicles: {},
@@ -1176,6 +1259,7 @@ auth.onAuthStateChanged(function(user){
       initFirebase();
       loadFuelPriceWidget();
       if(user.uid === ADMIN_UID){
+        runAutoCheckDigest();
         document.getElementById('adminSectionTitle').style.display = '';
         document.getElementById('openAdminGenCodeBtn').style.display = '';
         document.getElementById('openAdminTrialConfigBtn').style.display = '';
