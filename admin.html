@@ -1751,7 +1751,7 @@ function loadCustomerActivityWidget(){
     }
   }).catch(()=>{});
 }
-function openCustomerActivityModal(){
+function openCustomerActivityModal(autoFilterNotTracked){
   db.ref('adminUserDirectory').once('value').then(snap=>{
     const directory = snap.val() || {};
     const allList = Object.entries(directory)
@@ -1779,7 +1779,7 @@ function openCustomerActivityModal(){
         </div>`;
       }).join('') || '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Match இல்ல</div>';
     }
-    let showOnlyNotTracked = false;
+    let showOnlyNotTracked = !!autoFilterNotTracked;
     function refresh(query){
       const q = (query||'').trim().toLowerCase();
       let list = allList;
@@ -1787,13 +1787,14 @@ function openCustomerActivityModal(){
       if(q) list = list.filter(([uid, u]) => (u.name||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q));
       document.getElementById('custActModalRows').innerHTML = renderRows(list);
     }
+    const initialList = showOnlyNotTracked ? allList.filter(([_, u]) => !u.lastActiveAt) : allList;
     openModal(`
       <div class="modal-title">👥 Customer Activity<span class="close-x" id="closeModalX">✕</span></div>
       <div style="color:#888; font-size:12px; margin-bottom:12px;">Users, last active time first. "Not tracked yet" = அந்த user இந்த feature வந்த பிறகு app இன்னும் open பண்ணல.</div>
       <input type="text" id="custActModalSearch" placeholder="🔍 Name / email search..." style="width:100%; background:#111; border:1px solid #333; border-radius:8px; padding:9px 10px; color:#fff; font-size:13px; margin-bottom:8px; box-sizing:border-box;">
-      <div id="notTrackedFilterChip" style="display:inline-block; color:#FF6B6B; font-size:11.5px; border:1px solid #FF6B6B; border-radius:20px; padding:5px 12px; margin-bottom:12px; cursor:pointer;">😴 Not tracked yet மட்டும் காமிக்கு</div>
+      <div id="notTrackedFilterChip" style="display:inline-block; color:#FF6B6B; font-size:11.5px; border:1px solid #FF6B6B; border-radius:20px; padding:5px 12px; margin-bottom:12px; cursor:pointer; background:${showOnlyNotTracked?'#FF6B6B':'transparent'}; color:${showOnlyNotTracked?'#0A0A0A':'#FF6B6B'};">😴 Not tracked yet மட்டும் காமிக்கு</div>
       <div style="max-height:420px; overflow-y:auto;" id="custActModalRows">
-        ${allList.length ? renderRows(allList) : '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Data இன்னும் இல்ல (இந்த feature add பண்ணின பிறகு app open பண்ணினா தெரியும்)</div>'}
+        ${initialList.length || !showOnlyNotTracked ? renderRows(initialList) : '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Data இன்னும் இல்ல (இந்த feature add பண்ணின பிறகு app open பண்ணினா தெரியும்)</div>'}
       </div>
     `);
     document.getElementById('closeModalX').addEventListener('click', closeModal);
@@ -1814,13 +1815,11 @@ function openInactiveUsersModal(){
     const directory = snap.val() || {};
     const now = Date.now();
     const entries = Object.entries(directory).filter(([uid]) => uid !== ADMIN_UID);
-    const inactive = entries.filter(([_, u]) => !u.lastActiveAt || (now - u.lastActiveAt) > INACTIVE_THRESHOLD_MS);
+    const inactive = entries.filter(([_, u]) => u.lastActiveAt && (now - u.lastActiveAt) > INACTIVE_THRESHOLD_MS);
     inactive.sort((a,b) => (a[1].lastActiveAt||0) - (b[1].lastActiveAt||0));
     const rows = inactive.map(([uid, u])=>{
       const who = u.name || u.email || uid.slice(0,8);
-      const statusLabel = !u.lastActiveAt
-        ? `<span style="color:#FF6B6B; font-size:11.5px;">Signup ஆனா app-ஐ ஒருபோதும் திறக்கல</span>`
-        : `<span style="color:#FFC800; font-size:11.5px;">${timeAgo(u.lastActiveAt)} இருந்து inactive</span>`;
+      const statusLabel = `<span style="color:#FFC800; font-size:11.5px;">${timeAgo(u.lastActiveAt)} இருந்து inactive</span>`;
       const tierLabel = u.tier==='paid' ? '⭐ Premium' : (u.trialEndsAt && u.trialEndsAt > now ? '🎁 Trial' : 'Free');
       const waMsgNudge = encodeURIComponent(`வணக்கம்${u.name ? ' ' + u.name : ''}! Garage Book Pro-ல உங்க vehicle expenses track பண்ண மறந்துட்டீங்களா? 🚗 ஒரு நிமிடம் இருந்தா, fuel/service entry போட்டு பாருங்க — free-ஆ இருக்கும். ஏதாவது doubt இருந்தா இங்கயே கேளுங்க! 🙏`);
       const phoneHtml = u.phone ? `<a href="tel:${escapeHtml(u.phone)}" style="color:#58A6FF; font-size:12px; text-decoration:none;" onclick="event.stopPropagation()">📞 ${escapeHtml(u.phone)}</a> <a href="https://wa.me/${waPhone(u.phone)}?text=${waMsgNudge}" target="_blank" style="color:#4CD964; text-decoration:none;" onclick="event.stopPropagation()">💬</a>` : '';
@@ -1839,7 +1838,7 @@ function openInactiveUsersModal(){
     }).join('');
     openModal(`
       <div class="modal-title">😴 Inactive Users<span class="close-x" id="closeModalX">✕</span></div>
-      <div style="color:#888; font-size:12px; margin-bottom:14px;">${thresholdDays}+ நாள் app திறக்காதவங்க, அல்லது signup பண்ணி ஒருபோதும் use பண்ணாதவங்க. "Nudge அனுப்பு" கிளிக் பண்ணா in-app message prefill ஆகும். (Threshold-ஐ Settings → "😴 Inactive Threshold Set பண்ணு"-ல மாத்தலாம்.)</div>
+      <div style="color:#888; font-size:12px; margin-bottom:14px;">முன்ன active ஆ இருந்து, இப்போ ${thresholdDays}+ நாள் app திறக்காதவங்க. (Signup ஆனா ஒருபோதும் use பண்ணாதவங்க "😴 Not Tracked Yet" stage-ல தனியா காமிக்கும்.) "Nudge அனுப்பு" கிளிக் பண்ணா in-app message prefill ஆகும். Threshold-ஐ Settings → "😴 Inactive Threshold Set பண்ணு"-ல மாத்தலாம்.</div>
       <div style="max-height:440px; overflow-y:auto;">
         ${rows || '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Super! எல்லாரும் active ஆ இருக்காங்க 🎉</div>'}
       </div>
@@ -2464,11 +2463,11 @@ function loadCustomerStagesWidget(){
       if((now - u.lastActiveAt) > inactiveThresholdDays*dayMs){ inactive++; }
       if(u.tier !== 'paid' && u.trialEndsAt && (u.trialEndsAt - now) <= trialAlertDays*dayMs && (u.trialEndsAt - now) > -trialAlertDays*dayMs){ trialEnding++; }
       if(u.tier === 'paid' && u.premiumExpiresAt && (u.premiumExpiresAt - now) <= renewalAlertDays*dayMs){ renewalDue++; }
-      if(u.tier === 'paid' && (!u.premiumExpiresAt || (u.premiumExpiresAt - now) > renewalAlertDays*dayMs)){ premiumActive++; }
+      if(u.tier === 'paid'){ premiumActive++; }
     });
 
     const stages = [
-      { label: '😴 Not Tracked Yet', count: notTracked, color: '#FF9F45', onclick: 'openCustomerActivityModal()' },
+      { label: '😴 Not Tracked Yet', count: notTracked, color: '#FF9F45', onclick: 'openCustomerActivityModal(true)' },
       { label: '🎁 Trial Ending Soon', count: trialEnding, color: '#FF6B6B', onclick: 'openTrialExpiryModal()' },
       { label: '🔔 Renewal Due Soon', count: renewalDue, color: '#FFA07A', onclick: 'openRenewalDueModal()' },
       { label: '💰 Payment Pending', count: pendingCount, color: '#FFC800', onclick: 'openPaymentPendingModal()' },
