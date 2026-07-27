@@ -512,6 +512,12 @@
           <div style="color:#FFC800; font-size:13px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">⭐ ADMIN — GOOGLE RATING</div>
           <div id="adminGoogleRatingSummary" style="color:#FFFFFF; font-size:13.5px;">Loading...</div>
         </div>
+        <div id="adminStagesWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px;">
+          <div style="color:#B892FF; font-size:13px; font-weight:700; letter-spacing:0.5px; margin-bottom:12px;">📊 ADMIN — CUSTOMER STAGES</div>
+          <div id="adminStagesList" style="display:flex; flex-direction:column; gap:8px;">
+            <div style="color:#FFFFFF; font-size:13.5px;">Loading...</div>
+          </div>
+        </div>
         <div id="adminLiveActivityWidget" style="display:none; background:#000000; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; margin-bottom:14px; cursor:pointer;" onclick="openLiveActivityModal()">
           <div style="color:#FF6B9D; font-size:13px; font-weight:700; letter-spacing:0.5px; margin-bottom:10px;">📡 ADMIN — LIVE ACTIVITY</div>
           <div id="adminLiveActivityList" style="display:flex; flex-direction:column; gap:8px;">
@@ -1288,6 +1294,7 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('adminRenewalDueWidget').style.display = '';
         document.getElementById('adminLeadsWidget').style.display = '';
         document.getElementById('adminGoogleRatingWidget').style.display = '';
+        document.getElementById('adminStagesWidget').style.display = '';
         document.getElementById('openFeatureUsageBtn').style.display = '';
         document.getElementById('openReferralLeaderboardBtn').style.display = '';
         document.getElementById('openRenewalDueConfigBtn').style.display = '';
@@ -1673,21 +1680,27 @@ function renderCustomerActivityRows(list){
     listEl.innerHTML = '<div style="color:#666; font-size:12px;">Match இல்ல</div>';
     return;
   }
-  listEl.innerHTML = `<div style="max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">` + list.map(([uid, u])=>{
+  listEl.innerHTML = `<div style="max-height:340px; overflow-y:auto; display:flex; flex-direction:column; gap:10px;">` + list.map(([uid, u])=>{
     const who = u.name || u.email || uid.slice(0,8);
-    const statsPart = u.lastActiveAt ? `🚗${u.vehicleCount||0} 📝${u.entryCount||0}` : 'Not tracked yet';
+    const statsPart = u.lastActiveAt ? `🚗 ${u.vehicleCount||0} vehicles &nbsp; 📝 ${u.entryCount||0} entries` : '<span style="color:#FF9F45;">Not tracked yet</span>';
     const timePart = u.lastActiveAt ? timeAgo(u.lastActiveAt) : '-';
     const waIcon = u.phone
-      ? `<a href="https://wa.me/${waPhone(u.phone)}" target="_blank" style="font-size:15px; text-decoration:none;" onclick="event.stopPropagation()">💬</a>`
-      : `<span style="font-size:15px; opacity:0.25;" title="No phone number saved">💬</span>`;
-    const chatIcon = `<span class="custActivityChatBtn" data-uid="${uid}" style="font-size:15px; cursor:pointer;" onclick="event.stopPropagation()">📨</span>`;
+      ? `<a href="https://wa.me/${waPhone(u.phone)}" target="_blank" style="font-size:17px; text-decoration:none; padding:4px;" onclick="event.stopPropagation()">💬</a>`
+      : `<span style="font-size:17px; opacity:0.25; padding:4px;" title="No phone number saved">💬</span>`;
+    const chatIcon = `<span class="custActivityChatBtn" data-uid="${uid}" style="font-size:17px; cursor:pointer; padding:4px;" onclick="event.stopPropagation()">📨</span>`;
     return `
-    <div style="display:flex; align-items:center; gap:8px;">
-      <span style="font-size:14px;">👤</span>
-      <span style="color:#FFFFFF; font-size:12px; flex:1;">${escapeHtml(who)} — ${statsPart}</span>
-      <span style="color:#FFFFFF; font-size:10.5px; white-space:nowrap;">${timePart}</span>
-      ${waIcon}
-      ${chatIcon}
+    <div style="background:#111; border:1px solid #262626; border-radius:12px; padding:12px 14px;">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:8px;">
+        <div style="display:flex; align-items:flex-start; gap:8px; min-width:0;">
+          <span style="font-size:15px; margin-top:1px;">👤</span>
+          <span style="color:#FFFFFF; font-size:13px; font-weight:600; word-break:break-word;">${escapeHtml(who)}</span>
+        </div>
+        <span style="color:#888; font-size:11px; white-space:nowrap; margin-top:2px;">${timePart}</span>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+        <span style="color:#AAAAAA; font-size:12px;">${statsPart}</span>
+        <div style="display:flex; align-items:center; gap:6px;">${waIcon}${chatIcon}</div>
+      </div>
     </div>
   `;
   }).join('') + `</div>`;
@@ -2393,6 +2406,50 @@ function loadGoogleRatingWidget(){
     el.innerHTML = `<span style="color:#FFC800; font-size:18px; font-weight:800;">${data.stars}</span> <span style="color:#FFFFFF;">${starsFull}</span> <span style="color:#888; font-size:11px;"> · ${data.reviewCount||0} reviews · ${updatedLabel} update ஆச்சு</span>`;
   }).catch(()=>{
     el.innerHTML = '<span style="color:#666;">Load ஆகல</span>';
+  });
+}
+function loadCustomerStagesWidget(){
+  const el = document.getElementById('adminStagesList');
+  if(!el) return;
+  Promise.all([
+    db.ref('adminUserDirectory').once('value'),
+    db.ref('appConfig/trialExpiryAlertDays').once('value'),
+    db.ref('appConfig/renewalAlertDays').once('value'),
+    db.ref('supportThreads').orderByChild('paymentPending').equalTo(true).once('value')
+  ]).then(([dirSnap, trialCfgSnap, renewalCfgSnap, pendingSnap])=>{
+    const directory = dirSnap.val() || {};
+    const trialAlertDays = trialCfgSnap.exists() ? Number(trialCfgSnap.val()) : 3;
+    const renewalAlertDays = renewalCfgSnap.exists() ? Number(renewalCfgSnap.val()) : 7;
+    const pendingCount = Object.keys(pendingSnap.val() || {}).length;
+    const now = Date.now();
+    const dayMs = 24*60*60*1000;
+    const entries = Object.entries(directory).filter(([uidKey]) => uidKey !== ADMIN_UID);
+
+    let notTracked = 0, trialEnding = 0, renewalDue = 0, inactive = 0, premiumActive = 0;
+    entries.forEach(([_, u])=>{
+      if(!u.lastActiveAt){ notTracked++; return; }
+      if((now - u.lastActiveAt) > 3*dayMs){ inactive++; }
+      if(u.tier !== 'paid' && u.trialEndsAt && (u.trialEndsAt - now) <= trialAlertDays*dayMs && (u.trialEndsAt - now) > -trialAlertDays*dayMs){ trialEnding++; }
+      if(u.tier === 'paid' && u.premiumExpiresAt && (u.premiumExpiresAt - now) <= renewalAlertDays*dayMs){ renewalDue++; }
+      if(u.tier === 'paid' && (!u.premiumExpiresAt || (u.premiumExpiresAt - now) > renewalAlertDays*dayMs)){ premiumActive++; }
+    });
+
+    const stages = [
+      { label: '😴 Not Tracked Yet', count: notTracked, color: '#FF9F45', onclick: 'openCustomerActivityModal()' },
+      { label: '🎁 Trial Ending Soon', count: trialEnding, color: '#FF6B6B', onclick: 'openTrialExpiryModal()' },
+      { label: '🔔 Renewal Due Soon', count: renewalDue, color: '#FFA07A', onclick: 'openRenewalDueModal()' },
+      { label: '💰 Payment Pending', count: pendingCount, color: '#FFC800', onclick: 'openPaymentPendingModal()' },
+      { label: '😴 Inactive (3+ நாள்)', count: inactive, color: '#BB86FC', onclick: 'openInactiveUsersModal()' },
+      { label: '⭐ Premium Active', count: premiumActive, color: '#2ECC71', onclick: 'openPremiumSubscribersModal()' }
+    ];
+    el.innerHTML = stages.map(s => `
+      <div onclick="${s.onclick}" style="display:flex; align-items:center; justify-content:space-between; padding:9px 10px; background:#161616; border-radius:9px; cursor:pointer;">
+        <span style="color:#FFFFFF; font-size:12.5px;">${s.label}</span>
+        <span style="color:${s.color}; font-size:15px; font-weight:800;">${s.count}</span>
+      </div>
+    `).join('');
+  }).catch(()=>{
+    el.innerHTML = '<span style="color:#666; font-size:12.5px;">Load ஆகல</span>';
   });
 }
 function openFlashMessageConfigModal(){
@@ -4040,6 +4097,7 @@ function refreshAllAdminWidgets(silent){
   loadRenewalDueWidget();
   loadLeadsWidget();
   loadGoogleRatingWidget();
+  loadCustomerStagesWidget();
   checkAdminUnreadSupport();
   updateAdminQuickStatus();
   loadTodaySummary();
