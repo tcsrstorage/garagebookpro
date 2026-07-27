@@ -2475,15 +2475,21 @@ function loadCustomerStagesWidget(){
     const pendingCount = Object.keys(pendingSnap.val() || {}).length;
     const now = Date.now();
     const dayMs = 24*60*60*1000;
-    const entries = Object.entries(directory).filter(([uidKey]) => uidKey !== ADMIN_UID);
+    const allEntries = Object.entries(directory);
+    // Inactive Users modal excludes the admin's own account; every other stage modal
+    // (Premium Subscribers, Trial Expiry, Renewal Due, Payment Pending, Not Tracked)
+    // does not, so these counts must mirror that exactly or clicking through won't match.
+    const nonAdminEntries = allEntries.filter(([uidKey]) => uidKey !== ADMIN_UID);
 
     let notTracked = 0, trialEnding = 0, renewalDue = 0, inactive = 0, premiumActive = 0;
-    entries.forEach(([_, u])=>{
-      if(!u.lastActiveAt){ notTracked++; return; }
-      if((now - u.lastActiveAt) > inactiveThresholdDays*dayMs){ inactive++; }
+    allEntries.forEach(([_, u])=>{
+      if(!u.lastActiveAt){ notTracked++; }
       if(u.tier !== 'paid' && u.trialEndsAt && (u.trialEndsAt - now) <= trialAlertDays*dayMs && (u.trialEndsAt - now) > -trialAlertDays*dayMs){ trialEnding++; }
       if(u.tier === 'paid' && u.premiumExpiresAt && (u.premiumExpiresAt - now) <= renewalAlertDays*dayMs){ renewalDue++; }
       if(u.tier === 'paid'){ premiumActive++; }
+    });
+    nonAdminEntries.forEach(([_, u])=>{
+      if(u.lastActiveAt && (now - u.lastActiveAt) > inactiveThresholdDays*dayMs){ inactive++; }
     });
 
     const stages = [
