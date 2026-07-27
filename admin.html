@@ -1677,14 +1677,29 @@ function renderCustomerActivityRows(list){
     const who = u.name || u.email || uid.slice(0,8);
     const statsPart = u.lastActiveAt ? `🚗${u.vehicleCount||0} 📝${u.entryCount||0}` : 'Not tracked yet';
     const timePart = u.lastActiveAt ? timeAgo(u.lastActiveAt) : '-';
+    const waIcon = u.phone
+      ? `<a href="https://wa.me/${waPhone(u.phone)}" target="_blank" style="font-size:15px; text-decoration:none;" onclick="event.stopPropagation()">💬</a>`
+      : `<span style="font-size:15px; opacity:0.25;" title="No phone number saved">💬</span>`;
+    const chatIcon = `<span class="custActivityChatBtn" data-uid="${uid}" style="font-size:15px; cursor:pointer;" onclick="event.stopPropagation()">📨</span>`;
     return `
     <div style="display:flex; align-items:center; gap:8px;">
       <span style="font-size:14px;">👤</span>
       <span style="color:#FFFFFF; font-size:12px; flex:1;">${escapeHtml(who)} — ${statsPart}</span>
       <span style="color:#FFFFFF; font-size:10.5px; white-space:nowrap;">${timePart}</span>
+      ${waIcon}
+      ${chatIcon}
     </div>
   `;
   }).join('') + `</div>`;
+  document.querySelectorAll('.custActivityChatBtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const uidKey = btn.dataset.uid;
+      const u = (_custActivityCache.find(x=>x[0]===uidKey) || [])[1] || {};
+      db.ref('supportThreads/'+uidKey).once('value').then(tsnap=>{
+        openAdminThreadView(uidKey, tsnap.val(), u);
+      });
+    });
+  });
 }
 function filterCustomerActivityList(query){
   const q = (query||'').trim().toLowerCase();
