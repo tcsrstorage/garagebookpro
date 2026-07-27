@@ -1832,7 +1832,7 @@ function openInactiveUsersModal(){
         const email = btn.getAttribute('data-email');
         const phone = btn.getAttribute('data-phone');
         const msg = `வணக்கம்${name ? ' ' + name : ''}! Garage Book Pro-ல உங்க vehicle expenses track பண்ண மறந்துட்டீங்களா? 🚗 ஒரு நிமிடம் இருந்தா, fuel/service entry போட்டு பாருங்க — free-ஆ இருக்கும். ஏதாவது doubt இருந்தா இங்கயே கேளுங்க! 🙏`;
-        openAdminThreadView(uid, { userName: name, userEmail: email, userPhone: phone }, {}, msg);
+        openAdminThreadView(uid, { userName: name, userEmail: email, userPhone: phone }, {}, msg, openInactiveUsersModal);
       });
     });
   }).catch(()=>{});
@@ -1934,7 +1934,7 @@ function openPremiumSubscribersModal(){
         const expiry = btn.getAttribute('data-expiry');
         const expiryText = expiry ? new Date(Number(expiry)).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : 'soon';
         const msg = `வணக்கம்${name ? ' ' + name : ''}! உங்க Garage Book Pro Premium subscription ${expiryText}-ல expire ஆகுது. Renew பண்ண ₹${price} pay பண்ணி, "Payment Done" message அனுப்புங்க — புது Redeem Code அனுப்புறேன். 🙏`;
-        openAdminThreadView(uid, { userName: name, userEmail: email, userPhone: phone }, {}, msg);
+        openAdminThreadView(uid, { userName: name, userEmail: email, userPhone: phone }, {}, msg, openPremiumSubscribersModal);
       });
     });
     document.querySelectorAll('.setDateBtn').forEach(btn=>{
@@ -2041,7 +2041,7 @@ function openPaymentPendingModal(){
     document.querySelectorAll('.openThreadBtn').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         const uidKey = btn.getAttribute('data-uid');
-        openAdminThreadView(uidKey, threads[uidKey], directory[uidKey]);
+        openAdminThreadView(uidKey, threads[uidKey], directory[uidKey], null, openPaymentPendingModal);
       });
     });
     document.querySelectorAll('.genCodeForUserBtn').forEach(btn=>{
@@ -2141,7 +2141,7 @@ function openTrialExpiryModal(){
         const email = btn.getAttribute('data-email');
         const phone = btn.getAttribute('data-phone');
         const msg = `வணக்கம்${name ? ' ' + name : ''}! உங்க Garage Book Pro trial period முடியப்போகுது (அல்லது முடிஞ்சிருச்சு). Premium-க்கு continue பண்ண ₹${price} pay பண்ணி, "Payment Done" message அனுப்புங்க — உடனே Redeem Code அனுப்புறேன். 🙏`;
-        openAdminThreadView(uidKey, { userName: name, userEmail: email, userPhone: phone }, {}, msg);
+        openAdminThreadView(uidKey, { userName: name, userEmail: email, userPhone: phone }, {}, msg, openTrialExpiryModal);
       });
     });
   }).catch(err=> showToast('Load failed: ' + err.message));
@@ -2230,7 +2230,7 @@ function openRenewalDueModal(){
         const expiry = btn.getAttribute('data-expiry');
         const expiryText = expiry ? new Date(Number(expiry)).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : 'soon';
         const msg = `வணக்கம்${name ? ' ' + name : ''}! உங்க Garage Book Pro Premium subscription ${expiryText}-ல expire ஆகுது. Renew பண்ண ₹${price} pay பண்ணி, "Payment Done" message அனுப்புங்க — புது Redeem Code அனுப்புறேன். 🙏`;
-        openAdminThreadView(uidKey, { userName: name, userEmail: email, userPhone: phone }, {}, msg);
+        openAdminThreadView(uidKey, { userName: name, userEmail: email, userPhone: phone }, {}, msg, openRenewalDueModal);
       });
     });
   }).catch(err=> showToast('Load failed: ' + err.message));
@@ -5676,11 +5676,11 @@ function openAdminSupportInbox(){
     `);
     document.getElementById('closeModalX').addEventListener('click', closeModal);
     document.querySelectorAll('.admin-thread-row').forEach(row=>{
-      row.addEventListener('click', ()=> openAdminThreadView(row.dataset.uid, threads[row.dataset.uid], directory[row.dataset.uid]));
+      row.addEventListener('click', ()=> openAdminThreadView(row.dataset.uid, threads[row.dataset.uid], directory[row.dataset.uid], null, openAdminSupportInbox));
     });
   });
 }
-function openAdminThreadView(userUid, threadInfo, dirEntry, prefillText){
+function openAdminThreadView(userUid, threadInfo, dirEntry, prefillText, returnToFn){
   threadInfo = threadInfo || {};
   dirEntry = dirEntry || {};
   const displayName = threadInfo.userName || dirEntry.name || '';
@@ -5702,8 +5702,9 @@ function openAdminThreadView(userUid, threadInfo, dirEntry, prefillText){
       </div>
       ${Object.keys(msgs).length ? '<div id="deleteThreadBtn" style="text-align:center; color:#FF6B6B; font-size:12.5px; cursor:pointer; padding:6px;">🗑️ இந்த Chat முழுசா Delete பண்ணு</div>' : ''}
     `, true);
-    document.getElementById('closeModalX').addEventListener('click', closeModal);
-    db.ref('supportThreads/'+userUid+'/unreadForAdmin').set(false);
+    document.getElementById('closeModalX').addEventListener('click', ()=>{
+      if(typeof returnToFn === 'function') returnToFn(); else closeModal();
+    });
     checkAdminUnreadSupport();
     attachMsgDeleteHandlers(userUid, true);
     const delBtn = document.getElementById('deleteThreadBtn');
@@ -5712,7 +5713,7 @@ function openAdminThreadView(userUid, threadInfo, dirEntry, prefillText){
       db.ref('supportMessages/'+userUid).remove().then(()=>{
         db.ref('supportThreads/'+userUid).remove().then(()=>{
           showToast('Chat delete ஆச்சு');
-          closeModal();
+          if(typeof returnToFn === 'function') returnToFn(); else closeModal();
         });
       });
     });
