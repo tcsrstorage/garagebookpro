@@ -2951,7 +2951,7 @@ function renderVehicleChips(){
   document.getElementById('addVehicleChip').addEventListener('click', openAddVehicleModal);
 }
 
-function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML.replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function getAppConfigNumber(key, fallback){
   return db.ref('appConfig/'+key).once('value').then(snap=> snap.exists() ? Number(snap.val()) : fallback);
 }
