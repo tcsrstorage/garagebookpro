@@ -611,6 +611,10 @@
             <div class="settings-row-left"><span class="ic">😴</span><span class="txt">Inactive Users</span></div>
             <span class="arrow">›</span>
           </div>
+          <div class="settings-row" id="openInactiveThresholdConfigBtn">
+            <div class="settings-row-left"><span class="ic">😴</span><span class="txt">Inactive Threshold Set பண்ணு</span></div>
+            <span class="arrow">›</span>
+          </div>
           <div class="settings-row" id="openLeadsTrackerBtn">
             <div class="settings-row-left"><span class="ic">📋</span><span class="txt">Leads Tracker</span></div>
             <span class="arrow">›</span>
@@ -1281,6 +1285,7 @@ auth.onAuthStateChanged(function(user){
         document.getElementById('openLiveActivityBtn').style.display = '';
         document.getElementById('openCustomerActivityBtn').style.display = '';
         document.getElementById('openInactiveUsersBtn').style.display = '';
+        document.getElementById('openInactiveThresholdConfigBtn').style.display = '';
         document.getElementById('openLeadsTrackerBtn').style.display = '';
         document.getElementById('openMessageTemplatesBtn').style.display = '';
         document.getElementById('openRevenueBtn').style.display = '';
@@ -1802,7 +1807,9 @@ function openCustomerActivityModal(){
   });
 }
 function openInactiveUsersModal(){
-  const INACTIVE_THRESHOLD_MS = 3*24*60*60*1000; // 3 days
+  db.ref('appConfig/inactiveThresholdDays').once('value').then(cfgSnap=>{
+  const thresholdDays = cfgSnap.exists() ? Number(cfgSnap.val()) : 3;
+  const INACTIVE_THRESHOLD_MS = thresholdDays*24*60*60*1000;
   db.ref('adminUserDirectory').once('value').then(snap=>{
     const directory = snap.val() || {};
     const now = Date.now();
@@ -1832,7 +1839,7 @@ function openInactiveUsersModal(){
     }).join('');
     openModal(`
       <div class="modal-title">😴 Inactive Users<span class="close-x" id="closeModalX">✕</span></div>
-      <div style="color:#888; font-size:12px; margin-bottom:14px;">3+ நாள் app திறக்காதவங்க, அல்லது signup பண்ணி ஒருபோதும் use பண்ணாதவங்க. "Nudge அனுப்பு" கிளிக் பண்ணா in-app message prefill ஆகும்.</div>
+      <div style="color:#888; font-size:12px; margin-bottom:14px;">${thresholdDays}+ நாள் app திறக்காதவங்க, அல்லது signup பண்ணி ஒருபோதும் use பண்ணாதவங்க. "Nudge அனுப்பு" கிளிக் பண்ணா in-app message prefill ஆகும். (Threshold-ஐ Settings → "😴 Inactive Threshold Set பண்ணு"-ல மாத்தலாம்.)</div>
       <div style="max-height:440px; overflow-y:auto;">
         ${rows || '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Super! எல்லாரும் active ஆ இருக்காங்க 🎉</div>'}
       </div>
@@ -1849,6 +1856,7 @@ function openInactiveUsersModal(){
       });
     });
   }).catch(()=>{});
+  });
 }
 function loadPremiumSubsWidget(){
   const listEl = document.getElementById('adminPremiumSubsList');
@@ -2270,6 +2278,29 @@ function openRenewalDueConfigModal(){
     });
   });
 }
+function openInactiveThresholdConfigModal(){
+  db.ref('appConfig/inactiveThresholdDays').once('value').then(snap=>{
+    const currentDays = snap.exists() ? snap.val() : 3;
+    openModal(`
+      <div class="modal-title">😴 Inactive Threshold<span class="close-x" id="closeModalX">✕</span></div>
+      <div style="color:#fff; font-size:13px; margin-bottom:16px;">Customer app திறக்காம இத்தனை நாள் ஆனா "Inactive" நு கணக்கு போடணும் நு set பண்ணுங்க. "Inactive Users" list-லேயும், "Customer Stages" widget-லேயும் இந்த number தான் use ஆகும்.</div>
+      <div class="field-label">எத்தனை நாள் ஆனா inactive நு காமிக்கணும்</div>
+      <input type="number" id="inactiveThresholdDaysInput" inputmode="numeric" value="${currentDays}">
+      <button class="btn-primary" id="saveInactiveThresholdDaysBtn" style="margin-top:14px;">Save</button>
+    `);
+    document.getElementById('closeModalX').addEventListener('click', closeModal);
+    document.getElementById('saveInactiveThresholdDaysBtn').addEventListener('click', ()=>{
+      const days = Number(document.getElementById('inactiveThresholdDaysInput').value);
+      if(!days || days < 0){ showToast('Correct number போடுங்க'); return; }
+      db.ref('appConfig/inactiveThresholdDays').set(days).then(()=>{
+        showToast('Inactive Threshold ' + days + ' நாள்-ஆ set ஆச்சு!');
+        closeModal();
+        loadCustomerStagesWidget();
+      }).catch(err=> showToast('Failed: ' + err.message));
+    });
+  });
+}
+document.getElementById('openInactiveThresholdConfigBtn').addEventListener('click', openInactiveThresholdConfigModal);
 document.getElementById('openRenewalDueConfigBtn').addEventListener('click', openRenewalDueConfigModal);
 document.getElementById('openFlashMessageBtn').addEventListener('click', openFlashMessageConfigModal);
 
@@ -2415,11 +2446,13 @@ function loadCustomerStagesWidget(){
     db.ref('adminUserDirectory').once('value'),
     db.ref('appConfig/trialExpiryAlertDays').once('value'),
     db.ref('appConfig/renewalAlertDays').once('value'),
+    db.ref('appConfig/inactiveThresholdDays').once('value'),
     db.ref('supportThreads').orderByChild('paymentPending').equalTo(true).once('value')
-  ]).then(([dirSnap, trialCfgSnap, renewalCfgSnap, pendingSnap])=>{
+  ]).then(([dirSnap, trialCfgSnap, renewalCfgSnap, inactiveCfgSnap, pendingSnap])=>{
     const directory = dirSnap.val() || {};
     const trialAlertDays = trialCfgSnap.exists() ? Number(trialCfgSnap.val()) : 3;
     const renewalAlertDays = renewalCfgSnap.exists() ? Number(renewalCfgSnap.val()) : 7;
+    const inactiveThresholdDays = inactiveCfgSnap.exists() ? Number(inactiveCfgSnap.val()) : 3;
     const pendingCount = Object.keys(pendingSnap.val() || {}).length;
     const now = Date.now();
     const dayMs = 24*60*60*1000;
@@ -2428,7 +2461,7 @@ function loadCustomerStagesWidget(){
     let notTracked = 0, trialEnding = 0, renewalDue = 0, inactive = 0, premiumActive = 0;
     entries.forEach(([_, u])=>{
       if(!u.lastActiveAt){ notTracked++; return; }
-      if((now - u.lastActiveAt) > 3*dayMs){ inactive++; }
+      if((now - u.lastActiveAt) > inactiveThresholdDays*dayMs){ inactive++; }
       if(u.tier !== 'paid' && u.trialEndsAt && (u.trialEndsAt - now) <= trialAlertDays*dayMs && (u.trialEndsAt - now) > -trialAlertDays*dayMs){ trialEnding++; }
       if(u.tier === 'paid' && u.premiumExpiresAt && (u.premiumExpiresAt - now) <= renewalAlertDays*dayMs){ renewalDue++; }
       if(u.tier === 'paid' && (!u.premiumExpiresAt || (u.premiumExpiresAt - now) > renewalAlertDays*dayMs)){ premiumActive++; }
@@ -2439,7 +2472,7 @@ function loadCustomerStagesWidget(){
       { label: '🎁 Trial Ending Soon', count: trialEnding, color: '#FF6B6B', onclick: 'openTrialExpiryModal()' },
       { label: '🔔 Renewal Due Soon', count: renewalDue, color: '#FFA07A', onclick: 'openRenewalDueModal()' },
       { label: '💰 Payment Pending', count: pendingCount, color: '#FFC800', onclick: 'openPaymentPendingModal()' },
-      { label: '😴 Inactive (3+ நாள்)', count: inactive, color: '#BB86FC', onclick: 'openInactiveUsersModal()' },
+      { label: `😴 Inactive (${inactiveThresholdDays}+ நாள்)`, count: inactive, color: '#BB86FC', onclick: 'openInactiveUsersModal()' },
       { label: '⭐ Premium Active', count: premiumActive, color: '#2ECC71', onclick: 'openPremiumSubscribersModal()' }
     ];
     el.innerHTML = stages.map(s => `
