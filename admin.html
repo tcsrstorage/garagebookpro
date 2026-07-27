@@ -1765,6 +1765,10 @@ function openCustomerActivityModal(autoFilterNotTracked){
           ? `<span style="color:#58A6FF; font-size:12px;">🚗 ${u.vehicleCount != null ? u.vehicleCount : '-'} vehicles</span>
              <span style="color:#FFC800; font-size:12px;">📝 ${u.entryCount != null ? u.entryCount : '-'} entries</span>`
           : `<span style="color:#666; font-size:11.5px;">App திறந்ததும் தானா தெரியும்</span>`;
+        const waIcon = u.phone
+          ? `<a href="https://wa.me/${waPhone(u.phone)}" target="_blank" style="font-size:16px; text-decoration:none; padding:3px;" onclick="event.stopPropagation()">💬</a>`
+          : `<span style="font-size:16px; opacity:0.25; padding:3px;" title="No phone number saved">💬</span>`;
+        const chatIcon = `<span class="custActModalChatBtn" data-uid="${uid}" style="font-size:16px; cursor:pointer; padding:3px;" onclick="event.stopPropagation()">📨</span>`;
         return `
         <div style="padding:10px 0; border-bottom:1px solid #222;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1772,20 +1776,35 @@ function openCustomerActivityModal(autoFilterNotTracked){
             <span style="color:#666; font-size:11px;">${timeLabel}</span>
           </div>
           ${subLabel ? `<div style="color:#666; font-size:11px;">${escapeHtml(subLabel)}</div>` : ''}
-          <div style="display:flex; gap:14px; margin-top:4px;">
-            ${countsLabel}
-            <span style="color:${u.tier==='paid' ? '#2ECC71' : '#888'}; font-size:12px;">${u.tier==='paid' ? '⭐ Premium' : 'Free/Trial'}</span>
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-top:4px;">
+            <div style="display:flex; gap:14px; align-items:center;">
+              ${countsLabel}
+              <span style="color:${u.tier==='paid' ? '#2ECC71' : '#888'}; font-size:12px;">${u.tier==='paid' ? '⭐ Premium' : 'Free/Trial'}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:4px;">${waIcon}${chatIcon}</div>
           </div>
         </div>`;
       }).join('') || '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Match இல்ல</div>';
     }
     let showOnlyNotTracked = !!autoFilterNotTracked;
+    function attachChatHandlers(){
+      document.querySelectorAll('.custActModalChatBtn').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const uidKey = btn.dataset.uid;
+          const u = directory[uidKey] || {};
+          db.ref('supportThreads/'+uidKey).once('value').then(tsnap=>{
+            openAdminThreadView(uidKey, tsnap.val(), u, null, ()=>openCustomerActivityModal(showOnlyNotTracked));
+          });
+        });
+      });
+    }
     function refresh(query){
       const q = (query||'').trim().toLowerCase();
       let list = allList;
       if(showOnlyNotTracked) list = list.filter(([_, u]) => !u.lastActiveAt);
       if(q) list = list.filter(([uid, u]) => (u.name||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q));
       document.getElementById('custActModalRows').innerHTML = renderRows(list);
+      attachChatHandlers();
     }
     const initialList = showOnlyNotTracked ? allList.filter(([_, u]) => !u.lastActiveAt) : allList;
     openModal(`
@@ -1798,6 +1817,7 @@ function openCustomerActivityModal(autoFilterNotTracked){
       </div>
     `);
     document.getElementById('closeModalX').addEventListener('click', closeModal);
+    attachChatHandlers();
     document.getElementById('custActModalSearch').addEventListener('input', (e)=> refresh(e.target.value));
     document.getElementById('notTrackedFilterChip').addEventListener('click', function(){
       showOnlyNotTracked = !showOnlyNotTracked;
