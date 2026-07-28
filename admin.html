@@ -2531,21 +2531,32 @@ function loadCustomerStagesWidget(){
       if(u.lastActiveAt && (now - u.lastActiveAt) > inactiveThresholdDays*dayMs){ inactive++; }
     });
 
-    const stages = [
+    const statusStages = [
       { label: '😴 Not Tracked Yet', count: notTracked, color: '#FF9F45', onclick: "openCustomerActivityModal('notTracked')" },
       { label: '🎁 Trial Ending Soon', count: trialEnding, color: '#FF6B6B', onclick: 'openTrialExpiryModal()' },
       { label: '🔔 Renewal Due Soon', count: renewalDue, color: '#FFA07A', onclick: 'openRenewalDueModal()' },
       { label: '💰 Payment Pending', count: pendingCount, color: '#FFC800', onclick: 'openPaymentPendingModal()' },
-      { label: `😴 Inactive (${inactiveThresholdDays}+ நாள்)`, count: inactive, color: '#BB86FC', onclick: 'openInactiveUsersModal()' },
       { label: '⭐ Premium Active', count: premiumActive, color: '#2ECC71', onclick: 'openPremiumSubscribersModal()' },
       { label: '🆓 Free (Trial இல்ல)', count: freeNoActiveTrial, color: '#8899AA', onclick: "openCustomerActivityModal('freeNoTrial')" }
     ];
-    el.innerHTML = stages.map(s => `
-      <div onclick="${s.onclick}" style="display:flex; align-items:center; justify-content:space-between; padding:9px 10px; background:#161616; border-radius:9px; cursor:pointer;">
-        <span style="color:#FFFFFF; font-size:12.5px;">${s.label}</span>
-        <span style="color:${s.color}; font-size:15px; font-weight:800;">${s.count}</span>
+    const totalUsers = allEntries.length;
+    function renderStageRow(s){
+      return `
+      <div onclick="${s.onclick}" style="display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:#161616; border-radius:10px; cursor:pointer;">
+        <span style="color:#FFFFFF; font-size:14.5px;">${s.label}</span>
+        <span style="color:${s.color}; font-size:19px; font-weight:800;">${s.count}</span>
+      </div>`;
+    }
+    el.innerHTML = `
+      <div style="color:#666; font-size:11.5px; margin-bottom:2px;">📊 SUBSCRIPTION STATUS (மொத்தம் ${totalUsers} users)</div>
+      <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">
+        ${statusStages.map(renderStageRow).join('')}
       </div>
-    `).join('');
+      <div style="color:#666; font-size:11.5px; margin-bottom:2px;">⏰ ACTIVITY CHECK (மேலே உள்ளதோட overlap ஆகலாம்)</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        ${renderStageRow({ label: `😴 Inactive (${inactiveThresholdDays}+ நாள்)`, count: inactive, color: '#BB86FC', onclick: 'openInactiveUsersModal()' })}
+      </div>
+    `;
   }).catch(()=>{
     el.innerHTML = '<span style="color:#666; font-size:12.5px;">Load ஆகல</span>';
   });
