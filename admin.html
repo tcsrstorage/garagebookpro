@@ -1751,11 +1751,20 @@ function loadCustomerActivityWidget(){
     }
   }).catch(()=>{});
 }
-function openCustomerActivityModal(autoFilterNotTracked){
-  db.ref('adminUserDirectory').once('value').then(snap=>{
+function openCustomerActivityModal(filterMode){
+  Promise.all([
+    db.ref('adminUserDirectory').once('value'),
+    db.ref('appConfig/trialExpiryAlertDays').once('value')
+  ]).then(([snap, trialCfgSnap])=>{
     const directory = snap.val() || {};
+    const trialAlertDays = trialCfgSnap.exists() ? Number(trialCfgSnap.val()) : 3;
+    const now = Date.now();
+    const dayMs = 24*60*60*1000;
     const allList = Object.entries(directory)
       .sort((a,b) => (b[1].lastActiveAt||0) - (a[1].lastActiveAt||0));
+    function isTrialEndingSoon(u){
+      return u.tier !== 'paid' && u.trialEndsAt && (u.trialEndsAt - now) <= trialAlertDays*dayMs && (u.trialEndsAt - now) > -trialAlertDays*dayMs;
+    }
     function renderRows(list){
       return list.map(([uid, u])=>{
         const idLabel = u.name || u.email || uid.slice(0,8);
@@ -1786,43 +1795,63 @@ function openCustomerActivityModal(autoFilterNotTracked){
         </div>`;
       }).join('') || '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Match இல்ல</div>';
     }
-    let showOnlyNotTracked = !!autoFilterNotTracked;
+    let activeFilter = filterMode || null; // null | 'notTracked' | 'freeNoTrial'
+    function applyFilter(list){
+      if(activeFilter === 'notTracked') return list.filter(([_, u]) => !u.lastActiveAt);
+      if(activeFilter === 'freeNoTrial') return list.filter(([_, u]) => u.lastActiveAt && u.tier !== 'paid' && !isTrialEndingSoon(u));
+      return list;
+    }
     function attachChatHandlers(){
       document.querySelectorAll('.custActModalChatBtn').forEach(btn=>{
         btn.addEventListener('click', ()=>{
           const uidKey = btn.dataset.uid;
           const u = directory[uidKey] || {};
           db.ref('supportThreads/'+uidKey).once('value').then(tsnap=>{
-            openAdminThreadView(uidKey, tsnap.val(), u, null, ()=>openCustomerActivityModal(showOnlyNotTracked));
+            openAdminThreadView(uidKey, tsnap.val(), u, null, ()=>openCustomerActivityModal(activeFilter));
           });
         });
       });
     }
+    function updateChipStyles(){
+      const chip1 = document.getElementById('notTrackedFilterChip');
+      const chip2 = document.getElementById('freeNoTrialFilterChip');
+      chip1.style.background = activeFilter==='notTracked' ? '#FF6B6B' : 'transparent';
+      chip1.style.color = activeFilter==='notTracked' ? '#0A0A0A' : '#FF6B6B';
+      chip2.style.background = activeFilter==='freeNoTrial' ? '#8899AA' : 'transparent';
+      chip2.style.color = activeFilter==='freeNoTrial' ? '#0A0A0A' : '#8899AA';
+    }
     function refresh(query){
       const q = (query||'').trim().toLowerCase();
-      let list = allList;
-      if(showOnlyNotTracked) list = list.filter(([_, u]) => !u.lastActiveAt);
+      let list = applyFilter(allList);
       if(q) list = list.filter(([uid, u]) => (u.name||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q));
       document.getElementById('custActModalRows').innerHTML = renderRows(list);
       attachChatHandlers();
     }
-    const initialList = showOnlyNotTracked ? allList.filter(([_, u]) => !u.lastActiveAt) : allList;
+    const initialList = applyFilter(allList);
     openModal(`
       <div class="modal-title">👥 Customer Activity<span class="close-x" id="closeModalX">✕</span></div>
       <div style="color:#888; font-size:12px; margin-bottom:12px;">Users, last active time first. "Not tracked yet" = அந்த user இந்த feature வந்த பிறகு app இன்னும் open பண்ணல.</div>
       <input type="text" id="custActModalSearch" placeholder="🔍 Name / email search..." style="width:100%; background:#111; border:1px solid #333; border-radius:8px; padding:9px 10px; color:#fff; font-size:13px; margin-bottom:8px; box-sizing:border-box;">
-      <div id="notTrackedFilterChip" style="display:inline-block; color:#FF6B6B; font-size:11.5px; border:1px solid #FF6B6B; border-radius:20px; padding:5px 12px; margin-bottom:12px; cursor:pointer; background:${showOnlyNotTracked?'#FF6B6B':'transparent'}; color:${showOnlyNotTracked?'#0A0A0A':'#FF6B6B'};">😴 Not tracked yet மட்டும் காமிக்கு</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+        <div id="notTrackedFilterChip" style="display:inline-block; font-size:11.5px; border:1px solid #FF6B6B; border-radius:20px; padding:5px 12px; cursor:pointer;">😴 Not tracked yet</div>
+        <div id="freeNoTrialFilterChip" style="display:inline-block; font-size:11.5px; border:1px solid #8899AA; border-radius:20px; padding:5px 12px; cursor:pointer;">🆓 Free (Trial இல்ல)</div>
+      </div>
       <div style="max-height:420px; overflow-y:auto;" id="custActModalRows">
-        ${initialList.length || !showOnlyNotTracked ? renderRows(initialList) : '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Data இன்னும் இல்ல (இந்த feature add பண்ணின பிறகு app open பண்ணினா தெரியும்)</div>'}
+        ${initialList.length || !activeFilter ? renderRows(initialList) : '<div style="color:#888; font-size:13px; text-align:center; padding:20px 0;">Data இன்னும் இல்ல (இந்த feature add பண்ணின பிறகு app open பண்ணினா தெரியும்)</div>'}
       </div>
     `);
     document.getElementById('closeModalX').addEventListener('click', closeModal);
+    updateChipStyles();
     attachChatHandlers();
     document.getElementById('custActModalSearch').addEventListener('input', (e)=> refresh(e.target.value));
     document.getElementById('notTrackedFilterChip').addEventListener('click', function(){
-      showOnlyNotTracked = !showOnlyNotTracked;
-      this.style.background = showOnlyNotTracked ? '#FF6B6B' : 'transparent';
-      this.style.color = showOnlyNotTracked ? '#0A0A0A' : '#FF6B6B';
+      activeFilter = activeFilter === 'notTracked' ? null : 'notTracked';
+      updateChipStyles();
+      refresh(document.getElementById('custActModalSearch').value);
+    });
+    document.getElementById('freeNoTrialFilterChip').addEventListener('click', function(){
+      activeFilter = activeFilter === 'freeNoTrial' ? null : 'freeNoTrial';
+      updateChipStyles();
       refresh(document.getElementById('custActModalSearch').value);
     });
   });
@@ -2487,24 +2516,29 @@ function loadCustomerStagesWidget(){
     // does not, so these counts must mirror that exactly or clicking through won't match.
     const nonAdminEntries = allEntries.filter(([uidKey]) => uidKey !== ADMIN_UID);
 
-    let notTracked = 0, trialEnding = 0, renewalDue = 0, inactive = 0, premiumActive = 0;
+    let notTracked = 0, trialEnding = 0, renewalDue = 0, inactive = 0, premiumActive = 0, freeNoActiveTrial = 0;
     allEntries.forEach(([_, u])=>{
-      if(!u.lastActiveAt){ notTracked++; }
-      if(u.tier !== 'paid' && u.trialEndsAt && (u.trialEndsAt - now) <= trialAlertDays*dayMs && (u.trialEndsAt - now) > -trialAlertDays*dayMs){ trialEnding++; }
+      if(!u.lastActiveAt){ notTracked++; return; }
+      const isTrialEnding = u.tier !== 'paid' && u.trialEndsAt && (u.trialEndsAt - now) <= trialAlertDays*dayMs && (u.trialEndsAt - now) > -trialAlertDays*dayMs;
+      if(isTrialEnding){ trialEnding++; }
       if(u.tier === 'paid' && u.premiumExpiresAt && (u.premiumExpiresAt - now) <= renewalAlertDays*dayMs){ renewalDue++; }
       if(u.tier === 'paid'){ premiumActive++; }
+      // Active user, not paid, and not currently inside the trial-ending-soon window —
+      // covers trial-expired-long-ago accounts AND accounts admin manually disabled from Premium.
+      if(u.tier !== 'paid' && !isTrialEnding){ freeNoActiveTrial++; }
     });
     nonAdminEntries.forEach(([_, u])=>{
       if(u.lastActiveAt && (now - u.lastActiveAt) > inactiveThresholdDays*dayMs){ inactive++; }
     });
 
     const stages = [
-      { label: '😴 Not Tracked Yet', count: notTracked, color: '#FF9F45', onclick: 'openCustomerActivityModal(true)' },
+      { label: '😴 Not Tracked Yet', count: notTracked, color: '#FF9F45', onclick: "openCustomerActivityModal('notTracked')" },
       { label: '🎁 Trial Ending Soon', count: trialEnding, color: '#FF6B6B', onclick: 'openTrialExpiryModal()' },
       { label: '🔔 Renewal Due Soon', count: renewalDue, color: '#FFA07A', onclick: 'openRenewalDueModal()' },
       { label: '💰 Payment Pending', count: pendingCount, color: '#FFC800', onclick: 'openPaymentPendingModal()' },
       { label: `😴 Inactive (${inactiveThresholdDays}+ நாள்)`, count: inactive, color: '#BB86FC', onclick: 'openInactiveUsersModal()' },
-      { label: '⭐ Premium Active', count: premiumActive, color: '#2ECC71', onclick: 'openPremiumSubscribersModal()' }
+      { label: '⭐ Premium Active', count: premiumActive, color: '#2ECC71', onclick: 'openPremiumSubscribersModal()' },
+      { label: '🆓 Free (Trial இல்ல)', count: freeNoActiveTrial, color: '#8899AA', onclick: "openCustomerActivityModal('freeNoTrial')" }
     ];
     el.innerHTML = stages.map(s => `
       <div onclick="${s.onclick}" style="display:flex; align-items:center; justify-content:space-between; padding:9px 10px; background:#161616; border-radius:9px; cursor:pointer;">
