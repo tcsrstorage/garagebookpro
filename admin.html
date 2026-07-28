@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260728-2325">
+<meta name="app-build" content="20260728-2336">
 <style>
   :root{
     --yellow:#FFC800;
@@ -1692,6 +1692,18 @@ function computeCustomerStage(uid, u, cfg){
   if(u.tier === 'paid') return { num:5, emoji:'⭐', text:'Premium Active', color:'#2ECC71' };
   return { num:6, emoji:'🆓', text:'Free (Trial இல்ல)', color:'#8899AA' };
 }
+const STAGE_NUDGE_MESSAGES = {
+  1: (name)=>`Hi ${name}! 👋 GarageBookPro app-ல உங்க வண்டியை இன்னும் add பண்ணல. இப்போவே app-ஐ open பண்ணி உங்க முதல் vehicle-ஐ add பண்ணுங்க - 2 நிமிஷத்துல முடிஞ்சிரும்! 🚗`,
+  2: (name)=>`Hi ${name}! 🎁 உங்க GarageBookPro trial period soon-ல முடியப்போகுது. Unlimited vehicles + reports + cloud backup தொடர, இப்போவே Premium-க்கு upgrade பண்ணுங்க - Redeem Code screen-ல easy-ஆ பண்ணலாம்!`,
+  3: (name)=>`Hi ${name}! 🔔 உங்க GarageBookPro Premium subscription soon-ல expire ஆகப்போகுது. Access தொடர இப்போவே renew பண்ணுங்க - ₹240/year மட்டும்தான்!`,
+  4: (name)=>`Hi ${name}! 💰 உங்க payment இன்னும் நாங்க confirm பண்ணல. Payment screenshot அனுப்பினீங்களா? இல்லைனா Redeem Code screen-ல payment complete பண்ணுங்க, நாங்க fast-ஆ activate பண்ணிடுவோம்!`,
+  5: (name)=>`Hi ${name}! ⭐ GarageBookPro Premium member ஆனதுக்கு நன்றி! உங்க experience எப்படி இருக்கு? Happy-ஆ இருந்தா, உங்க friends/family-கிட்ட recommend பண்ணுங்க - referral code share பண்ணி இருவரும் benefit வாங்கலாம்!`,
+  6: (name)=>`Hi ${name}! 🆓 நீங்க இப்போ Free plan-ல இருக்கீங்க (1 vehicle மட்டும்). Unlimited vehicles, reports, cloud backup, PDF export வேணுமா? Premium-க்கு upgrade பண்ணுங்க - ₹240/year மட்டும்தான்!`
+};
+function getStageNudgeMessage(stageNum, name){
+  const fn = STAGE_NUDGE_MESSAGES[stageNum] || STAGE_NUDGE_MESSAGES[1];
+  return fn(name || 'Customer');
+}
 function renderCustomerActivityRows(list){
   const listEl = document.getElementById('adminCustomerActivityList');
   if(!listEl) return;
@@ -1705,10 +1717,11 @@ function renderCustomerActivityRows(list){
     const stageBadge = `<span style="display:inline-block; margin-top:3px; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; background:${stage.color}22; color:${stage.color}; border:1px solid ${stage.color}55;">${stage.emoji} Stage ${stage.num} - ${stage.text}</span>`;
     const statsPart = u.lastActiveAt ? `🚗 ${u.vehicleCount||0} vehicles &nbsp; 📝 ${u.entryCount||0} entries` : '<span style="color:#FF9F45;">Not tracked yet</span>';
     const timePart = u.lastActiveAt ? timeAgo(u.lastActiveAt) : '-';
+    const nudgeMsg = getStageNudgeMessage(stage.num, u.name || '');
     const waIcon = u.phone
-      ? `<a href="https://wa.me/${waPhone(u.phone)}" target="_blank" style="font-size:17px; text-decoration:none; padding:4px;" onclick="event.stopPropagation()">💬</a>`
+      ? `<a href="https://wa.me/${waPhone(u.phone)}?text=${encodeURIComponent(nudgeMsg)}" target="_blank" style="font-size:17px; text-decoration:none; padding:4px;" onclick="event.stopPropagation()">💬</a>`
       : `<span style="font-size:17px; opacity:0.25; padding:4px;" title="No phone number saved">💬</span>`;
-    const chatIcon = `<span class="custActivityChatBtn" data-uid="${uid}" style="font-size:17px; cursor:pointer; padding:4px;" onclick="event.stopPropagation()">📨</span>`;
+    const chatIcon = `<span class="custActivityChatBtn" data-uid="${uid}" data-nudge="${escapeHtml(nudgeMsg)}" style="font-size:17px; cursor:pointer; padding:4px;" onclick="event.stopPropagation()">📨</span>`;
     return `
     <div style="background:#111; border:1px solid #262626; border-radius:12px; padding:12px 14px;">
       <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:8px;">
@@ -1732,8 +1745,9 @@ function renderCustomerActivityRows(list){
     btn.addEventListener('click', ()=>{
       const uidKey = btn.dataset.uid;
       const u = (_custActivityCache.find(x=>x[0]===uidKey) || [])[1] || {};
+      const nudge = btn.dataset.nudge || '';
       db.ref('supportThreads/'+uidKey).once('value').then(tsnap=>{
-        openAdminThreadView(uidKey, tsnap.val(), u);
+        openAdminThreadView(uidKey, tsnap.val(), u, nudge);
       });
     });
   });
@@ -1814,10 +1828,11 @@ function openCustomerActivityModal(filterMode){
           ? `<span style="color:#58A6FF; font-size:12px;">🚗 ${u.vehicleCount != null ? u.vehicleCount : '-'} vehicles</span>
              <span style="color:#FFC800; font-size:12px;">📝 ${u.entryCount != null ? u.entryCount : '-'} entries</span>`
           : `<span style="color:#666; font-size:11.5px;">App திறந்ததும் தானா தெரியும்</span>`;
+        const nudgeMsg = getStageNudgeMessage(stage.num, u.name || '');
         const waIcon = u.phone
-          ? `<a href="https://wa.me/${waPhone(u.phone)}" target="_blank" style="font-size:16px; text-decoration:none; padding:3px;" onclick="event.stopPropagation()">💬</a>`
+          ? `<a href="https://wa.me/${waPhone(u.phone)}?text=${encodeURIComponent(nudgeMsg)}" target="_blank" style="font-size:16px; text-decoration:none; padding:3px;" onclick="event.stopPropagation()">💬</a>`
           : `<span style="font-size:16px; opacity:0.25; padding:3px;" title="No phone number saved">💬</span>`;
-        const chatIcon = `<span class="custActModalChatBtn" data-uid="${uid}" style="font-size:16px; cursor:pointer; padding:3px;" onclick="event.stopPropagation()">📨</span>`;
+        const chatIcon = `<span class="custActModalChatBtn" data-uid="${uid}" data-nudge="${escapeHtml(nudgeMsg)}" style="font-size:16px; cursor:pointer; padding:3px;" onclick="event.stopPropagation()">📨</span>`;
         return `
         <div style="padding:10px 0; border-bottom:1px solid #222;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1847,8 +1862,9 @@ function openCustomerActivityModal(filterMode){
         btn.addEventListener('click', ()=>{
           const uidKey = btn.dataset.uid;
           const u = directory[uidKey] || {};
+          const nudge = btn.dataset.nudge || '';
           db.ref('supportThreads/'+uidKey).once('value').then(tsnap=>{
-            openAdminThreadView(uidKey, tsnap.val(), u, null, ()=>openCustomerActivityModal(activeFilter));
+            openAdminThreadView(uidKey, tsnap.val(), u, nudge, ()=>openCustomerActivityModal(activeFilter));
           });
         });
       });
