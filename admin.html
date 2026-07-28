@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260726-0640">
+<meta name="app-build" content="20260728-2325">
 <style>
   :root{
     --yellow:#FFC800;
@@ -1678,6 +1678,20 @@ function openRevenueModal(){
 }
 
 let _custActivityCache = [];
+let _custActivityCfg = { now: Date.now(), trialAlertDays: 3, renewalAlertDays: 7, pendingUidSet: new Set() };
+function computeCustomerStage(uid, u, cfg){
+  const now = cfg.now;
+  const dayMs = 24*60*60*1000;
+  if(!u.lastActiveAt) return { num:1, emoji:'😴', text:'Not Tracked Yet', color:'#FF9F45' };
+  const isPaymentPending = cfg.pendingUidSet && cfg.pendingUidSet.has(uid);
+  const isTrialEnding = u.tier !== 'paid' && u.trialEndsAt && (u.trialEndsAt - now) <= cfg.trialAlertDays*dayMs && (u.trialEndsAt - now) > -cfg.trialAlertDays*dayMs;
+  const isRenewalDue = u.tier === 'paid' && u.premiumExpiresAt && (u.premiumExpiresAt - now) <= cfg.renewalAlertDays*dayMs;
+  if(isPaymentPending) return { num:4, emoji:'💰', text:'Payment Pending', color:'#FFC800' };
+  if(isRenewalDue) return { num:3, emoji:'🔔', text:'Renewal Due Soon', color:'#FFA07A' };
+  if(isTrialEnding) return { num:2, emoji:'🎁', text:'Trial Ending Soon', color:'#FF6B6B' };
+  if(u.tier === 'paid') return { num:5, emoji:'⭐', text:'Premium Active', color:'#2ECC71' };
+  return { num:6, emoji:'🆓', text:'Free (Trial இல்ல)', color:'#8899AA' };
+}
 function renderCustomerActivityRows(list){
   const listEl = document.getElementById('adminCustomerActivityList');
   if(!listEl) return;
@@ -1687,6 +1701,8 @@ function renderCustomerActivityRows(list){
   }
   listEl.innerHTML = `<div style="max-height:340px; overflow-y:auto; display:flex; flex-direction:column; gap:10px;">` + list.map(([uid, u])=>{
     const who = u.name || u.email || uid.slice(0,8);
+    const stage = computeCustomerStage(uid, u, _custActivityCfg);
+    const stageBadge = `<span style="display:inline-block; margin-top:3px; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; background:${stage.color}22; color:${stage.color}; border:1px solid ${stage.color}55;">${stage.emoji} Stage ${stage.num} - ${stage.text}</span>`;
     const statsPart = u.lastActiveAt ? `🚗 ${u.vehicleCount||0} vehicles &nbsp; 📝 ${u.entryCount||0} entries` : '<span style="color:#FF9F45;">Not tracked yet</span>';
     const timePart = u.lastActiveAt ? timeAgo(u.lastActiveAt) : '-';
     const waIcon = u.phone
@@ -1696,9 +1712,12 @@ function renderCustomerActivityRows(list){
     return `
     <div style="background:#111; border:1px solid #262626; border-radius:12px; padding:12px 14px;">
       <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:8px;">
-        <div style="display:flex; align-items:flex-start; gap:8px; min-width:0;">
-          <span style="font-size:15px; margin-top:1px;">👤</span>
-          <span style="color:#FFFFFF; font-size:13px; font-weight:600; word-break:break-word;">${escapeHtml(who)}</span>
+        <div style="display:flex; flex-direction:column; gap:4px; min-width:0;">
+          <div style="display:flex; align-items:flex-start; gap:8px;">
+            <span style="font-size:15px; margin-top:1px;">👤</span>
+            <span style="color:#FFFFFF; font-size:13px; font-weight:600; word-break:break-word;">${escapeHtml(who)}</span>
+          </div>
+          ${stageBadge}
         </div>
         <span style="color:#888; font-size:11px; white-space:nowrap; margin-top:2px;">${timePart}</span>
       </div>
@@ -1738,11 +1757,22 @@ function waPhone(phone){
 function loadCustomerActivityWidget(){
   const listEl = document.getElementById('adminCustomerActivityList');
   if(!listEl) return;
-  db.ref('adminUserDirectory').once('value').then(snap=>{
+  Promise.all([
+    db.ref('adminUserDirectory').once('value'),
+    db.ref('appConfig/trialExpiryAlertDays').once('value'),
+    db.ref('appConfig/renewalAlertDays').once('value'),
+    db.ref('supportThreads').orderByChild('paymentPending').equalTo(true).once('value')
+  ]).then(([snap, trialCfgSnap, renewalCfgSnap, pendingSnap])=>{
     const directory = snap.val() || {};
     const list = Object.entries(directory)
       .sort((a,b) => (b[1].lastActiveAt||0) - (a[1].lastActiveAt||0));
     _custActivityCache = list;
+    _custActivityCfg = {
+      now: Date.now(),
+      trialAlertDays: trialCfgSnap.exists() ? Number(trialCfgSnap.val()) : 3,
+      renewalAlertDays: renewalCfgSnap.exists() ? Number(renewalCfgSnap.val()) : 7,
+      pendingUidSet: new Set(Object.keys(pendingSnap.val() || {}))
+    };
     const searchBox = document.getElementById('custActivitySearch');
     if(searchBox && searchBox.value.trim()){
       filterCustomerActivityList(searchBox.value);
@@ -1754,12 +1784,20 @@ function loadCustomerActivityWidget(){
 function openCustomerActivityModal(filterMode){
   Promise.all([
     db.ref('adminUserDirectory').once('value'),
-    db.ref('appConfig/trialExpiryAlertDays').once('value')
-  ]).then(([snap, trialCfgSnap])=>{
+    db.ref('appConfig/trialExpiryAlertDays').once('value'),
+    db.ref('appConfig/renewalAlertDays').once('value'),
+    db.ref('supportThreads').orderByChild('paymentPending').equalTo(true).once('value')
+  ]).then(([snap, trialCfgSnap, renewalCfgSnap, pendingSnap])=>{
     const directory = snap.val() || {};
     const trialAlertDays = trialCfgSnap.exists() ? Number(trialCfgSnap.val()) : 3;
     const now = Date.now();
     const dayMs = 24*60*60*1000;
+    const stageCfg = {
+      now,
+      trialAlertDays,
+      renewalAlertDays: renewalCfgSnap.exists() ? Number(renewalCfgSnap.val()) : 7,
+      pendingUidSet: new Set(Object.keys(pendingSnap.val() || {}))
+    };
     const allList = Object.entries(directory)
       .sort((a,b) => (b[1].lastActiveAt||0) - (a[1].lastActiveAt||0));
     function isTrialEndingSoon(u){
@@ -1770,6 +1808,8 @@ function openCustomerActivityModal(filterMode){
         const idLabel = u.name || u.email || uid.slice(0,8);
         const subLabel = (u.name && u.email) ? u.email : '';
         const timeLabel = u.lastActiveAt ? timeAgo(u.lastActiveAt) : 'Not tracked yet';
+        const stage = computeCustomerStage(uid, u, stageCfg);
+        const stageBadge = `<span style="display:inline-block; margin-top:4px; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; background:${stage.color}22; color:${stage.color}; border:1px solid ${stage.color}55;">${stage.emoji} Stage ${stage.num} - ${stage.text}</span>`;
         const countsLabel = u.lastActiveAt
           ? `<span style="color:#58A6FF; font-size:12px;">🚗 ${u.vehicleCount != null ? u.vehicleCount : '-'} vehicles</span>
              <span style="color:#FFC800; font-size:12px;">📝 ${u.entryCount != null ? u.entryCount : '-'} entries</span>`
@@ -1785,6 +1825,7 @@ function openCustomerActivityModal(filterMode){
             <span style="color:#666; font-size:11px;">${timeLabel}</span>
           </div>
           ${subLabel ? `<div style="color:#666; font-size:11px;">${escapeHtml(subLabel)}</div>` : ''}
+          <div>${stageBadge}</div>
           <div style="display:flex; align-items:center; justify-content:space-between; margin-top:4px;">
             <div style="display:flex; gap:14px; align-items:center;">
               ${countsLabel}
@@ -2532,12 +2573,12 @@ function loadCustomerStagesWidget(){
     });
 
     const statusStages = [
-      { label: '😴 Not Tracked Yet', count: notTracked, color: '#FF9F45', onclick: "openCustomerActivityModal('notTracked')" },
-      { label: '🎁 Trial Ending Soon', count: trialEnding, color: '#FF6B6B', onclick: 'openTrialExpiryModal()' },
-      { label: '🔔 Renewal Due Soon', count: renewalDue, color: '#FFA07A', onclick: 'openRenewalDueModal()' },
-      { label: '💰 Payment Pending', count: pendingCount, color: '#FFC800', onclick: 'openPaymentPendingModal()' },
-      { label: '⭐ Premium Active', count: premiumActive, color: '#2ECC71', onclick: 'openPremiumSubscribersModal()' },
-      { label: '🆓 Free (Trial இல்ல)', count: freeNoActiveTrial, color: '#8899AA', onclick: "openCustomerActivityModal('freeNoTrial')" }
+      { label: 'Stage 1 - 😴 Not Tracked Yet', count: notTracked, color: '#FF9F45', onclick: "openCustomerActivityModal('notTracked')" },
+      { label: 'Stage 2 - 🎁 Trial Ending Soon', count: trialEnding, color: '#FF6B6B', onclick: 'openTrialExpiryModal()' },
+      { label: 'Stage 3 - 🔔 Renewal Due Soon', count: renewalDue, color: '#FFA07A', onclick: 'openRenewalDueModal()' },
+      { label: 'Stage 4 - 💰 Payment Pending', count: pendingCount, color: '#FFC800', onclick: 'openPaymentPendingModal()' },
+      { label: 'Stage 5 - ⭐ Premium Active', count: premiumActive, color: '#2ECC71', onclick: 'openPremiumSubscribersModal()' },
+      { label: 'Stage 6 - 🆓 Free (Trial இல்ல)', count: freeNoActiveTrial, color: '#8899AA', onclick: "openCustomerActivityModal('freeNoTrial')" }
     ];
     const totalUsers = allEntries.length;
     function renderStageRow(s){
