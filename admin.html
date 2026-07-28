@@ -1954,6 +1954,7 @@ function openPremiumSubscribersModal(){
         <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">
           <span class="sendReminderBtn" data-uid="${uid}" data-email="${escapeHtml(u.email||'')}" data-name="${escapeHtml(u.name||'')}" data-phone="${escapeHtml(u.phone||'')}" data-expiry="${u.premiumExpiresAt||''}" style="display:inline-block; color:#FFC800; font-size:11.5px; border:1px solid #FFC800; border-radius:8px; padding:4px 10px; cursor:pointer;">💬 Reminder அனுப்பு</span>
           <span class="setDateBtn" data-uid="${uid}" data-activated="${u.premiumActivatedAt||''}" data-expiry="${u.premiumExpiresAt||''}" style="display:inline-block; color:#58A6FF; font-size:11.5px; border:1px solid #58A6FF; border-radius:8px; padding:4px 10px; cursor:pointer;">📅 தேதி Set பண்ணு</span>
+          <span class="disableTierBtn" data-uid="${uid}" style="display:inline-block; color:#FF6B6B; font-size:11.5px; border:1px solid #FF6B6B; border-radius:8px; padding:4px 10px; cursor:pointer;">🚫 Disable பண்ணு</span>
         </div>
       </div>`;
     }).join('');
@@ -2008,6 +2009,11 @@ function openPremiumSubscribersModal(){
             openPremiumSubscribersModal();
           }).catch(err=> showToast('Failed: ' + err.message));
         });
+      });
+    });
+    document.querySelectorAll('.disableTierBtn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        togglePremiumTier(btn.getAttribute('data-uid'), 'paid', openPremiumSubscribersModal);
       });
     });
   });
@@ -2962,6 +2968,7 @@ function openAdminUserListModal(){
             <span class="editUserTrialBtn" data-uid="${u.uid}" data-days="${u.trialEndsAt ? Math.max(0, Math.ceil((u.trialEndsAt - now) / 86400000)) : 0}" style="color:#FFC800; font-size:18px; padding:4px 8px; cursor:pointer;">✏️</span>
             <span class="editUserPlaceBtn" data-uid="${u.uid}" data-place="${escapeHtml(u.place||'')}" style="color:#58A6FF; font-size:16px; padding:4px 8px; cursor:pointer;">📍</span>
             <span class="editUserPhoneBtn" data-uid="${u.uid}" data-phone="${escapeHtml(u.phone||'')}" style="color:#4CD964; font-size:16px; padding:4px 8px; cursor:pointer;">📞</span>
+            <span class="toggleTierBtn" data-uid="${u.uid}" data-tier="${u.tier||'free'}" style="color:${u.tier==='paid' ? '#FF6B6B' : '#2ECC71'}; font-size:16px; padding:4px 8px; cursor:pointer;" title="${u.tier==='paid' ? 'Disable Premium' : 'Enable Premium'}">${u.tier==='paid' ? '🚫' : '⭐'}</span>
           </span>
         </div>`;
       }).join('') || '<div style="color:#fff; font-size:13px; padding:10px 0;">Match இல்ல</div>';
@@ -2980,6 +2987,9 @@ function openAdminUserListModal(){
       });
       document.querySelectorAll('.editUserPhoneBtn').forEach(btn=>{
         btn.addEventListener('click', ()=> editUserPhone(btn.dataset.uid, btn.dataset.phone));
+      });
+      document.querySelectorAll('.toggleTierBtn').forEach(btn=>{
+        btn.addEventListener('click', ()=> togglePremiumTier(btn.dataset.uid, btn.dataset.tier, ()=>refreshRows(document.getElementById('userListSearch').value)));
       });
     }
     const trialCount = allEntries.filter(u=> u.tier!=='paid' && u.trialEndsAt && now < u.trialEndsAt).length;
@@ -3014,6 +3024,9 @@ function openAdminUserListModal(){
     document.querySelectorAll('.editUserPhoneBtn').forEach(btn=>{
       btn.addEventListener('click', ()=> editUserPhone(btn.dataset.uid, btn.dataset.phone));
     });
+    document.querySelectorAll('.toggleTierBtn').forEach(btn=>{
+      btn.addEventListener('click', ()=> togglePremiumTier(btn.dataset.uid, btn.dataset.tier, ()=>refreshRows(document.getElementById('userListSearch').value)));
+    });
   }).catch(err=>{
     showToast('Load failed: ' + err.message);
   });
@@ -3037,6 +3050,20 @@ function editUserPhone(uid, currentPhone){
     db.ref('adminUserDirectory/'+uid+'/phone').set(newPhone).then(()=>{
       showToast('Phone number update ஆச்சு!');
       openAdminUserListModal(); // refresh
+    });
+  }).catch(err=> showToast('Failed: ' + err.message));
+}
+function togglePremiumTier(uid, currentTier, refreshFn){
+  const isDisabling = currentTier === 'paid';
+  const confirmMsg = isDisabling
+    ? 'இந்த customer-ஓட Premium-ஐ Disable பண்ணலாமா? Free tier-க்கு போயிடுவாங்க (1 vehicle மட்டும் access). Expiry date save ஆகி இருக்கும் — திரும்ப Enable பண்ணா அதே date தான் வரும்.'
+    : 'இந்த customer-க்கு Premium-ஐ திரும்ப Enable பண்ணலாமா? முன்னாடி save ஆன expiry date தான் restore ஆகும் (இல்லனா "தேதி Set பண்ணு"-ல புது date போடலாம்).';
+  if(!confirm(confirmMsg)) return;
+  const newTier = isDisabling ? 'free' : 'paid';
+  db.ref('users/'+uid+'/profile/tier').set(newTier).then(()=>{
+    db.ref('adminUserDirectory/'+uid+'/tier').set(newTier).then(()=>{
+      showToast(isDisabling ? 'Premium Disable ஆச்சு!' : 'Premium Enable ஆச்சு!');
+      if(typeof refreshFn === 'function') refreshFn(); else openAdminUserListModal();
     });
   }).catch(err=> showToast('Failed: ' + err.message));
 }
