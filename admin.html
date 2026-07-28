@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260728-2336">
+<meta name="app-build" content="20260728-2342">
 <style>
   :root{
     --yellow:#FFC800;
@@ -1695,10 +1695,10 @@ function computeCustomerStage(uid, u, cfg){
 const STAGE_NUDGE_MESSAGES = {
   1: (name)=>`Hi ${name}! 👋 GarageBookPro app-ல உங்க வண்டியை இன்னும் add பண்ணல. இப்போவே app-ஐ open பண்ணி உங்க முதல் vehicle-ஐ add பண்ணுங்க - 2 நிமிஷத்துல முடிஞ்சிரும்! 🚗`,
   2: (name)=>`Hi ${name}! 🎁 உங்க GarageBookPro trial period soon-ல முடியப்போகுது. Unlimited vehicles + reports + cloud backup தொடர, இப்போவே Premium-க்கு upgrade பண்ணுங்க - Redeem Code screen-ல easy-ஆ பண்ணலாம்!`,
-  3: (name)=>`Hi ${name}! 🔔 உங்க GarageBookPro Premium subscription soon-ல expire ஆகப்போகுது. Access தொடர இப்போவே renew பண்ணுங்க - ₹240/year மட்டும்தான்!`,
+  3: (name)=>`Hi ${name}! 🔔 உங்க GarageBookPro Premium subscription soon-ல expire ஆகப்போகுது. Access தொடர இப்போவே renew பண்ணுங்க - ₹250/year மட்டும்தான்!`,
   4: (name)=>`Hi ${name}! 💰 உங்க payment இன்னும் நாங்க confirm பண்ணல. Payment screenshot அனுப்பினீங்களா? இல்லைனா Redeem Code screen-ல payment complete பண்ணுங்க, நாங்க fast-ஆ activate பண்ணிடுவோம்!`,
   5: (name)=>`Hi ${name}! ⭐ GarageBookPro Premium member ஆனதுக்கு நன்றி! உங்க experience எப்படி இருக்கு? Happy-ஆ இருந்தா, உங்க friends/family-கிட்ட recommend பண்ணுங்க - referral code share பண்ணி இருவரும் benefit வாங்கலாம்!`,
-  6: (name)=>`Hi ${name}! 🆓 நீங்க இப்போ Free plan-ல இருக்கீங்க (1 vehicle மட்டும்). Unlimited vehicles, reports, cloud backup, PDF export வேணுமா? Premium-க்கு upgrade பண்ணுங்க - ₹240/year மட்டும்தான்!`
+  6: (name)=>`Hi ${name}! 🆓 நீங்க இப்போ Free plan-ல இருக்கீங்க (1 vehicle மட்டும்). Unlimited vehicles, reports, cloud backup, PDF export வேணுமா? Premium-க்கு upgrade பண்ணுங்க - ₹250/year மட்டும்தான்!`
 };
 function getStageNudgeMessage(stageNum, name){
   const fn = STAGE_NUDGE_MESSAGES[stageNum] || STAGE_NUDGE_MESSAGES[1];
