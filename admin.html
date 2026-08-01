@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260731-1407">
+<meta name="app-build" content="20260801-1540">
 <style>
   :root{
     --yellow:#FFC800;
@@ -505,6 +505,10 @@
             <div style="flex:1; text-align:center;" onclick="event.stopPropagation(); openRevenueModal();">
               <div id="adminStatsRedemptions" style="color:#FF9F45; font-size:23px; font-weight:700;">0</div>
               <div style="color:#FFFFFF; font-size:11px;">Redemptions</div>
+            </div>
+            <div style="flex:1; text-align:center;" onclick="event.stopPropagation(); openRevenueModal();">
+              <div id="adminStatsFreeActivation" style="color:#B8B8B8; font-size:23px; font-weight:700;">0</div>
+              <div style="color:#FFFFFF; font-size:11px;">Free Activation</div>
             </div>
           </div>
         </div>
@@ -4335,16 +4339,20 @@ function loadAdminHomeStats(){
   });
   db.ref('redeemCodes').once('value').then(snap=>{
     const elR = document.getElementById('adminStatsRedemptions');
-    if(!elR) return;
-    let paidCount = 0;
+    const elF = document.getElementById('adminStatsFreeActivation');
+    if(!elR && !elF) return;
+    let paidCount = 0, compCount = 0;
     if(snap.exists()){
       snap.forEach(child=>{
         const r = child.val();
         const amount = r.amount != null ? r.amount : 250;
-        if(r.used && !r.isComp && amount > 0) paidCount++;
+        if(!r.used) return;
+        if(r.isComp || amount === 0) compCount++;
+        else paidCount++;
       });
     }
-    elR.textContent = paidCount;
+    if(elR) elR.textContent = paidCount;
+    if(elF) elF.textContent = compCount;
   }).catch(()=>{});
 }
 let homeActivityRef = null; // live listener for the Home screen Live Activity widget
