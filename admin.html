@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260801-1607">
+<meta name="app-build" content="20260801-1618">
 <style>
   :root{
     --yellow:#FFC800;
@@ -4336,12 +4336,17 @@ function loadAdminHomeStats(){
       const s = sSnap.val() || 0;
       const elV = document.getElementById('adminStatsVisits');
       const elS = document.getElementById('adminStatsSignups');
-      const elC = document.getElementById('adminStatsConversion');
       if(elV) elV.textContent = v;
       if(elS) elS.textContent = s;
-      if(elC) elC.textContent = s;
     });
   });
+  db.ref('adminUserDirectory').once('value').then(dirSnap=>{
+    const elC = document.getElementById('adminStatsConversion');
+    if(!elC) return;
+    const dirVal = dirSnap.val() || {};
+    const paidUserCount = Object.values(dirVal).filter(u=> u.tier === 'paid').length;
+    elC.textContent = paidUserCount;
+  }).catch(()=>{});
   db.ref('redeemCodes').once('value').then(snap=>{
     const elR = document.getElementById('adminStatsRedemptions');
     const elF = document.getElementById('adminStatsFreeActivation');
