@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260801-1550">
+<meta name="app-build" content="20260801-1607">
 <style>
   :root{
     --yellow:#FFC800;
@@ -3100,20 +3100,25 @@ function openAdminUserListModal(){
     }
     const trialCount = allEntries.filter(u=> u.tier!=='paid' && u.trialEndsAt && now < u.trialEndsAt).length;
     const paidCount = allEntries.filter(u=> u.tier==='paid').length;
+    const freeExpiredCount = allEntries.length - paidCount - trialCount;
     openModal(`
       <div class="modal-title">Users & Trial Status<span class="close-x" id="closeModalX">✕</span></div>
-      <div style="display:flex; gap:10px; margin-bottom:16px;">
-        <div style="flex:1; background:#161616; border-radius:10px; padding:12px; text-align:center;">
-          <div style="color:#FFC800; font-size:20px; font-weight:700;">${paidCount}</div>
-          <div style="color:#fff; font-size:11px;">Premium</div>
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <div style="flex:1; background:#161616; border-radius:10px; padding:10px 6px; text-align:center;">
+          <div style="color:#FFC800; font-size:18px; font-weight:700;">${paidCount}</div>
+          <div style="color:#fff; font-size:10px;">Premium</div>
         </div>
-        <div style="flex:1; background:#161616; border-radius:10px; padding:12px; text-align:center;">
-          <div style="color:#58A6FF; font-size:20px; font-weight:700;">${trialCount}</div>
-          <div style="color:#fff; font-size:11px;">On Trial</div>
+        <div style="flex:1; background:#161616; border-radius:10px; padding:10px 6px; text-align:center;">
+          <div style="color:#58A6FF; font-size:18px; font-weight:700;">${trialCount}</div>
+          <div style="color:#fff; font-size:10px;">On Trial</div>
         </div>
-        <div style="flex:1; background:#161616; border-radius:10px; padding:12px; text-align:center;">
-          <div style="color:#fff; font-size:20px; font-weight:700;">${allEntries.length}</div>
-          <div style="color:#fff; font-size:11px;">Total Users</div>
+        <div style="flex:1; background:#161616; border-radius:10px; padding:10px 6px; text-align:center;">
+          <div style="color:#B8B8B8; font-size:18px; font-weight:700;">${freeExpiredCount}</div>
+          <div style="color:#fff; font-size:10px;">Free/Expired</div>
+        </div>
+        <div style="flex:1; background:#161616; border-radius:10px; padding:10px 6px; text-align:center;">
+          <div style="color:#fff; font-size:18px; font-weight:700;">${allEntries.length}</div>
+          <div style="color:#fff; font-size:10px;">Total Users</div>
         </div>
       </div>
       <input type="text" id="userListSearch" placeholder="🔍 Name / email / phone search..." style="width:100%; background:#111; border:1px solid #333; border-radius:8px; padding:9px 10px; color:#fff; font-size:13px; margin-bottom:14px; box-sizing:border-box;">
