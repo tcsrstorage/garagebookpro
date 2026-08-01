@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260801-1540">
+<meta name="app-build" content="20260801-1550">
 <style>
   :root{
     --yellow:#FFC800;
@@ -4900,7 +4900,11 @@ async function loadRecentCodes(){
   const listEl = document.getElementById('recentCodesList');
   if(!listEl) return;
   try{
-    const snap = await db.ref('redeemCodes').once('value');
+    const [snap, dirSnap] = await Promise.all([
+      db.ref('redeemCodes').once('value'),
+      db.ref('adminUserDirectory').once('value')
+    ]);
+    const dirVal = dirSnap.val() || {};
     if(!snap.exists()){
       listEl.innerHTML = '<div style="color:#fff; font-size:12.5px;">இன்னும் code இல்ல</div>';
       return;
@@ -4920,9 +4924,17 @@ async function loadRecentCodes(){
       const toggleCompBtnHtml = r.used
         ? `<button class="toggleCompBtn" data-code="${r.key}" data-iscomp="${r.isComp ? '1' : '0'}" style="background:none; border:1px solid #444; border-radius:6px; color:#fff; font-size:10.5px; padding:3px 7px; margin-left:6px; cursor:pointer; white-space:nowrap;">${r.isComp ? '💰 Mark Paid' : '🎁 Mark Comp'}</button>`
         : '';
+      const usedByUser = r.used && r.usedBy ? dirVal[r.usedBy] : null;
+      const usedByWho = usedByUser
+        ? (usedByUser.name || usedByUser.email || r.usedBy.slice(0,8))
+        : (r.used && r.usedBy ? r.usedBy.slice(0,8) : (r.used ? 'Unknown' : ''));
+      const usedByHtml = r.used
+        ? `<div style="width:100%; color:#888; font-size:11px; margin-top:2px;">👤 Used by: ${escapeHtml(usedByWho)}</div>`
+        : '';
       return `<div class="recentCodeRow" data-code="${r.key}" style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:#161616; border-radius:8px; margin-bottom:6px; cursor:pointer; flex-wrap:wrap; gap:4px;">
         <span style="font-weight:400; font-size:13.5px;">📋 ${r.key}${compHtml}</span>
         <span style="display:flex; align-items:center;">${statusHtml}${toggleCompBtnHtml}${deleteBtnHtml}</span>
+        ${usedByHtml}
       </div>`;
     }).join('');
     listEl.querySelectorAll('.toggleCompBtn').forEach(btn => {
