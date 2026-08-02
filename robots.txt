@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /backups/
+
+Sitemap: https://garagebookpro.in/sitemap.xml
