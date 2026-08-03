@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260803-2310">
+<meta name="app-build" content="20260803-2350">
 <style>
   :root{
     --yellow:#FFC800;
@@ -1120,7 +1120,8 @@ auth.onAuthStateChanged(function(user){
       // Backward compatibility: old format stored a single ownerUid string. Migrate to object format.
       if(typeof linkVal === 'string'){
         const oldOwner = linkVal;
-        db.ref('linkMap/'+user.uid).set({ [oldOwner]: { joinedAt: Date.now() } });
+        // In-memory only. Rewriting the node would need a shareCode under the new
+        // linkMap rules, and this legacy format predates share codes entirely.
         linkVal = { [oldOwner]: { joinedAt: Date.now() } };
       }
       const linkedOwners = linkVal && typeof linkVal === 'object' ? Object.keys(linkVal) : [];
@@ -3244,7 +3245,7 @@ function openEditRecurringModal(id){
     <div class="field-label">Vehicle</div>
     <select id="rVehicle">${vehicleEntries.map(([vid,v])=>`<option value="${vid}" ${r?.vehicleId===vid?'selected':''}>${escapeHtml(v.name)}</option>`).join('')}</select>
     <div class="field-label">Category</div>
-    <select id="rCategory">${catEntries.map(([cid,c])=>`<option value="${cid}" ${r?.categoryId===cid?'selected':''}>${c.emoji} ${escapeHtml(c.name)}</option>`).join('')}</select>
+    <select id="rCategory">${catEntries.map(([cid,c])=>`<option value="${cid}" ${r?.categoryId===cid?'selected':''}>${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</option>`).join('')}</select>
     <div class="field-label">Amount (₹)</div>
     <input type="number" id="rAmount" inputmode="numeric" value="${r?.amount||''}">
     <div class="field-label">Frequency</div>
@@ -3654,7 +3655,7 @@ function renderHome(){
       const c = STATE.categories[cid] || {emoji:'📦', name:'Unknown'};
       const pct = Math.max(4, (amt/maxCat)*100);
       return `<div class="cat-bar-row">
-        <div class="cat-bar-emoji">${c.emoji}</div>
+        <div class="cat-bar-emoji">${escapeHtml(c.emoji)}</div>
         <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${pct}%"></div></div>
         <div class="cat-bar-amt">${fmtMoney(amt)}</div>
       </div>`;
@@ -3679,7 +3680,7 @@ function entryCardHtml(e){
   const dateStr = e.date ? new Date(e.date+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short'}) : '';
   const sub = (STATE.activeVehicle==='all' ? `${v.name} · ${pm.name} · ${dateStr}` : `${pm.name} · ${dateStr}`) + odoLabel(e);
   return `<div class="entry-card" data-id="${e.id}">
-    <div class="entry-emoji">${c.emoji}</div>
+    <div class="entry-emoji">${escapeHtml(c.emoji)}</div>
     <div class="entry-info">
       <div class="entry-cat">${escapeHtml(c.name)}</div>
       <div class="entry-sub">${escapeHtml(sub)}</div>
@@ -3814,7 +3815,7 @@ function renderCompare(){
       const t = catThis[cid]||0, l = catLast[cid]||0;
       const d = l ? ((t-l)/l*100) : (t>0?100:0);
       return `<div class="entry-card">
-        <div class="entry-emoji">${c.emoji}</div>
+        <div class="entry-emoji">${escapeHtml(c.emoji)}</div>
         <div class="entry-info">
           <div class="entry-cat">${escapeHtml(c.name)}</div>
           <div class="entry-sub">Last: ${fmtMoney(l)}</div>
@@ -4365,10 +4366,10 @@ function renderEntryForm(existing){
 
   const catEntries = Object.entries(STATE.categories).filter(([id,c]) => c.active !== false || id===existing?.categoryId);
   const catChips = catEntries.map(([id,c])=>
-    `<div class="pick-chip ${id===(existing?.categoryId)?'active':''}" data-cat="${id}">${c.emoji} ${escapeHtml(c.name)}</div>`).join('');
+    `<div class="pick-chip ${id===(existing?.categoryId)?'active':''}" data-cat="${id}">${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</div>`).join('');
   const pmEntries = Object.entries(STATE.paymodes).filter(([id,p]) => p.active !== false || id===existing?.paymodeId);
   const pmChips = pmEntries.map(([id,p])=>
-    `<div class="pick-chip ${id===(existing?.paymodeId)?'active':''}" data-pm="${id}">${p.emoji} ${escapeHtml(p.name)}</div>`).join('');
+    `<div class="pick-chip ${id===(existing?.paymodeId)?'active':''}" data-pm="${id}">${escapeHtml(p.emoji)} ${escapeHtml(p.name)}</div>`).join('');
 
   openModal(`
     <div class="modal-title">${existing?'Edit Entry':'Add Expense'}<span class="close-x" id="closeModalX">✕</span></div>
@@ -5032,7 +5033,7 @@ function openFamilyShareModal(){
         const data = cs.val();
         if(!data || !data.ownerUid){ showToast('Code தப்பா இருக்கு'); return; }
         if(data.ownerUid === currentUser.uid){ showToast('இது உங்க own code'); return; }
-        const linkEntry = { joinedAt: Date.now() };
+        const linkEntry = { joinedAt: Date.now(), shareCode: code };
         if(data.restrictedVehicleId) linkEntry.restrictedVehicleId = data.restrictedVehicleId;
         db.ref('linkMap/'+currentUser.uid+'/'+data.ownerUid).set(linkEntry).then(()=>{
           localStorage.setItem('gbp_active_owner_' + currentUser.uid, data.ownerUid);
@@ -5295,7 +5296,7 @@ function openManageList(kind){
     const isActive = item.active !== false;
     return `
     <div class="manage-item ${isActive?'':'inactive'}">
-      <div class="emj">${item.emoji}</div>
+      <div class="emj">${escapeHtml(item.emoji)}</div>
       <div class="nm">${escapeHtml(item.name)}</div>
       <label class="toggle-switch"><input type="checkbox" class="toggle-active" data-id="${id}" data-kind="${singularKind}" ${isActive?'checked':''}><span class="toggle-slider"></span></label>
       <div class="edit-btn" data-id="${id}" data-kind="${kind}">✏️</div>
@@ -5552,7 +5553,7 @@ function openVehicleReport(vehicleId){
 
   const catRowsHtml = sortedCats.length ? sortedCats.map(([cid,amt])=>{
     const c = STATE.categories[cid] || {emoji:'📦', name:'Unknown'};
-    return `<div class="cat-bar-row"><div class="cat-bar-emoji">${c.emoji}</div>
+    return `<div class="cat-bar-row"><div class="cat-bar-emoji">${escapeHtml(c.emoji)}</div>
       <div style="flex:1;">${escapeHtml(c.name)}</div>
       <div class="cat-bar-amt">${fmtMoney(amt)}</div></div>`;
   }).join('') : `<div class="empty-state">No expenses yet</div>`;
@@ -5562,7 +5563,7 @@ function openVehicleReport(vehicleId){
     const pm = STATE.paymodes[e.paymodeId] || {name:''};
     const dateStr = e.date ? new Date(e.date+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '';
     return `<div class="entry-card">
-      <div class="entry-emoji">${c.emoji}</div>
+      <div class="entry-emoji">${escapeHtml(c.emoji)}</div>
       <div class="entry-info">
         <div class="entry-cat">${escapeHtml(c.name)}</div>
         <div class="entry-sub">${dateStr} · ${escapeHtml(pm.name)}${odoLabel(e)}${e.notes?' · '+escapeHtml(e.notes):''}</div>
