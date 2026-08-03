@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260803-2350">
+<meta name="app-build" content="20260804-0030">
 <style>
   :root{
     --yellow:#FFC800;
@@ -567,6 +567,10 @@
             <div class="settings-row-left"><span class="ic">🎁</span><span class="txt">Trial Duration Set பண்ணு</span></div>
             <span class="arrow">›</span>
           </div>
+          <div class="settings-row" id="openTrialExpiryBtn">
+            <div class="settings-row-left"><span class="ic">⏰</span><span class="txt">Trial Expiring Soon</span></div>
+            <span class="arrow">›</span>
+          </div>
           <div class="settings-row" id="openTrialAlertConfigBtn">
             <div class="settings-row-left"><span class="ic">⏰</span><span class="txt">Trial Alert Window Set பண்ணு</span></div>
             <span class="arrow">›</span>
@@ -603,8 +607,16 @@
             <div class="settings-row-left"><span class="ic">🏆</span><span class="txt">Referral Leaderboard</span></div>
             <span class="arrow">›</span>
           </div>
+          <div class="settings-row" id="openRenewalDueBtn">
+            <div class="settings-row-left"><span class="ic">🔔</span><span class="txt">Renewal Due Soon</span></div>
+            <span class="arrow">›</span>
+          </div>
           <div class="settings-row" id="openRenewalDueConfigBtn">
             <div class="settings-row-left"><span class="ic">🔔</span><span class="txt">Renewal Alert Window Set பண்ணு</span></div>
+            <span class="arrow">›</span>
+          </div>
+          <div class="settings-row" id="openGoogleRatingBtn">
+            <div class="settings-row-left"><span class="ic">⭐</span><span class="txt">Google Rating Update பண்ணு</span></div>
             <span class="arrow">›</span>
           </div>
           <div class="settings-row" id="openFlashMessageBtn">
@@ -3247,6 +3259,9 @@ function openTrialAlertConfigModal(){
   });
 }
 document.getElementById('openTrialAlertConfigBtn').addEventListener('click', openTrialAlertConfigModal);
+document.getElementById('openTrialExpiryBtn').addEventListener('click', openTrialExpiryModal);
+document.getElementById('openRenewalDueBtn').addEventListener('click', openRenewalDueModal);
+document.getElementById('openGoogleRatingBtn').addEventListener('click', openGoogleRatingModal);
 function fuelSlugify(name){
   return name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
 }
