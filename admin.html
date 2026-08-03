@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260804-0030">
+<meta name="app-build" content="20260804-0120">
 <style>
   :root{
     --yellow:#FFC800;
@@ -999,6 +999,9 @@ let STATE = {
   tier: "free" // "free" or "paid"
 };
 const FREE_TIER_VEHICLE_LIMIT = 1;
+// Premium keeps working for this long past premiumExpiresAt, so a customer who is a
+// few days late renewing is never suddenly locked out. Mirrored in Firebase rules.
+const PREMIUM_GRACE_MS = 7*24*60*60*1000;
 
 const DEFAULT_CATEGORIES = {
   cat_petrol:{emoji:"⛽",name:"Petrol"},
@@ -3673,11 +3676,16 @@ function initFirebase(){
     STATE.profilePlace = (val.profile && val.profile.place) || '';
     STATE.appliedReferral = (val.profile && val.profile.appliedReferral) || null;
     STATE.trialActive = STATE.tier !== 'paid' && STATE.trialEndsAt && Date.now() < STATE.trialEndsAt;
-    STATE.isPremiumActive = STATE.tier === 'paid' || STATE.trialActive;
+    // A paid subscription lapses once premiumExpiresAt + grace has passed. We never rewrite
+    // tier for this — expiry is derived, so it is enforced identically by the Firebase rules
+    // and no background job is needed. Existing vehicles stay readable/editable either way.
+    STATE.premiumExpired = STATE.tier === 'paid' && !!STATE.premiumExpiresAt && Date.now() > (STATE.premiumExpiresAt + PREMIUM_GRACE_MS);
+    STATE.paidActive = STATE.tier === 'paid' && !STATE.premiumExpired;
+    STATE.isPremiumActive = STATE.paidActive || STATE.trialActive;
     const bannerEl = document.getElementById('homePremiumBanner');
     if(bannerEl) bannerEl.classList.toggle('hidden', STATE.isPremiumActive);
     const redeemRow = document.getElementById('redeemCodeQuickRow');
-    if(redeemRow) redeemRow.style.display = (STATE.tier !== 'paid' && STATE.trialActive) ? 'block' : 'none';
+    if(redeemRow) redeemRow.style.display = !STATE.paidActive ? 'block' : 'none';
     renderTrialBanner();
     renderPremiumStatusBanner();
     STATE.vehicles = val.vehicles || {};
@@ -4715,8 +4723,10 @@ document.getElementById('addDailyLogBtn').addEventListener('click', openAddDaily
 function openAccountModal(){
   const identity = (currentUser && (currentUser.email || currentUser.phoneNumber)) || '-';
   let tierLabel;
-  if(STATE.tier === 'paid'){
+  if(STATE.paidActive){
     tierLabel = '<span style="color:#FFC800; font-weight:400;">⭐ Premium</span>';
+  } else if(STATE.premiumExpired){
+    tierLabel = '<span style="color:#FF4D4D; font-weight:400;">⭐ Premium — முடிஞ்சிடுச்சு (Renew பண்ணுங்க)</span>';
   } else if(STATE.trialActive){
     const daysLeft = Math.ceil((STATE.trialEndsAt - Date.now()) / 86400000);
     tierLabel = `<span style="color:#58A6FF; font-weight:400;">🎁 Free Trial — ${daysLeft} நாள் மிச்சம்</span>`;
@@ -4728,7 +4738,7 @@ function openAccountModal(){
     <div class="field-label">Logged in as</div>
     <div style="padding:12px 14px; background:#1A1A1A; border-radius:10px; margin-bottom:14px; font-weight:400;">${identity}</div>
     <div class="field-label">Plan</div>
-    <div style="padding:12px 14px; background:#1A1A1A; border-radius:10px; margin-bottom:20px;">${tierLabel} — ${Object.keys(STATE.vehicles).length}/${STATE.tier === 'paid' ? '∞' : FREE_TIER_VEHICLE_LIMIT} vehicles</div>
+    <div style="padding:12px 14px; background:#1A1A1A; border-radius:10px; margin-bottom:20px;">${tierLabel} — ${Object.keys(STATE.vehicles).length}/${STATE.paidActive ? '∞' : FREE_TIER_VEHICLE_LIMIT} vehicles</div>
     ${currentUser && currentUser.email ? `<button class="btn-secondary" id="resetPwFromAccountBtn" style="margin-bottom:12px;">🔑 Password Reset Link அனுப்பு</button>` : ''}
     ${STATE.tier === 'paid' ? `<button class="btn-secondary btn-danger" id="deactivatePremiumBtn" style="margin-bottom:12px;">⭐ Premium Deactivate பண்ணு</button>` : ''}
     <button class="btn-secondary btn-danger" id="logoutBtn" style="margin-bottom:12px;">🚪 Logout</button>
@@ -5470,9 +5480,11 @@ async function redeemPremiumCode(){
 
 function openFreeLimitModal(){
   const nextNum = Object.keys(STATE.vehicles).length + 1;
-  const trialNote = STATE.trialActive
-    ? `<div style="color:#8FD19E; font-size:12.5px; line-height:1.6; margin-bottom:14px;">Free Trial-ல Reports, Compare, Cloud Backup, PDF Export எல்லாம் இருக்கு — Vehicle limit மட்டும் Premium-க்கு தான்.</div>`
-    : '';
+  const trialNote = STATE.premiumExpired
+    ? `<div style="color:#FF9F9F; font-size:12.5px; line-height:1.6; margin-bottom:14px;">உங்க Premium subscription முடிஞ்சிடுச்சு. இருக்கற vehicles எல்லாம் பாதிக்காது — Renew பண்ணினா மீண்டும் புது vehicle add பண்ணலாம்.</div>`
+    : (STATE.trialActive
+      ? `<div style="color:#8FD19E; font-size:12.5px; line-height:1.6; margin-bottom:14px;">Free Trial-ல Reports, Compare, Cloud Backup, PDF Export எல்லாம் இருக்கு — Vehicle limit மட்டும் Premium-க்கு தான்.</div>`
+      : '');
   openModal(`
     <div class="modal-title">🚗 Vehicle Limit<span class="close-x" id="closeModalX">✕</span></div>
     <div style="text-align:center; padding:10px 0 6px;">
@@ -5492,7 +5504,7 @@ function openFreeLimitModal(){
   });
 }
 function openAddVehicleModal(){
-  if(STATE.tier !== 'paid' && Object.keys(STATE.vehicles).length >= FREE_TIER_VEHICLE_LIMIT){
+  if(!STATE.paidActive && Object.keys(STATE.vehicles).length >= FREE_TIER_VEHICLE_LIMIT){
     openFreeLimitModal();
     return;
   }
