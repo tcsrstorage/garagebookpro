@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260804-0210">
+<meta name="app-build" content="20260804-0940">
 <style>
   :root{
     --yellow:#FFC800;
@@ -311,6 +311,45 @@
 /* Admin-only build: hide all customer-facing UI */
 #customerOnlySection, .fab, .fab-chat, .bottomnav, #tab-monthly, #tab-compare, #tab-settings, #vehicleScroll { display:none !important; }
 #adminAccessDenied{ display:none; min-height:100vh; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:30px; background:#0A0A0A; color:#fff; }
+
+  /* ===== FULLSCREEN IMAGE VIEWER (Document Vault zoom) ===== */
+  #imgViewerOverlay{
+    position:fixed; inset:0; z-index:3000; background:#000;
+    display:none; flex-direction:column;
+    touch-action:none; overscroll-behavior:contain;
+    -webkit-user-select:none; user-select:none;
+  }
+  #imgViewerOverlay.show{ display:flex; }
+  #imgViewerBar{
+    flex:0 0 auto; display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px; padding-top:calc(12px + env(safe-area-inset-top));
+    background:rgba(0,0,0,.9); border-bottom:1px solid #222;
+  }
+  #imgViewerTitle{ font-weight:700; font-size:15px; color:var(--yellow); }
+  #imgViewerClose{
+    font-size:24px; line-height:1; color:#fff; cursor:pointer;
+    padding:4px 10px; border-radius:8px; background:#1c1c1c;
+  }
+  #imgViewerStage{
+    flex:1 1 auto; position:relative; overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+  }
+  #imgViewerImg{
+    max-width:100%; max-height:100%; display:block;
+    transform-origin:0 0; will-change:transform;
+    -webkit-user-drag:none; user-drag:none; -webkit-touch-callout:none;
+  }
+  #imgViewerHint{
+    flex:0 0 auto; text-align:center; color:#fff; opacity:.55;
+    font-size:11.5px; padding:9px 12px;
+    padding-bottom:calc(9px + env(safe-area-inset-bottom));
+    background:rgba(0,0,0,.9); border-top:1px solid #222;
+  }
+  .docZoomBadge{
+    position:absolute; right:8px; bottom:8px; pointer-events:none;
+    background:rgba(0,0,0,.75); color:var(--yellow);
+    font-size:11.5px; font-weight:700; padding:5px 9px; border-radius:7px;
+  }
 </style>
 </head>
 <body>
@@ -877,6 +916,16 @@
 </div>
 
 <div id="modalRoot"></div>
+<div id="imgViewerOverlay">
+  <div id="imgViewerBar">
+    <span id="imgViewerTitle">Document</span>
+    <span id="imgViewerClose">&#10005;</span>
+  </div>
+  <div id="imgViewerStage">
+    <img id="imgViewerImg" src="" alt="Document">
+  </div>
+  <div id="imgViewerHint">Pinch பண்ணி Zoom &nbsp;&bull;&nbsp; Double-tap பண்ணி Zoom in/out &nbsp;&bull;&nbsp; Drag பண்ணி நகர்த்தலாம்</div>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -5074,6 +5123,7 @@ function openModal(innerHtml, fullscreen){
   });
 }
 function closeModal(){
+  closeImageViewer();
   if(liveActivityRef){ liveActivityRef.off(); liveActivityRef = null; }
   document.getElementById('modalRoot').innerHTML='';
 }
@@ -5706,6 +5756,185 @@ function readPdfAsDataUrl(file){
     reader.readAsDataURL(file);
   });
 }
+// ============ FULLSCREEN IMAGE VIEWER (pinch zoom / pan / double-tap) ============
+var IMGV = { scale:1, tx:0, ty:0, base:null, min:1, max:5,
+             pinch:null, pan:null, mouse:null, lastTap:0, lastTapX:0, lastTapY:0, bound:false };
+
+function imgvNode(id){ return document.getElementById(id); }
+
+function openImageViewer(src, title){
+  var ov = imgvNode('imgViewerOverlay'), img = imgvNode('imgViewerImg');
+  if(!ov || !img || !src) return;
+  imgvBind();
+  imgvNode('imgViewerTitle').textContent = title || 'Document';
+  IMGV.scale = 1; IMGV.tx = 0; IMGV.ty = 0; IMGV.base = null;
+  IMGV.pinch = null; IMGV.pan = null; IMGV.mouse = null; IMGV.lastTap = 0;
+  img.style.transform = 'none';
+  img.onload = function(){ setTimeout(function(){ imgvMeasure(0); }, 30); };
+  img.onerror = function(){ showToast('Image காட்ட முடியல'); closeImageViewer(); };
+  img.src = src;
+  ov.classList.add('show');
+  document.body.style.overflow = 'hidden';
+  if(img.complete && img.naturalWidth) setTimeout(function(){ imgvMeasure(0); }, 30);
+}
+
+function closeImageViewer(){
+  var ov = imgvNode('imgViewerOverlay'), img = imgvNode('imgViewerImg');
+  if(!ov || !ov.classList.contains('show')) return;
+  ov.classList.remove('show');
+  document.body.style.overflow = '';
+  if(img){ img.onload = null; img.onerror = null; img.src = ''; img.style.transform = 'none'; }
+  IMGV.pinch = null; IMGV.pan = null; IMGV.mouse = null; IMGV.base = null;
+}
+
+function imgvMeasure(retry){
+  var img = imgvNode('imgViewerImg');
+  if(!img) return;
+  var prev = img.style.transform;
+  img.style.transform = 'none';
+  var r = img.getBoundingClientRect();
+  img.style.transform = prev;
+  if(!r.width || !r.height){
+    if((retry||0) < 10) setTimeout(function(){ imgvMeasure((retry||0)+1); }, 60);
+    return;
+  }
+  IMGV.base = r;
+  imgvClamp(); imgvApply();
+}
+
+function imgvApply(){
+  var img = imgvNode('imgViewerImg');
+  if(img) img.style.transform = 'translate(' + IMGV.tx + 'px,' + IMGV.ty + 'px) scale(' + IMGV.scale + ')';
+}
+
+function imgvClamp(){
+  var stage = imgvNode('imgViewerStage'), b = IMGV.base;
+  if(!stage || !b || !b.width || !b.height) return;
+  var s = stage.getBoundingClientRect();
+  var w = b.width * IMGV.scale, h = b.height * IMGV.scale;
+  if(w <= s.width){
+    IMGV.tx = s.left + s.width/2 - b.left - w/2;
+  } else {
+    var maxTx = s.left - b.left, minTx = s.right - b.left - w;
+    if(IMGV.tx > maxTx) IMGV.tx = maxTx;
+    if(IMGV.tx < minTx) IMGV.tx = minTx;
+  }
+  if(h <= s.height){
+    IMGV.ty = s.top + s.height/2 - b.top - h/2;
+  } else {
+    var maxTy = s.top - b.top, minTy = s.bottom - b.top - h;
+    if(IMGV.ty > maxTy) IMGV.ty = maxTy;
+    if(IMGV.ty < minTy) IMGV.ty = minTy;
+  }
+}
+
+function imgvZoomTo(newScale, cx, cy){
+  var b = IMGV.base;
+  if(!b) { imgvMeasure(); b = IMGV.base; if(!b) return; }
+  newScale = Math.max(IMGV.min, Math.min(IMGV.max, newScale));
+  var px = (cx - b.left - IMGV.tx) / IMGV.scale;
+  var py = (cy - b.top - IMGV.ty) / IMGV.scale;
+  IMGV.tx = cx - b.left - newScale * px;
+  IMGV.ty = cy - b.top - newScale * py;
+  IMGV.scale = newScale;
+  imgvClamp(); imgvApply();
+}
+
+function imgvDist(t1, t2){
+  var dx = t1.clientX - t2.clientX, dy = t1.clientY - t2.clientY;
+  return Math.sqrt(dx*dx + dy*dy);
+}
+
+function imgvBind(){
+  if(IMGV.bound) return;
+  var ov = imgvNode('imgViewerOverlay'), stage = imgvNode('imgViewerStage');
+  if(!ov || !stage) return;
+  IMGV.bound = true;
+
+  imgvNode('imgViewerClose').addEventListener('click', closeImageViewer);
+
+  stage.addEventListener('touchstart', function(e){
+    if(!IMGV.base) imgvMeasure();
+    if(e.touches.length === 2){
+      e.preventDefault();
+      var t1 = e.touches[0], t2 = e.touches[1];
+      IMGV.pinch = { d: imgvDist(t1,t2), s: IMGV.scale,
+                     cx: (t1.clientX+t2.clientX)/2, cy: (t1.clientY+t2.clientY)/2 };
+      IMGV.pan = null;
+    } else if(e.touches.length === 1){
+      var t = e.touches[0];
+      IMGV.pan = { x:t.clientX, y:t.clientY, tx:IMGV.tx, ty:IMGV.ty, moved:false, bg:(e.target === stage) };
+    }
+  }, {passive:false});
+
+  stage.addEventListener('touchmove', function(e){
+    if(IMGV.pinch && e.touches.length === 2){
+      e.preventDefault();
+      var d = imgvDist(e.touches[0], e.touches[1]);
+      if(IMGV.pinch.d > 0) imgvZoomTo(IMGV.pinch.s * (d / IMGV.pinch.d), IMGV.pinch.cx, IMGV.pinch.cy);
+    } else if(IMGV.pan && e.touches.length === 1){
+      var t = e.touches[0];
+      var dx = t.clientX - IMGV.pan.x, dy = t.clientY - IMGV.pan.y;
+      if(Math.abs(dx) > 5 || Math.abs(dy) > 5) IMGV.pan.moved = true;
+      if(IMGV.scale > 1){
+        e.preventDefault();
+        IMGV.tx = IMGV.pan.tx + dx; IMGV.ty = IMGV.pan.ty + dy;
+        imgvClamp(); imgvApply();
+      }
+    }
+  }, {passive:false});
+
+  stage.addEventListener('touchend', function(e){
+    if(e.touches.length < 2) IMGV.pinch = null;
+    if(e.touches.length !== 0) return;
+    var was = IMGV.pan; IMGV.pan = null;
+    if(!was || was.moved || !e.changedTouches || !e.changedTouches.length) return;
+    var t = e.changedTouches[0], now = Date.now();
+    if(now - IMGV.lastTap < 300 &&
+       Math.abs(t.clientX - IMGV.lastTapX) < 30 && Math.abs(t.clientY - IMGV.lastTapY) < 30){
+      IMGV.lastTap = 0;
+      imgvZoomTo(IMGV.scale > 1.15 ? 1 : 2.5, t.clientX, t.clientY);
+    } else {
+      IMGV.lastTap = now; IMGV.lastTapX = t.clientX; IMGV.lastTapY = t.clientY;
+      if(was.bg && IMGV.scale <= 1.02){
+        setTimeout(function(){ if(IMGV.lastTap === now) closeImageViewer(); }, 310);
+      }
+    }
+  }, {passive:false});
+
+  stage.addEventListener('wheel', function(e){
+    e.preventDefault();
+    if(!IMGV.base) imgvMeasure();
+    imgvZoomTo(IMGV.scale * (e.deltaY < 0 ? 1.15 : 1/1.15), e.clientX, e.clientY);
+  }, {passive:false});
+
+  stage.addEventListener('mousedown', function(e){
+    if(IMGV.scale <= 1) return;
+    e.preventDefault();
+    IMGV.mouse = { x:e.clientX, y:e.clientY, tx:IMGV.tx, ty:IMGV.ty };
+  });
+  window.addEventListener('mousemove', function(e){
+    if(!IMGV.mouse) return;
+    IMGV.tx = IMGV.mouse.tx + (e.clientX - IMGV.mouse.x);
+    IMGV.ty = IMGV.mouse.ty + (e.clientY - IMGV.mouse.y);
+    imgvClamp(); imgvApply();
+  });
+  window.addEventListener('mouseup', function(){ IMGV.mouse = null; });
+
+  stage.addEventListener('dblclick', function(e){
+    if(!IMGV.base) imgvMeasure();
+    imgvZoomTo(IMGV.scale > 1.15 ? 1 : 2.5, e.clientX, e.clientY);
+  });
+
+  window.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') closeImageViewer();
+  });
+  window.addEventListener('resize', function(){
+    var o = imgvNode('imgViewerOverlay');
+    if(o && o.classList.contains('show')) setTimeout(function(){ imgvMeasure(0); }, 80);
+  });
+}
+
 function isPdfDataUrl(val){ return typeof val === 'string' && val.indexOf('data:application/pdf') === 0; }
 function openVehicleDocuments(vehicleId){
   const v = STATE.vehicles[vehicleId];
@@ -5731,7 +5960,10 @@ function openVehicleDocuments(vehicleId){
             <span style="font-size:26px;">📄</span>
             <span style="color:#FFC800; font-weight:700; font-size:13px;">PDF Document — View பண்ண Tap பண்ணுங்க</span>
           </a>`
-        : `<img src="${v[dt.key]}" style="width:100%; border-radius:8px; margin-top:6px;">`)+
+        : `<div style="position:relative; margin-top:6px;">
+             <img src="${v[dt.key]}" class="docPreviewImg" data-label="${escapeHtml(dt.label)}" style="width:100%; border-radius:8px; display:block; cursor:zoom-in;">
+             <div class="docZoomBadge">🔍 Zoom பண்ண Tap</div>
+           </div>`)+
       `<div style="text-align:right; margin-top:6px;"><span class="docDeleteBtn" data-key="${dt.key}" style="color:#FF4D4D; font-size:12px; font-weight:700; cursor:pointer;">🗑️ Remove</span></div>` : `<div style="color:#fff; font-size:12px; opacity:.6;">Photo/PDF இல்ல இன்னும்</div>`}
     </div>`;
   }).join('');
@@ -5741,6 +5973,9 @@ function openVehicleDocuments(vehicleId){
     ${rows}
   `);
   document.getElementById('closeModalX').addEventListener('click', closeModal);
+  document.querySelectorAll('.docPreviewImg').forEach(im=>{
+    im.addEventListener('click', ()=> openImageViewer(im.src, im.dataset.label || 'Document'));
+  });
   document.querySelectorAll('.docFileInput').forEach(inp=>{
     inp.addEventListener('change', async ()=>{
       const file = inp.files[0];
