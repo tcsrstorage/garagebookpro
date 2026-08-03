@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260804-0120">
+<meta name="app-build" content="20260804-0210">
 <style>
   :root{
     --yellow:#FFC800;
@@ -5456,13 +5456,19 @@ async function redeemPremiumCode(){
     });
     // STEP 2: now update the user's profile tier; redeemCodes/{code}/used
     // is already true in the database, so the validate rule passes reliably.
+    const activatedAt = Date.now();
+    const expiresAt = activatedAt + 365*24*60*60*1000;
     try{
       await db.ref(ROOT+'/profile').update({
         tier: 'paid',
         appliedCode: code,
-        premiumActivatedAt: Date.now(),
-        premiumExpiresAt: Date.now() + 365*24*60*60*1000
+        premiumActivatedAt: activatedAt,
+        premiumExpiresAt: expiresAt
       });
+      // Mirror into adminUserDirectory straight away. Without this the admin panel's
+      // Premium Subscribers list keeps showing the customer as free/trial until they
+      // happen to reopen the app, since that's the only other place the directory syncs.
+      syncAdminDirectory('paid', STATE.trialEndsAt, STATE.profileName, STATE.profilePhone, activatedAt, expiresAt, STATE.profilePlace);
     }catch(step2Err){
       // rollback step 1 so the code isn't burned without granting access
       await db.ref('redeemCodes/'+code).update({ used: false, usedBy: null, usedAt: null });
