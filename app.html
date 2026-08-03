@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260803-2140">
+<meta name="app-build" content="20260803-2310">
 <style>
   :root{
     --yellow:#FFC800;
@@ -5458,9 +5458,9 @@ function applyReferralCode(myOwnCode, bonusDays){
         logActivity('referral', 'Referral code apply பண்ணாங்க: ' + input);
         showToast('🎁 ' + bonusDays + ' நாள் extra trial கிடைச்சது!');
         closeModal();
-      }).catch(err=> errEl.textContent = 'Failed: ' + err.message);
+      }).catch(err=> { console.error('Firebase error:', err); errEl.textContent = 'எதுவும் நடக்கல — மறுபடி try பண்ணுங்க'; });
     });
-  }).catch(err=> errEl.textContent = 'Failed: ' + err.message);
+  }).catch(err=> { console.error('Firebase error:', err); errEl.textContent = 'எதுவும் நடக்கல — மறுபடி try பண்ணுங்க'; });
 }
 
 function openYearlyWrapModal(){
