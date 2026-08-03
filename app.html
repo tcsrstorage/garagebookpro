@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Garage Book Pro">
-<meta name="app-build" content="20260731-1407">
+<meta name="app-build" content="20260803-2140">
 <style>
   :root{
     --yellow:#FFC800;
@@ -3203,7 +3203,7 @@ function addRecurringEntry(rid){
   updates['/recurring/'+rid+'/nextDueDate'] = nextDue;
   db.ref(ROOT).update(updates).then(()=>{
     showToast(r.label + ' add ஆச்சு!');
-  }).catch(err=> showToast('Failed: ' + err.message));
+  }).catch(err=> { console.error('Firebase error:', err); showToast('எதுவும் நடக்கல — மறுபடி try பண்ணுங்க'); });
 }
 function openManageRecurring(){
   const rows = Object.entries(STATE.recurring||{}).map(([id,r])=>{
@@ -3277,7 +3277,7 @@ function openEditRecurringModal(id){
     const path = id ? ('/recurring/'+id) : ('/recurring/'+uid('rec'));
     db.ref(ROOT+path).set(data).then(()=>{
       showToast('Saved!'); closeModal();
-    }).catch(err=> showToast('Failed: ' + err.message));
+    }).catch(err=> { console.error('Firebase error:', err); showToast('எதுவும் நடக்கல — மறுபடி try பண்ணுங்க'); });
   });
 }
 
@@ -3892,7 +3892,7 @@ function openAccountModal(){
     <div class="field-label">Logged in as</div>
     <div style="padding:12px 14px; background:#1A1A1A; border-radius:10px; margin-bottom:14px; font-weight:400;">${identity}</div>
     <div class="field-label">Plan</div>
-    <div style="padding:12px 14px; background:#1A1A1A; border-radius:10px; margin-bottom:20px;">${tierLabel} — ${Object.keys(STATE.vehicles).length}/${STATE.isPremiumActive ? '∞' : FREE_TIER_VEHICLE_LIMIT} vehicles</div>
+    <div style="padding:12px 14px; background:#1A1A1A; border-radius:10px; margin-bottom:20px;">${tierLabel} — ${Object.keys(STATE.vehicles).length}/${STATE.tier === 'paid' ? '∞' : FREE_TIER_VEHICLE_LIMIT} vehicles</div>
     ${currentUser && currentUser.email ? `<button class="btn-secondary" id="resetPwFromAccountBtn" style="margin-bottom:12px;">🔑 Password Reset Link அனுப்பு</button>` : ''}
     ${STATE.tier === 'paid' ? `<button class="btn-secondary btn-danger" id="deactivatePremiumBtn" style="margin-bottom:12px;">⭐ Premium Deactivate பண்ணு</button>` : ''}
     <button class="btn-secondary btn-danger" id="logoutBtn" style="margin-bottom:12px;">🚪 Logout</button>
@@ -4201,7 +4201,7 @@ function openMechanicQrModal(){
       </div>
     `);
     document.getElementById('closeModalX').addEventListener('click', closeModal);
-  }).catch(err=> showToast('Failed: ' + err.message));
+  }).catch(err=> { console.error('Firebase error:', err); showToast('QR create ஆகல — மறுபடி try பண்ணுங்க'); });
 }
 function openModal(innerHtml, fullscreen){
   const root = document.getElementById('modalRoot');
@@ -4490,8 +4490,8 @@ function renderEntryForm(existing){
       showToast(existing?'Entry updated!':'Entry saved!');
       closeModal();
     }).catch(err=>{
-      showToast('Save failed: ' + err.message);
       console.error('Firebase write error:', err);
+      showToast('Save ஆகல — மறுபடி try பண்ணுங்க');
     });
   });
 
@@ -4502,7 +4502,8 @@ function renderEntryForm(existing){
           showToast('Entry deleted');
           closeModal();
         }).catch(err=>{
-          showToast('Delete failed: ' + err.message);
+          console.error('Firebase error:', err);
+          showToast('Delete ஆகல — மறுபடி try பண்ணுங்க');
           console.error('Firebase delete error:', err);
         });
       }
@@ -4638,12 +4639,17 @@ async function redeemPremiumCode(){
 }
 
 function openFreeLimitModal(){
+  const nextNum = Object.keys(STATE.vehicles).length + 1;
+  const trialNote = STATE.trialActive
+    ? `<div style="color:#8FD19E; font-size:12.5px; line-height:1.6; margin-bottom:14px;">Free Trial-ல Reports, Compare, Cloud Backup, PDF Export எல்லாம் இருக்கு — Vehicle limit மட்டும் Premium-க்கு தான்.</div>`
+    : '';
   openModal(`
     <div class="modal-title">🚗 Vehicle Limit<span class="close-x" id="closeModalX">✕</span></div>
     <div style="text-align:center; padding:10px 0 6px;">
       <div style="font-size:44px; margin-bottom:12px;">🔒</div>
-      <div style="color:#fff; font-size:15px; font-weight:600; margin-bottom:10px;">Free Tier-ல் 1 Vehicle மட்டும் Add பண்ண முடியும்</div>
-      <div style="color:#B8B8B8; font-size:13px; line-height:1.6; margin-bottom:20px;">2வது Vehicle-ஐயும் Add பண்ண, Unlimited vehicles-க்கு Premium-க்கு Upgrade பண்ணுங்க — ஒரே <span id="freeLimitPriceText">₹250/year (₹21/month மட்டும்)</span>.</div>
+      <div style="color:#fff; font-size:15px; font-weight:600; margin-bottom:10px;">${FREE_TIER_VEHICLE_LIMIT} Vehicle மட்டும் Add பண்ண முடியும்</div>
+      ${trialNote}
+      <div style="color:#B8B8B8; font-size:13px; line-height:1.6; margin-bottom:20px;">${nextNum}வது Vehicle-ஐயும் Add பண்ண, Unlimited vehicles-க்கு Premium-க்கு Upgrade பண்ணுங்க — ஒரே <span id="freeLimitPriceText">₹250/year (₹21/month மட்டும்)</span>.</div>
       <button class="btn-primary" id="goToUpgradeBtn">⭐ Premium-க்கு Upgrade பண்ணு</button>
     </div>
   `);
@@ -4656,7 +4662,7 @@ function openFreeLimitModal(){
   });
 }
 function openAddVehicleModal(){
-  if(!STATE.isPremiumActive && Object.keys(STATE.vehicles).length >= FREE_TIER_VEHICLE_LIMIT){
+  if(STATE.tier !== 'paid' && Object.keys(STATE.vehicles).length >= FREE_TIER_VEHICLE_LIMIT){
     openFreeLimitModal();
     return;
   }
@@ -4693,8 +4699,14 @@ function openAddVehicleModal(){
       STATE.activeVehicle = id;
       closeModal();
     }).catch(err=>{
-      showToast('Save failed: ' + err.message);
       console.error('Firebase write error:', err);
+      const ecode = ((err && (err.code || err.message)) || '').toString();
+      if(/permission[_ ]?denied/i.test(ecode)){
+        closeModal();
+        openFreeLimitModal();
+        return;
+      }
+      showToast('Save ஆகல — மறுபடி try பண்ணுங்க');
     });
   });
 }
@@ -4738,7 +4750,8 @@ function bindToggleSwitches(){
         showToast(sw.checked ? 'Enabled' : 'Disabled');
         sw.closest('.manage-item').classList.toggle('inactive', !sw.checked);
       }).catch(err=>{
-        showToast('Update failed: ' + err.message);
+        console.error('Firebase error:', err);
+        showToast('Update ஆகல — மறுபடி try பண்ணுங்க');
         console.error('Firebase update error:', err);
         sw.checked = !sw.checked;
       });
@@ -4810,8 +4823,8 @@ function openEditVehicleModal(id){
       showToast('Vehicle updated!');
       closeModal();
     }).catch(err=>{
-      showToast('Save failed: ' + err.message);
       console.error('Firebase write error:', err);
+      showToast('Save ஆகல — மறுபடி try பண்ணுங்க');
     });
   });
 }
@@ -4897,7 +4910,8 @@ function openVehicleDocuments(vehicleId){
         showToast('Saved!');
         openVehicleDocuments(vehicleId); // refresh
       }catch(err){
-        showToast('Upload failed: ' + err.message);
+        console.error('Firebase error:', err);
+        showToast('Upload ஆகல — மறுபடி try பண்ணுங்க');
       }
     });
   });
@@ -5263,7 +5277,8 @@ function bindDeleteButtons(){
           if(kind==='vehicle' && STATE.activeVehicle===id) STATE.activeVehicle='all';
           closeModal();
         }).catch(err=>{
-          showToast('Delete failed: ' + err.message);
+          console.error('Firebase error:', err);
+          showToast('Delete ஆகல — மறுபடி try பண்ணுங்க');
           console.error('Firebase delete error:', err);
         });
       }
@@ -5311,8 +5326,8 @@ function openManageList(kind){
       closeModal();
       openManageList(kind);
     }).catch(err=>{
-      showToast('Save failed: ' + err.message);
       console.error('Firebase write error:', err);
+      showToast('Save ஆகல — மறுபடி try பண்ணுங்க');
     });
   });
 }
@@ -5340,8 +5355,8 @@ function openEditListItemModal(kind, id){
       closeModal();
       openManageList(kind);
     }).catch(err=>{
-      showToast('Save failed: ' + err.message);
       console.error('Firebase write error:', err);
+      showToast('Save ஆகல — மறுபடி try பண்ணுங்க');
     });
   });
 }
